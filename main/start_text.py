@@ -11,7 +11,7 @@ async def start_cmd(bot, msg):
         InlineKeyboardButton("🖥️ How To Deploy", url="https://youtu.be/oc847WvOUaI")
     ]])
     
-    await bot.send_photo(chat_id=msg.chat.id, photo=START_IMAGE_URL, caption=txt, reply_markup=btn, disable_web_page_preview=True)
+    await bot.send_photo(chat_id=msg.chat.id, photo=START_IMAGE_URL, caption=txt, reply_markup=btn)
     
     if msg.from_user.id == ADMIN:
         await start(bot, msg, cb=False)
