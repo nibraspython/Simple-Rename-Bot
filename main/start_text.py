@@ -4,17 +4,15 @@ from config import ADMIN, START_IMAGE_URL
 
 @Client.on_message(filters.command("start") & filters.private)
 async def start_cmd(bot, msg):
-    txt = "This is a personal use bot 🙏. Do you want your own bot? 👇 Click the source code to deploy"
-    btn = InlineKeyboardMarkup([[
-        InlineKeyboardButton("🤖 SOURCE CODE", url="https://github.com/MrMKN/Simple-Rename-Bot")
-    ], [
-        InlineKeyboardButton("🖥️ How To Deploy", url="https://youtu.be/oc847WvOUaI")
-    ]])
-
     if msg.from_user.id == ADMIN:
-        await bot.send_photo(chat_id=msg.chat.id, photo=START_IMAGE_URL, caption=txt, reply_markup=btn)
         await start(bot, msg, cb=False)
     else:
+        txt = "This is a personal use bot 🙏. Do you want your own bot? 👇 Click the source code to deploy"
+        btn = InlineKeyboardMarkup([[
+            InlineKeyboardButton("🤖 SOURCE CODE", url="https://github.com/MrMKN/Simple-Rename-Bot")
+        ], [
+            InlineKeyboardButton("🖥️ How To Deploy", url="https://youtu.be/oc847WvOUaI")
+        ]])
         await msg.reply_text(text=txt, reply_markup=btn, disable_web_page_preview=True)
 
 @Client.on_callback_query(filters.regex("start"))
@@ -26,10 +24,14 @@ async def start(bot, msg, cb=True):
         InlineKeyboardButton("ℹ️ Help", callback_data="help"),
         InlineKeyboardButton("📡 About", callback_data="about")
     ]]
-    if cb:
-        await msg.message.edit(text=txt, reply_markup=InlineKeyboardMarkup(button), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
+
+    if msg.from_user.id == ADMIN:
+        await bot.send_photo(chat_id=msg.chat.id, photo=START_IMAGE_URL, caption=txt, reply_markup=InlineKeyboardMarkup(button))
     else:
-        await msg.reply_text(text=txt, reply_markup=InlineKeyboardMarkup(button), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
+        if cb:
+            await msg.message.edit(text=txt, reply_markup=InlineKeyboardMarkup(button), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
+        else:
+            await msg.reply_text(text=txt, reply_markup=InlineKeyboardMarkup(button), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
 
 @Client.on_callback_query(filters.regex("help"))
 async def help(bot, msg):
