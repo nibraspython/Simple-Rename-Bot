@@ -8,4 +8,4 @@ CAPTION = environ.get("CAPTION", "video")
 
 # for thumbnail ( back end is MrMKN brain 😉)
 DOWNLOAD_LOCATION = "./DOWNLOADS"
-
+START_IMAGE_URL = "https://te.legra.ph/file/bce41bc329362c454abed.jpg"
