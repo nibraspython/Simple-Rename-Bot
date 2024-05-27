@@ -41,7 +41,7 @@ async def rename_file(bot, msg):
     await sts.edit("Upload වෙන ගමන් 🔥 ")
     c_time = time.time()
     try:
-        await bot.send_video(msg.chat.id, video=downloaded, thumb=og_thumbnail, caption=caption, duration=duration, progress=progress_message, progress_args=("Uploade Started.....", sts, c_time))        
+        await bot.send_video(msg.chat.id, video=downloaded, thumb=og_thumbnail, caption=cap, duration=duration, progress=progress_message, progress_args=("Uploade Started.....", sts, c_time))        
     except Exception as e:  
         return await sts.edit(f"Error {e}")                       
     try:
