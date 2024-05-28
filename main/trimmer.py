@@ -22,9 +22,9 @@ async def trim_video(bot, msg):
     except ValueError:
         return await msg.reply_text("Invalid time format. Please use HH:MM:SS.")
 
-    sts = await msg.reply_text("Trying to Download.....")
+    sts = await msg.reply_text("🔄 Trying to Download... 📥")
     c_time = time.time()
-    downloaded = await reply.download(progress=progress_message, progress_args=("Download Started.....", sts, c_time))
+    downloaded = await reply.download(progress=progress_message, progress_args=("📥 Download Started...", sts, c_time))
     output_video = f"{os.path.splitext(downloaded)[0]}_trimmed.mp4"
 
     try:
@@ -37,14 +37,14 @@ async def trim_video(bot, msg):
         ]
         subprocess.run(command, check=True)
     except subprocess.CalledProcessError as e:
-        return await sts.edit(f"Error during trimming: {e}")
+        return await sts.edit(f"❌ Error during trimming: {e}")
 
     video_clip = VideoFileClip(output_video)
     duration = int(video_clip.duration)
     video_clip.close()
 
     filesize = humanbytes(os.path.getsize(output_video))
-    cap = f"Trimmed Video\n\n💽 size: {filesize}\n🕒 duration: {duration} seconds"
+    cap = f"Trimmed Video\n\n💽 Size: {filesize}\n🕒 Duration: {duration} seconds"
 
     dir = os.listdir(DOWNLOAD_LOCATION)
     if len(dir) == 0:
@@ -57,12 +57,12 @@ async def trim_video(bot, msg):
             print(e)
             og_thumbnail = None
 
-    await sts.edit("Uploading started.....")
+    await sts.edit("🚀 Uploading started...")
     c_time = time.time()
     try:
-        await bot.send_video(msg.chat.id, video=output_video, thumb=og_thumbnail, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started.....", sts, c_time))
+        await bot.send_video(msg.chat.id, video=output_video, thumb=og_thumbnail, caption=cap, duration=duration, progress=progress_message, progress_args=("🚀 Upload Started...", sts, c_time))
     except Exception as e:
-        return await sts.edit(f"Error: {e}")
+        return await sts.edit(f"❌ Error: {e}")
     try:
         if file_thumb:
             os.remove(file_thumb)
