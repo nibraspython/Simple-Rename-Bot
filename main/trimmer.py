@@ -1,8 +1,31 @@
-import time, os, subprocess
+import time
+import os
+import subprocess
 from pyrogram import Client, filters
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import progress_message, humanbytes
+from main.utils import humanbytes
 from moviepy.editor import VideoFileClip
+
+async def progress_message(current, total, message, status_message, start_time):
+    now = time.time()
+    diff = now - start_time
+
+    # Calculate progress percentage
+    percentage = current * 100 / total
+    speed = current / diff
+    elapsed_time = round(diff)
+    time_to_completion = round((total - current) / speed)
+    estimated_total_time = elapsed_time + time_to_completion
+
+    # Generate progress bar with emojis
+    progress_bar = f"[{'=' * int(20 * percentage / 100)}{' ' * (20 - int(20 * percentage / 100))}]"
+    progress = f"{progress_bar}\n📦 Progress: {humanbytes(current)} of {humanbytes(total)}\n⚡ Speed: {humanbytes(speed)}/s\n⏳ ETA: {time_to_completion}s"
+    
+    # Update the status message with emojis
+    await status_message.edit_text(
+        text=f"{message}\n\n{progress}",
+        parse_mode='markdown'
+    )
 
 @Client.on_message(filters.private & filters.command("trim") & filters.user(ADMIN))
 async def trim_video(bot, msg):
@@ -28,10 +51,11 @@ async def trim_video(bot, msg):
     output_video = f"{os.path.splitext(downloaded)[0]}_trimmed.mp4"
 
     try:
-        # Using subprocess to call ffmpeg directly
+        # Using subprocess to call ffmpeg directly to trim the video
         command = [
             'ffmpeg', '-i', downloaded,
-            '-ss', str(start_time), '-to', str(end_time),
+            '-ss', start_time_str, '-to', end_time_str,
+            '-map', '0:v', '-map', '0:a?',  # Map only video and audio streams
             '-c', 'copy',  # Copy video and audio streams without re-encoding
             output_video
         ]
