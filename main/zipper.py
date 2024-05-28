@@ -3,7 +3,7 @@ import os
 import zipfile
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import DOWNLOAD_LOCATION, ADMIN, CAPTION
+from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
 # Temporary storage for files to zip
