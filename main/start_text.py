@@ -11,9 +11,24 @@ async def start_cmd(bot, msg):
         btn = InlineKeyboardMarkup([[
             InlineKeyboardButton("🤖 SOURCE CODE", url="https://github.com/MrMKN/Simple-Rename-Bot")
         ], [
-            InlineKeyboardButton("🖥️ How To Deploy", url="https://youtu.be/oc847WvOUaI")
+            InlineKeyboardButton("🖥️ How To Deploy", url="https://youtu.be/oc847WvOUaI"),
+            InlineKeyboardButton("ℹ️ Informations", callback_data="informations")
         ]])
         await msg.reply_text(text=txt, reply_markup=btn, disable_web_page_preview=True)
+
+@Client.on_callback_query(filters.regex("informations"))
+async def informations(bot, msg):
+    txt = ("<b>🤖 ᴍy ɴᴀᴍᴇ : Dilrenamer\n"
+           "🖥️ Dᴇᴠᴇʟᴏᴩᴇʀ : Dilshan\n"
+           "👨‍💻 Owner : Private Bots\n"
+           "✏️ Lᴀɴɢᴜᴀɢᴇ: Pyᴛʜᴏɴ\n"
+           "📊 Bᴜɪʟᴅ Vᴇʀꜱɪᴏɴ: Pʀɪᴠᴀᴛᴇ Bᴏᴛs\n\n"
+           "<b>Thanks To All Who Supported ❤</b>")
+    button = [[
+        InlineKeyboardButton("🚫 Close", callback_data="del"),
+        InlineKeyboardButton("⬅️ Back", callback_data="start")
+    ]]
+    await msg.message.edit(text=txt, reply_markup=InlineKeyboardMarkup(button), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
 
 @Client.on_callback_query(filters.regex("start"))
 async def start(bot, msg, cb=True):
@@ -23,6 +38,8 @@ async def start(bot, msg, cb=True):
     ], [
         InlineKeyboardButton("ℹ️ Help", callback_data="help"),
         InlineKeyboardButton("📡 About", callback_data="about")
+    ], [
+        InlineKeyboardButton("ℹ️ Informations", callback_data="informations")
     ]]
 
     if msg.from_user.id == ADMIN:
