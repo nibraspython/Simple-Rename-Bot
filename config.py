@@ -2,7 +2,7 @@ from os import environ
 
 API_ID = int(environ.get("API_ID", "14631157"))
 API_HASH = environ.get("API_HASH", "aa7c2b3be68a7488abdb9de6ce78d311")
-BOT_TOKEN = environ.get("BOT_TOKEN", "6898599695:AAE-rukB-OoPJgxOOOcKKuK_8gv55HiC4ww")
+BOT_TOKEN = environ.get("BOT_TOKEN", "7341561892:AAHDXnPLYUxW0Qh5XG8ynGGY1lKW8PumNqk")
 ADMIN = int(environ.get("ADMIN", "5380833276"))          
 CAPTION = environ.get("CAPTION", "video")
 
