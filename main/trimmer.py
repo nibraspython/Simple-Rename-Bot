@@ -1,9 +1,8 @@
-import time, os
+import time, os, subprocess
 from pyrogram import Client, filters
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from moviepy.editor import VideoFileClip
-from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 
 @Client.on_message(filters.private & filters.command("trim") & filters.user(ADMIN))
 async def trim_video(bot, msg):
@@ -29,9 +28,15 @@ async def trim_video(bot, msg):
     output_video = f"{os.path.splitext(downloaded)[0]}_trimmed.mp4"
 
     try:
-        # Exclude subtitle streams
-        ffmpeg_extract_subclip(downloaded, start_time, end_time, targetname=output_video, codec="copy")
-    except Exception as e:
+        # Using subprocess to call ffmpeg directly
+        command = [
+            'ffmpeg', '-i', downloaded,
+            '-ss', str(start_time), '-to', str(end_time),
+            '-c', 'copy',  # Copy video and audio streams without re-encoding
+            output_video
+        ]
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as e:
         return await sts.edit(f"Error during trimming: {e}")
 
     video_clip = VideoFileClip(output_video)
