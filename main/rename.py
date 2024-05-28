@@ -14,9 +14,9 @@ async def rename_file(bot, msg):
         return await msg.reply_text("Please Reply To A File or video or audio with filename + .extension e.g., (.mkv or .mp4 or .zip)")
     og_media = getattr(reply, reply.media.value)
     new_name = msg.text.split(" ", 1)[1]
-    sts = await msg.reply_text("Trying to Download.....")
+    sts = await msg.reply_text("🔄 Trying to Download.....")
     c_time = time.time()
-    downloaded = await reply.download(file_name=new_name, progress=progress_message, progress_args=("Download Started.....", sts, c_time))
+    downloaded = await reply.download(file_name=new_name, progress=progress_message, progress_args=("Download Started..... **Thanks To All Who Supported ❤**", sts, c_time))
     filesize = humanbytes(og_media.file_size)
 
     # Get video duration
@@ -43,10 +43,10 @@ async def rename_file(bot, msg):
             print(e)
             og_thumbnail = None
 
-    await sts.edit("Uploading started.....")
+    await sts.edit("🚀 Uploading started..... **Thanks To All Who Supported ❤**")
     c_time = time.time()
     try:
-        await bot.send_video(msg.chat.id, video=downloaded, thumb=og_thumbnail, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started.....", sts, c_time))
+        await bot.send_video(msg.chat.id, video=downloaded, thumb=og_thumbnail, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started..... **Thanks To All Who Supported**", sts, c_time))
     except Exception as e:
         return await sts.edit(f"Error: {e}")
     try:
