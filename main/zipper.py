@@ -13,6 +13,7 @@ files_to_zip = {}
 async def zip_files(bot, msg):
     chat_id = msg.chat.id
     files_to_zip[chat_id] = []
+    print(f"Started zip process for chat_id: {chat_id}")
 
     buttons = [
         [InlineKeyboardButton("Done ✔️", callback_data="zip_done")],
@@ -29,6 +30,7 @@ async def receive_files(bot, msg):
         if media:
             files_to_zip[chat_id].append(media)
             await msg.reply_text(f"📥 **File received: {media.file_name}**\n📁 **Total files: {len(files_to_zip[chat_id])}**")
+            print(f"File received: {media.file_name} for chat_id: {chat_id}")
 
 @Client.on_callback_query(filters.regex("zip_done") & filters.user(ADMIN))
 async def zip_done_callback(bot, query):
@@ -42,6 +44,7 @@ async def zip_done_callback(bot, query):
                 [InlineKeyboardButton("Cancel 🚫", callback_data="zip_cancel")]
             ])
         )
+        print(f"Files listed for zipping for chat_id: {chat_id}")
     else:
         await query.message.reply_text("⚠️ **No files received to zip.**")
     await query.message.delete()
@@ -56,6 +59,7 @@ async def zip_cancel_callback(bot, query):
     chat_id = query.message.chat.id
     if chat_id in files_to_zip:
         del files_to_zip[chat_id]
+        print(f"Zip process canceled for chat_id: {chat_id}")
     await query.message.reply_text("❌ **ZIP creation canceled.**")
     await query.message.delete()
 
@@ -66,6 +70,7 @@ async def get_zip_filename(bot, msg):
         zip_filename = msg.text.strip() + ".zip"
         zip_filepath = os.path.join(DOWNLOAD_LOCATION, zip_filename)
         sts = await msg.reply_text("🔄 **Downloading files...**")
+        print(f"Zip filename received: {zip_filename} for chat_id: {chat_id}")
 
         downloaded_files = []
         for media in files_to_zip[chat_id]:
@@ -76,6 +81,7 @@ async def get_zip_filename(bot, msg):
                 progress_args=(f"⬇️ **Downloading {media.file_name}...**", sts, c_time)
             )
             downloaded_files.append(downloaded_file)
+            print(f"Downloaded file: {downloaded_file}")
 
         sts = await sts.edit("🔄 **Creating ZIP file...**")
 
@@ -86,6 +92,7 @@ async def get_zip_filename(bot, msg):
 
         filesize = humanbytes(os.path.getsize(zip_filepath))
         await sts.edit(f"📦 **ZIP file created: {zip_filename}**\n📏 **Size: {filesize}**")
+        print(f"ZIP file created: {zip_filepath} with size: {filesize}")
 
         c_time = time.time()
         await bot.send_document(
@@ -99,6 +106,9 @@ async def get_zip_filename(bot, msg):
         # Clean up
         for file in downloaded_files:
             os.remove(file)
+            print(f"Removed downloaded file: {file}")
         os.remove(zip_filepath)
+        print(f"Removed ZIP file: {zip_filepath}")
         del files_to_zip[chat_id]
         await sts.delete()
+        print(f"Zip process completed for chat_id: {chat_id}")
