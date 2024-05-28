@@ -9,7 +9,7 @@ from main.utils import progress_message, humanbytes
 # Temporary storage for files to zip
 files_to_zip = {}
 
-@Client.on_message(filters.private & filters.command(",slip") & filters.user(ADMIN))
+@Client.on_message(filters.private & filters.command("slip") & filters.user(ADMIN))
 async def zip_files(bot, msg):
     chat_id = msg.chat.id
     files_to_zip[chat_id] = []
