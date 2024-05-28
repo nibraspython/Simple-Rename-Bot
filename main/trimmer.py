@@ -10,18 +10,25 @@ from moviepy.editor import VideoFileClip
 # Temporary storage for media and trimming durations
 trim_data = {}
 
+@Client.on_message(filters.private & filters.command("trim") & filters.user(ADMIN))
+async def start_trim_process(bot, msg):
+    chat_id = msg.chat.id
+    trim_data[chat_id] = {}
+    await msg.reply_text("🔄 **Please send the video or document you want to trim.**")
+
 @Client.on_message(filters.private & filters.media & filters.user(ADMIN))
 async def receive_media(bot, msg):
     chat_id = msg.chat.id
-    media = msg.video or msg.document
-    if media:
-        trim_data[chat_id] = {'media': media}
-        await msg.reply_text("☑️ **Media received. Please send the trimming durations in the format:** `HH:MM:SS HH:MM:SS` (start_time end_time)")
+    if chat_id in trim_data and 'media' not in trim_data[chat_id]:
+        media = msg.video or msg.document
+        if media:
+            trim_data[chat_id]['media'] = media
+            await msg.reply_text("🕒 **Media received. Please send the trimming durations in the format:** `HH:MM:SS HH:MM:SS` (start_time end_time)")
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def receive_durations(bot, msg):
     chat_id = msg.chat.id
-    if chat_id in trim_data and 'media' in trim_data[chat_id]:
+    if chat_id in trim_data and 'media' in trim_data[chat_id] and 'start_time' not in trim_data[chat_id]:
         durations = msg.text.strip().split()
         if len(durations) == 2:
             start_time_str, end_time_str = durations
@@ -90,13 +97,13 @@ async def trim_confirm_callback(bot, query):
                 print(e)
                 og_thumbnail = None
 
-        await sts.edit("🚀 **Uploading started...**")
+        await sts.edit("🚀 **Uploading started...📤**")
         c_time = time.time()
         try:
             await bot.send_video(
                 chat_id, video=output_video, thumb=og_thumbnail, caption=cap,
                 duration=duration, progress=progress_message,
-                progress_args=("🚀 **Upload Started...**", sts, c_time)
+                progress_args=("🚀 **Upload Started...📤**", sts, c_time)
             )
         except Exception as e:
             return await sts.edit(f"❌ **Error:** `{e}`")
