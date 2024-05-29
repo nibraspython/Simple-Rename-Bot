@@ -8,7 +8,7 @@ from main.utils import progress_message, humanbytes
 
 urls_to_download = {}
 
-@Client.on_message(filters.private & filters.command("upload") & filters.user(ADMIN))
+@Client.on_message(filters.private & filters.command("get") & filters.user(ADMIN))
 async def get_url(bot, msg):
     chat_id = msg.chat.id
     urls_to_download[chat_id] = None
