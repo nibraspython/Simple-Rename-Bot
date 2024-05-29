@@ -1,87 +1,74 @@
 import os
 import time
-import yt_dlp
+import requests
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
-urls_to_download = {}
-
-@Client.on_message(filters.private & filters.command("get") & filters.user(ADMIN))
-async def get_url(bot, msg):
-    chat_id = msg.chat.id
-    urls_to_download[chat_id] = None
-    await msg.reply_text("🌐 **Send the URL to upload:**")
+@Client.on_message(filters.private & filters.command("urldl") & filters.user(ADMIN))
+async def urldl_command(bot, msg):
+    await msg.reply_text("📥 **Send me the direct download URL.**")
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
-async def receive_url(bot, msg):
-    chat_id = msg.chat.id
-    if chat_id in urls_to_download and urls_to_download[chat_id] is None:
-        url = msg.text.strip()
-        urls_to_download[chat_id] = url
+async def handle_url(bot, msg):
+    url = msg.text.strip()
+    if not url.startswith("http"):
+        return await msg.reply_text("⚠️ **Invalid URL. Please send a valid direct download link.**")
+    
+    # Ask for confirmation
+    buttons = [
+        [InlineKeyboardButton("Confirm ✔️", callback_data=f"urldl_confirm|{url}")],
+        [InlineKeyboardButton("Cancel 🚫", callback_data="urldl_cancel")]
+    ]
+    reply_markup = InlineKeyboardMarkup(buttons)
+    await msg.reply_text(f"**URL:** {url}\n\n**Do you want to download this file?**", reply_markup=reply_markup)
 
-        buttons = [
-            [InlineKeyboardButton("Confirm ✔️", callback_data="url_confirm")],
-            [InlineKeyboardButton("Cancel 🚫", callback_data="url_cancel")]
-        ]
-        reply_markup = InlineKeyboardMarkup(buttons)
-        await msg.reply_text(f"🌐 **URL:** `{url}`\n\nDo you want to proceed?", reply_markup=reply_markup)
+@Client.on_callback_query(filters.regex(r"urldl_confirm\|") & filters.user(ADMIN))
+async def urldl_confirm(bot, query):
+    url = query.data.split("|")[1]
+    await query.message.edit_text("🔄 **Starting download...**")
 
-@Client.on_callback_query(filters.regex("url_confirm") & filters.user(ADMIN))
-async def url_confirm_callback(bot, query):
-    chat_id = query.message.chat.id
-    url = urls_to_download.get(chat_id)
+    file_name = url.split("/")[-1]
+    file_path = os.path.join(DOWNLOAD_LOCATION, file_name)
 
-    if url:
-        await query.message.edit_text("🔄 **Initializing download...**")
-        ydl_opts = {
-            'format': 'best',
-            'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-            'progress_hooks': [lambda d: download_hook(d, query.message, time.time())],
-        }
+    try:
+        start_time = time.time()
+        response = requests.get(url, stream=True)
+        total_size = int(response.headers.get('content-length', 0))
+        downloaded_size = 0
 
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(url, download=True)
-                file_path = ydl.prepare_filename(info_dict)
+        with open(file_path, 'wb') as file:
+            for data in response.iter_content(chunk_size=1024):
+                file.write(data)
+                downloaded_size += len(data)
+                await progress_message(downloaded_size, total_size, "📥 Downloading...", query.message, start_time)
 
-            file_size = humanbytes(os.path.getsize(file_path))
-            await query.message.edit_text(f"🚀 **Uploading started...**\n\n**File:** `{os.path.basename(file_path)}`\n**Size:** `{file_size}`")
+        file_size = humanbytes(os.path.getsize(file_path))
+        await query.message.edit_text(f"✅ **Downloaded successfully!**\n\n**File:** {file_name}\n**Size:** {file_size}")
 
-            c_time = time.time()
-            if file_path.endswith(('.mp4', '.mkv')):
-                await bot.send_video(
-                    chat_id,
-                    video=file_path,
-                    caption=f"**{os.path.basename(file_path)}**\n**Size:** `{file_size}`",
-                    progress=progress_message,
-                    progress_args=("⬆️ **Uploading...**", query.message, c_time)
-                )
-            else:
-                await bot.send_document(
-                    chat_id,
-                    document=file_path,
-                    caption=f"**{os.path.basename(file_path)}**\n**Size:** `{file_size}`",
-                    progress=progress_message,
-                    progress_args=("⬆️ **Uploading...**", query.message, c_time)
-                )
+        # Determine if the file is a video
+        if file_name.lower().endswith((".mp4", ".mkv")):
+            await bot.send_video(
+                query.message.chat.id,
+                video=file_path,
+                caption=f"**{file_name}**\n**Size:** {file_size}",
+                progress=progress_message,
+                progress_args=("📤 Uploading...", query.message, start_time)
+            )
+        else:
+            await bot.send_document(
+                query.message.chat.id,
+                document=file_path,
+                caption=f"**{file_name}**\n**Size:** {file_size}",
+                progress=progress_message,
+                progress_args=("📤 Uploading...", query.message, start_time)
+            )
 
-            os.remove(file_path)
-            await query.message.delete()
-        except Exception as e:
-            await query.message.edit(f"❌ **Error:** {e}")
+        os.remove(file_path)
+    except Exception as e:
+        await query.message.edit_text(f"❌ **Error downloading file:** {e}")
 
-@Client.on_callback_query(filters.regex("url_cancel") & filters.user(ADMIN))
-async def url_cancel_callback(bot, query):
-    chat_id = query.message.chat.id
-    if chat_id in urls_to_download:
-        del urls_to_download[chat_id]
-    await query.message.edit_text("❌ **Download canceled.**")
-
-def download_hook(d, message, start_time):
-    if d['status'] == 'downloading':
-        total_size = d.get('total_bytes') or d.get('total_bytes_estimate')
-        progress_message(d['downloaded_bytes'], total_size, "⬇️ **Downloading...**", message, start_time)
-    elif d['status'] == 'finished':
-        print('Done downloading, now converting ...')
+@Client.on_callback_query(filters.regex("urldl_cancel") & filters.user(ADMIN))
+async def urldl_cancel(bot, query):
+    await query.message.edit_text("❌ **Download cancelled.**")
