@@ -1,5 +1,6 @@
 import time
 import os
+import requests
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from config import DOWNLOAD_LOCATION, ADMIN
@@ -8,6 +9,22 @@ from moviepy.editor import VideoFileClip
 
 # Dictionary to keep track of user states
 user_states = {}
+
+# Function to download file from a URL
+def download_file(url, file_name, progress, progress_args):
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(file_name, 'wb') as f:
+            total_length = int(r.headers.get('content-length', 0))
+            downloaded = 0
+            start_time = time.time()
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if progress:
+                        progress(downloaded, total_length, *progress_args, start_time=start_time)
+    return file_name
 
 # Only handle messages with the "/convert" command and from the authorized user
 @Client.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
@@ -71,7 +88,7 @@ async def handle_conversion(bot, msg):
         downloaded = await bot.download_media(media, file_name=new_name, progress=progress_message, progress_args=("Download Started..... 😅", sts, c_time))
     # Otherwise, download the file directly from the link
     else:
-        downloaded = await bot.download_file(media, file_name=new_name, progress=progress_message, progress_args=("Download Started..... 😅", sts, c_time))
+        downloaded = download_file(media, file_name=new_name, progress=progress_message, progress_args=("Download Started..... 😅", sts, c_time))
 
     filesize = humanbytes(os.path.getsize(downloaded))
 
