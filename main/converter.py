@@ -1,5 +1,6 @@
 import time
 import os
+import requests
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
@@ -9,7 +10,7 @@ from moviepy.editor import VideoFileClip
 # Dictionary to keep track of users awaiting confirmation after sending a video or link
 user_convert_requests = {}
 
-@Client.on_message(filters.private & filters.command("urldl") & filters.user(ADMIN))
+@Client.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
 async def convert_command(bot, msg):
     await msg.reply_text("Please send the video or direct link to the video you want to convert to MP3.")
 
@@ -57,16 +58,17 @@ async def confirm_or_cancel(bot, query):
         downloaded = await bot.download_media(media, file_name=os.path.join(DOWNLOAD_LOCATION, media.file_name), progress=progress_message, progress_args=("Download Started..... **Thanks To All Who Supported ❤**", sts, c_time))
     else:
         url = request['url']
-        # Handle direct link download (you might use a library like `requests` to download the file)
         sts = await query.message.edit_text("🔄 Trying to Download from link.....📥")
         c_time = time.time()
         response = requests.get(url, stream=True)
         downloaded = os.path.join(DOWNLOAD_LOCATION, os.path.basename(url.split("?")[0]))
         with open(downloaded, 'wb') as f:
-            total_length = int(response.headers.get('content-length'))
+            total_length = int(response.headers.get('content-length', 0))
+            downloaded_size = 0
             for data in response.iter_content(chunk_size=4096):
                 f.write(data)
-                progress_message(len(data), total_length, sts, c_time)
+                downloaded_size += len(data)
+                progress_message(downloaded_size, total_length, sts, c_time)
     
     try:
         # Convert video to MP3
