@@ -19,17 +19,18 @@ async def handle_conversion(bot, msg):
         og_media = media.video
     elif media.document.mime_type == 'video/mp4':
         og_media = media.document
+        media = og_media
     else:
         return await msg.reply_text("Please reply to a video message or provide a direct link to convert to MP3.")
 
     new_name = "converted_audio.mp3"
     sts = await msg.reply_text("Trying to Download! 📥")
-    
-    c_time = time.time()
-    
-    downloaded = await og_media.download()
 
-    filesize = humanbytes(og_media.file_size)
+    c_time = time.time()
+
+    downloaded = await bot.download_media(media, file_name=new_name)
+
+    filesize = humanbytes(os.path.getsize(downloaded))
 
     # Get video duration
     video_clip = VideoFileClip(downloaded)
