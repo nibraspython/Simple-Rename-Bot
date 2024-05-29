@@ -6,19 +6,31 @@ from moviepy.editor import VideoFileClip
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 @Client.on_message(filters.private & filters.command("convert"))
-async def convert_to_mp3(bot, msg):
-    await msg.reply_text("🎬 Please send the video file or provide a direct link to convert to MP3 🎶")
+async def ask_for_input(bot, msg):
+    # Ask for input with inline keyboard
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("📹 Video File", callback_data="video"),
+                InlineKeyboardButton("🔗 Direct Link", callback_data="link")
+            ]
+        ]
+    )
+    await msg.reply_text("Please choose an option:", reply_markup=keyboard)
 
-@Client.on_message(filters.private & ~filters.command(["convert"]) & ~filters.command(["cancel"]) & ~filters.command(["confirm"]))
+@Client.on_callback_query()
+async def handle_callback(bot, query):
+    if query.data == "video":
+        await query.answer("Please send the video file to convert.")
+    elif query.data == "link":
+        await query.answer("Please send the direct link to the video to convert.")
+
+@Client.on_message(filters.private & ~filters.command(["convert", "cancel", "confirm"]))
 async def handle_conversion(bot, msg):
-    reply = msg.reply_to_message
-    if not reply:
-        return await msg.reply_text("Please reply to a message with a video file or provide a direct link to convert to MP3.")
-    
-    # Check if the reply contains a media file or a link
-    media = reply.document or reply.video
-    if not media and not reply.text:
-        return await msg.reply_text("Please reply to a message with a video file or provide a direct link to convert to MP3.")
+    # Check if the message contains a media file or a link
+    media = msg.document or msg.video
+    if not media and not msg.text:
+        return
 
     # Display confirmation message with inline keyboard
     keyboard = InlineKeyboardMarkup(
@@ -36,9 +48,17 @@ async def handle_callback(bot, query):
     if query.data == "confirm":
         await query.answer("Conversion started! 🔄")
 
-        # Download the video file
+        # Get the latest message to get the video file or link
+        msg = await bot.get_messages(query.message.chat.id, query.message.message_id - 1)
+
+        # Check if the message contains a media file or a link
+        media = msg.document or msg.video
+        if not media and not msg.text:
+            return await query.message.reply_text("Please provide a video file or a direct link to convert to MP3.")
+        
+        # Download the video file or link
         sts = await query.message.reply_text("📥 Downloading the video...")
-        video = await query.message.reply_to_message.download()
+        video = await msg.download()
 
         # Convert video to mp3
         audio_file = f"{video}.mp3"
@@ -67,4 +87,3 @@ async def handle_callback(bot, query):
     elif query.data == "cancel":
         await query.message.reply_text("Conversion canceled! ❌")
         await query.answer()
-
