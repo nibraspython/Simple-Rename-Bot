@@ -8,50 +8,48 @@ from moviepy.editor import VideoFileClip
 async def convert_to_mp3(bot, msg):
     await msg.reply_text("Please send a video or provide a direct link to convert to MP3. 😊")
 
-@Client.on_message(filters.private & filters.video | filters.text & filters.user(ADMIN))
+@Client.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
 async def handle_conversion(bot, msg):
-    if msg.video:
-        media = msg.video
+    if not msg.reply_to_message:
+        return await msg.reply_text("Please reply to a video message or provide a direct link to convert to MP3.")
+
+    media = msg.reply_to_message
+
+    if not media.video and not media.document:
+        return await msg.reply_text("Please reply to a video message or provide a direct link to convert to MP3.")
+
+    if media.video:
+        og_media = media.video
+    elif media.document.mime_type == 'video/mp4':
+        og_media = media.document
     else:
-        try:
-            media = await bot.get_messages(msg.chat.id, msg.reply_to_message.message_id)
-        except:
-            return await msg.reply_text("Please send a video or provide a direct link to convert to MP3. 😊")
-    
-    og_media = media
+        return await msg.reply_text("Please reply to a video message or provide a direct link to convert to MP3.")
+
     new_name = "converted_audio.mp3"
     sts = await msg.reply_text("🔄 Trying to Download.....📥")
     c_time = time.time()
-    
-    if media.video:
-        downloaded = await media.download(file_name="video_to_convert")
-        filesize = humanbytes(media.video.file_size)
-        
-        # Get video duration
-        video_clip = VideoFileClip(downloaded)
-        duration = int(video_clip.duration)
-        video_clip.close()
-        
-        await sts.edit("🔄 Converting to MP3.....🎵")
-        try:
-            audio_path = f'{DOWNLOAD_LOCATION}/{new_name}'
-            video_clip.audio.write_audiofile(audio_path)
-        except Exception as e:
-            return await sts.edit(f"Error: {e}")
-        
-    else:
-        # Handle direct link to video
-        downloaded = None
-        filesize = "Unknown"
-        duration = "Unknown"
-        await sts.edit("🔄 Converting to MP3.....🎵")
-        # Add code to convert the video from the direct link to MP3 format
-        
+
+    downloaded = await og_media.download()
+
+    filesize = humanbytes(og_media.file_size)
+
+    # Get video duration
+    video_clip = VideoFileClip(downloaded)
+    duration = int(video_clip.duration)
+    video_clip.close()
+
+    await sts.edit("🔄 Converting to MP3.....🎵")
+    try:
+        audio_path = f'{DOWNLOAD_LOCATION}/{new_name}'
+        video_clip.audio.write_audiofile(audio_path)
+    except Exception as e:
+        return await sts.edit(f"Error: {e}")
+
     if downloaded:
         os.remove(downloaded)
-    
+
     cap = f"🎵 {new_name}nn💽 size: {filesize}n🕒 duration: {duration} seconds"
-    
+
     await sts.edit("🚀 Uploading started..... 📤Thanks To All Who Supported ❤")
     c_time = time.time()
     try:
