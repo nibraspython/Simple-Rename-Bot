@@ -3,6 +3,10 @@ import os
 from pyrogram import Client, filters
 from main.utils import progress_message, humanbytes
 from moviepy.editor import VideoFileClip
+from config import ADMIN, DOWNLOAD_LOCATION, CAPTION
+
+# Define user_states
+user_states = {}
 
 @Client.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
 async def convert_to_mp3(bot, msg):
