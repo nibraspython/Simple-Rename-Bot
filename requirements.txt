@@ -1,4 +1,4 @@
 pyrogram
 Tgcrypto
 moviepy
-pymediainfo
+yt-dlp
