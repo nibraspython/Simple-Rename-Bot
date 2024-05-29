@@ -1,32 +1,65 @@
 import time
 import os
 from pyrogram import Client, filters
-from pyrogram.types import Message
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from moviepy.editor import VideoFileClip
 
+# Dictionary to keep track of user states
+user_states = {}
+
 # Only handle messages with the "/convert" command and from the authorized user
 @Client.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
 async def convert_to_mp3(bot, msg):
-    await msg.reply_text("Please send a video or provide a direct link to convert to MP3. 😊")
+    user_id = msg.from_user.id
+    user_states[user_id] = "awaiting_selection"
+    
+    # Create the inline keyboard
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔗 Direct Link", callback_data="direct_link")],
+        [InlineKeyboardButton("📹 Video", callback_data="video")]
+    ])
+    
+    await msg.reply_text("Please choose an option:", reply_markup=keyboard)
+
+# Handle callback queries from the inline keyboard
+@Client.on_callback_query(filters.user(ADMIN))
+async def handle_callback(bot, callback_query):
+    user_id = callback_query.from_user.id
+    data = callback_query.data
+    
+    if user_id not in user_states or user_states[user_id] != "awaiting_selection":
+        return
+    
+    if data == "direct_link":
+        user_states[user_id] = "awaiting_link"
+        await callback_query.message.edit_text("Please send the direct link to the MP4 video. 📎")
+    elif data == "video":
+        user_states[user_id] = "awaiting_video"
+        await callback_query.message.edit_text("Please send the video you want to convert to MP3. 📹")
 
 # Handle media messages or text links after the "/convert" command
-@Client.on_message(filters.private & (filters.video | filters.document | filters.text) & filters.reply & filters.user(ADMIN))
+@Client.on_message(filters.private & (filters.video | filters.document | filters.text) & filters.user(ADMIN))
 async def handle_conversion(bot, msg):
-    reply_to_msg = msg.reply_to_message
+    user_id = msg.from_user.id
 
-    # Check if the original message is the conversion command
-    if not reply_to_msg or not reply_to_msg.text or "/convert" not in reply_to_msg.text:
+    # Check if the user is in the right state
+    if user_id not in user_states:
         return
 
-    # Determine if the message contains media or a text link
-    media = msg.video or msg.document if isinstance(msg, Message) else None
-    media_link = msg.text if msg.text and msg.text.startswith("http") else None
-
-    # Ensure the message is either media or a valid URL
-    if not media and not media_link:
-        return await msg.reply_text("Please reply to a video message or provide a direct link to convert to MP3.")
+    state = user_states[user_id]
+    if state == "awaiting_link":
+        media_link = msg.text if msg.text and msg.text.startswith("http") else None
+        if not media_link:
+            return await msg.reply_text("Please provide a valid direct link to an MP4 video.")
+        media = media_link
+    elif state == "awaiting_video":
+        media = msg.video or msg.document if isinstance(msg, Message) else None
+        if not media or (media.document and media.document.mime_type != 'video/mp4'):
+            return await msg.reply_text("Please send a valid video file.")
+    else:
+        return
 
     new_name = "converted_audio.mp3"
     sts = await msg.reply_text("Trying to Download! 📥")
@@ -34,11 +67,11 @@ async def handle_conversion(bot, msg):
     c_time = time.time()
 
     # Download the media if it's a message
-    if media:
+    if state == "awaiting_video":
         downloaded = await bot.download_media(media, file_name=new_name, progress=progress_message, progress_args=("Download Started..... 😅", sts, c_time))
     # Otherwise, download the file directly from the link
     else:
-        downloaded = await bot.download_file(media_link, file_name=new_name, progress=progress_message, progress_args=("Download Started..... 😅", sts, c_time))
+        downloaded = await bot.download_file(media, file_name=new_name, progress=progress_message, progress_args=("Download Started..... 😅", sts, c_time))
 
     filesize = humanbytes(os.path.getsize(downloaded))
 
@@ -75,3 +108,6 @@ async def handle_conversion(bot, msg):
     except Exception as e:
         return await sts.edit(f"Error: {e}")
     await sts.delete()
+
+    # Reset user state
+    user_states.pop(user_id, None)
