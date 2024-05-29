@@ -1,6 +1,7 @@
 import time
 import os
 from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton  # Importing necessary classes
 from main.utils import progress_message, humanbytes
 from moviepy.editor import VideoFileClip
 from config import ADMIN, DOWNLOAD_LOCATION, CAPTION
