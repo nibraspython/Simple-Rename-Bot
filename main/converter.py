@@ -1,5 +1,6 @@
 import time, os
 from pyrogram import Client, filters
+from pyrogram.types import Message  # Add this import
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from moviepy.editor import VideoFileClip
@@ -10,7 +11,7 @@ async def convert_to_mp3(bot, msg):
 
 @Client.on_message(filters.private & (filters.video | filters.document | filters.text) & filters.user(ADMIN))
 async def handle_conversion(bot, msg):
-    if isinstance(msg, Message):
+    if isinstance(msg, Message):  # Use Message class from pyrogram.types
         media = msg.video or msg.document
     else:
         media = None
