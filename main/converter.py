@@ -1,21 +1,28 @@
 import os
 import time
+import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from config import DOWNLOAD_LOCATION, ADMIN, CAPTION
 from main.utils import progress_message, humanbytes
 from moviepy.editor import VideoFileClip
 
-app = Client("video_to_mp3_bot")
+# Initialize logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = Client("renamer_bot")
 
 # /convert command handler
 @app.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
 async def convert_to_mp3(bot, msg: Message):
+    logger.info("Received /convert command")
     await msg.reply_text("🔄 Please send the video file you want to convert to MP3.")
 
 # Handler for receiving the video file
 @app.on_message(filters.private & filters.video & filters.user(ADMIN))
 async def receive_video(bot, msg: Message):
+    logger.info("Received video for conversion")
     video = msg.video
     if video:
         sts = await msg.reply_text("📥 Video received. Converting to MP3...")
@@ -37,6 +44,7 @@ async def receive_video(bot, msg: Message):
                 video_clip.close()
             except Exception as e:
                 await sts.edit(f"❌ Error during conversion: {e}")
+                logger.error(f"Error during conversion: {e}")
                 return
 
             filesize = humanbytes(os.path.getsize(mp3_path))
@@ -51,17 +59,18 @@ async def receive_video(bot, msg: Message):
                     progress_args=("🚀 Uploading MP3 file...", sts, c_time)
                 )
             except Exception as e:
-                await sts.edit(f"❌ Error during upload: {e}")
-                return
+                await sts.edit(f"
 
-            try:
-                os.remove(downloaded)
-                os.remove(mp3_path)
-            except Exception as e:
-                await sts.edit(f"❌ Error during cleanup: {e}")
-                return
-
-            await sts.delete()
-            await msg.reply_text("✅ MP3 file converted and uploaded successfully!")
+                Error during upload: {e}") logger.error(f"Error during upload: {e}") returntry:
+            os.remove(downloaded)
+            os.remove(mp3_path)
         except Exception as e:
-            await sts.edit(f"❌ Error: {e}")
+            await sts.edit(f"❌ Error during cleanup: {e}")
+            logger.error(f"Error during cleanup: {e}")
+            return
+
+        await sts.delete()
+        await msg.reply_text("✅ MP3 file converted and uploaded successfully!")
+    except Exception as e:
+        await sts.edit(f"❌ Error: {e}")
+        logger.error(f"Error: {e}")
