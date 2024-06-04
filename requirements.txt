@@ -2,3 +2,4 @@ pyrogram
 Tgcrypto
 moviepy
 yt-dlp
+pytube
