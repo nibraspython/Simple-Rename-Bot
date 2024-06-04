@@ -2,14 +2,14 @@ import time
 import os
 import zipfile
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Message
 from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
 from main.utils import progress_message, humanbytes
 
 zip_files = {}
 
 @Client.on_message(filters.private & filters.command("zip") & filters.user(ADMIN))
-async def zip_files_handler(bot, msg):
+async def zip_files_handler(bot, msg: Message):
     chat_id = msg.chat.id
     zip_files[chat_id] = []
 
@@ -24,14 +24,14 @@ async def zip_files_handler(bot, msg):
     )
 
 @Client.on_message(filters.private & filters.document & filters.user(ADMIN))
-async def add_file_to_zip(bot, msg):
+async def add_file_to_zip(bot, msg: Message):
     chat_id = msg.chat.id
     if chat_id in zip_files:
         zip_files[chat_id].append(msg)
         await msg.reply_text(f"✅ File added to ZIP list. Total files: {len(zip_files[chat_id])}")
 
 @Client.on_callback_query(filters.regex("zip_confirm") & filters.user(ADMIN))
-async def confirm_zip_files(bot, callback_query):
+async def confirm_zip_files(bot, callback_query: CallbackQuery):
     chat_id = callback_query.message.chat.id
     if chat_id in zip_files and zip_files[chat_id]:
         await bot.send_message(chat_id, "Please provide a name for the ZIP file (without extension).")
@@ -39,20 +39,20 @@ async def confirm_zip_files(bot, callback_query):
         await bot.send_message(chat_id, "No files were added to the ZIP list.")
 
 @Client.on_callback_query(filters.regex("zip_cancel") & filters.user(ADMIN))
-async def cancel_zip_files(bot, callback_query):
+async def cancel_zip_files(bot, callback_query: CallbackQuery):
     chat_id = callback_query.message.chat.id
     if chat_id in zip_files:
         del zip_files[chat_id]
     await bot.send_message(chat_id, "❌ ZIP creation canceled.")
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
-async def get_zip_name(bot, msg):
+async def get_zip_name(bot, msg: Message):
     chat_id = msg.chat.id
     if chat_id in zip_files and zip_files[chat_id]:
         zip_name = msg.text
         await create_zip(bot, msg, zip_name)
 
-async def create_zip(bot, msg, zip_name):
+async def create_zip(bot: Client, msg: Message, zip_name: str):
     chat_id = msg.chat.id
     zip_path = os.path.join(DOWNLOAD_LOCATION, f"{zip_name}.zip")
     sts = await msg.reply_text("🔄 Downloading files for ZIP... 📥")
