@@ -41,8 +41,6 @@ async def confirm_zip_files(bot, callback_query: CallbackQuery):
     chat_id = callback_query.message.chat.id
     if chat_id in zip_files and zip_files[chat_id]:
         await bot.send_message(chat_id, "Please provide a name for the ZIP file (without extension).")
-    else:
-        await bot.send_message(chat_id, "No files were added to the ZIP list.")
 
 # Callback query handler for canceling ZIP files
 @app.on_callback_query(filters.regex("zip_cancel") & filters.user(ADMIN))
@@ -50,7 +48,6 @@ async def cancel_zip_files(bot, callback_query: CallbackQuery):
     chat_id = callback_query.message.chat.id
     if chat_id in zip_files:
         del zip_files[chat_id]
-    await bot.send_message(chat_id, "❌ ZIP creation canceled.")
 
 # Handler for getting ZIP name and creating the ZIP file
 @app.on_message(filters.private & filters.text & filters.user(ADMIN))
