@@ -86,6 +86,3 @@ async def create_zip(bot: Client, msg: Message, zip_name: str):
     finally:
         del zip_files[chat_id]
         await sts.delete()
-
-# Run the client
-app.run()
