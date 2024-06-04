@@ -21,36 +21,45 @@ async def receive_video(bot, msg: Message):
     chat_id = msg.chat.id
     video = msg.video
     if video:
-        await msg.reply_text("📥 Video received. Converting to MP3...")
-        sts = await msg.reply_text("🔄 Converting...")
-        c_time = time.time()
-        downloaded = await bot.download_media(
-            video,
-            progress=progress_message,
-            progress_args=("📥 Downloading...", sts, c_time)
-        )
-        mp3_path = os.path.join(DOWNLOAD_LOCATION, f"{video.file_id}.mp3")
-        
         try:
-            video_clip = VideoFileClip(downloaded)
-            audio_clip = video_clip.audio
-            audio_clip.write_audiofile(mp3_path)
-            audio_clip.close()
-            video_clip.close()
+            await msg.reply_text("📥 Video received. Converting to MP3...")
+            sts = await msg.reply_text("🔄 Converting...")
+            c_time = time.time()
+            downloaded = await bot.download_media(
+                video,
+                progress=progress_message,
+                progress_args=("📥 Downloading...", sts, c_time)
+            )
+            mp3_path = os.path.join(DOWNLOAD_LOCATION, f"{video.file_id}.mp3")
+
+            try:
+                video_clip = VideoFileClip(downloaded)
+                audio_clip = video_clip.audio
+                audio_clip.write_audiofile(mp3_path)
+                audio_clip.close()
+                video_clip.close()
+            except Exception as e:
+                await sts.edit(f"❌ Error during conversion: {e}")
+                return
+
+            filesize = humanbytes(os.path.getsize(mp3_path))
+            await sts.edit("🚀 Uploading MP3 file... 📤")
+            c_time = time.time()
+            try:
+                await bot.send_audio(
+                    chat_id,
+                    audio=mp3_path,
+                    caption=f"🎵 Converted MP3nn💽 Size: {filesize}",
+                    progress=progress_message,
+                    progress_args=("🚀 Uploading MP3 file...", sts, c_time)
+                )
+            except Exception as e:
+                await sts.edit(f"❌ Error during upload: {e}")
+                return
+
+            os.remove(downloaded)
+            os.remove(mp3_path)
+            await sts.delete()
+            await msg.reply_text("✅ MP3 file converted and uploaded successfully!")
         except Exception as e:
-            return await sts.edit(f"❌ Error during conversion: {e}")
-        
-        filesize = humanbytes(os.path.getsize(mp3_path))
-        await sts.edit("🚀 Uploading MP3 file... 📤")
-        c_time = time.time()
-        await bot.send_audio(
-            chat_id,
-            audio=mp3_path,
-            caption=f"🎵 Converted MP3nn💽 Size: {filesize}",
-            progress=progress_message,
-            progress_args=("🚀 Uploading MP3 file...", sts, c_time)
-        )
-        
-        os.remove(downloaded)
-        os.remove(mp3_path)
-        await sts.delete()
+            print(f"❌ Error: {e}")
