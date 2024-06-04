@@ -1,6 +1,7 @@
 import os
 import time
 from pyrogram import Client, filters
+from pyrogram.types import Message
 from config import DOWNLOAD_LOCATION, ADMIN, CAPTION
 from main.utils import progress_message, humanbytes
 from moviepy.editor import VideoFileClip
@@ -9,7 +10,7 @@ app = Client("video_to_mp3_bot")
 
 # /convert command handler
 @app.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
-async def convert_to_mp3(bot, msg):
+async def convert_to_mp3(bot, msg: Message):
     await msg.reply_text("🔄 Please send the video file you want to convert to MP3.")
 
 # Handler for receiving the video file
