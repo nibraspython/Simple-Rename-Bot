@@ -1,4 +1,3 @@
-import time
 import os
 import zipfile
 from pyrogram import Client, filters
@@ -6,9 +5,14 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQ
 from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
 from main.utils import progress_message, humanbytes
 
+# Initialize Pyrogram client
+app = Client("zip_bot")
+
+# Dictionary to store files for zipping
 zip_files = {}
 
-@Client.on_message(filters.private & filters.command("zip") & filters.user(ADMIN))
+# /zip command handler
+@app.on_message(filters.private & filters.command("zip") & filters.user(ADMIN))
 async def zip_files_handler(bot, msg: Message):
     chat_id = msg.chat.id
     zip_files[chat_id] = []
@@ -23,14 +27,16 @@ async def zip_files_handler(bot, msg: Message):
         reply_markup=confirm_keyboard
     )
 
-@Client.on_message(filters.private & filters.document & filters.user(ADMIN))
+# Handler for adding files to the ZIP list
+@app.on_message(filters.private & (filters.document | filters.video | filters.audio) & filters.user(ADMIN))
 async def add_file_to_zip(bot, msg: Message):
     chat_id = msg.chat.id
     if chat_id in zip_files:
         zip_files[chat_id].append(msg)
         await msg.reply_text(f"✅ File added to ZIP list. Total files: {len(zip_files[chat_id])}")
 
-@Client.on_callback_query(filters.regex("zip_confirm") & filters.user(ADMIN))
+# Callback query handler for confirming ZIP files
+@app.on_callback_query(filters.regex("zip_confirm") & filters.user(ADMIN))
 async def confirm_zip_files(bot, callback_query: CallbackQuery):
     chat_id = callback_query.message.chat.id
     if chat_id in zip_files and zip_files[chat_id]:
@@ -38,20 +44,23 @@ async def confirm_zip_files(bot, callback_query: CallbackQuery):
     else:
         await bot.send_message(chat_id, "No files were added to the ZIP list.")
 
-@Client.on_callback_query(filters.regex("zip_cancel") & filters.user(ADMIN))
+# Callback query handler for canceling ZIP files
+@app.on_callback_query(filters.regex("zip_cancel") & filters.user(ADMIN))
 async def cancel_zip_files(bot, callback_query: CallbackQuery):
     chat_id = callback_query.message.chat.id
     if chat_id in zip_files:
         del zip_files[chat_id]
     await bot.send_message(chat_id, "❌ ZIP creation canceled.")
 
-@Client.on_message(filters.private & filters.text & filters.user(ADMIN))
+# Handler for getting ZIP name and creating the ZIP file
+@app.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def get_zip_name(bot, msg: Message):
     chat_id = msg.chat.id
     if chat_id in zip_files and zip_files[chat_id]:
         zip_name = msg.text
         await create_zip(bot, msg, zip_name)
 
+# Function to create ZIP file
 async def create_zip(bot: Client, msg: Message, zip_name: str):
     chat_id = msg.chat.id
     zip_path = os.path.join(DOWNLOAD_LOCATION, f"{zip_name}.zip")
@@ -77,3 +86,6 @@ async def create_zip(bot: Client, msg: Message, zip_name: str):
     finally:
         del zip_files[chat_id]
         await sts.delete()
+
+# Run the client
+app.run()
