@@ -12,7 +12,7 @@ app = Client("zip_bot")
 zip_files = {}
 
 # /zip command handler
-@app.on_message(filters.private & filters.command("zip") & filters.user(ADMIN))
+@Client.on_message(filters.private & filters.command("rename") & filters.user(ADMIN))
 async def zip_files_handler(bot, msg: Message):
     chat_id = msg.chat.id
     zip_files[chat_id] = []
