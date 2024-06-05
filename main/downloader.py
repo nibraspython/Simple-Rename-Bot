@@ -23,13 +23,14 @@ async def youtube_link_handler(bot, msg):
     likes = yt.rating  # Note: YouTube API might require a different way to fetch likes
     thumb_url = yt.thumbnail_url
 
-    # Generate resolution options
-    streams = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution')
+    # Combine progressive and adaptive streams
+    streams = yt.streams.filter(file_extension='mp4').order_by('resolution')
     buttons = []
     for stream in streams:
-        res = stream.resolution
-        size = humanbytes(stream.filesize)
-        buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"yt_{stream.itag}_{url}")])
+        if stream.resolution:  # Only include streams with a resolution
+            res = stream.resolution
+            size = humanbytes(stream.filesize) if stream.filesize else "Unknown size"
+            buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"yt_{stream.itag}_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
 
@@ -77,3 +78,16 @@ async def yt_callback_handler(bot, query):
     if thumb_path:
         os.remove(thumb_path)
     await sts.delete()
+
+# Helper function to format file sizes
+def humanbytes(size):
+    # Returns the human-readable file size
+    if not size:
+        return "0 B"
+    power = 2**10
+    n = 0
+    power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
+    while size > power:
+        size /= power
+        n += 1
+    return f"{round(size, 2)} {power_labels[n]}B"
