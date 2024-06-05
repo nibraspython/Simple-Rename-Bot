@@ -6,7 +6,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pytube import YouTube
 from moviepy.editor import VideoFileClip
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import progress_message, humanbytes
+from main.utils import humanbytes
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -53,7 +53,7 @@ async def download_video(url, filename, sts):
                 bytes_downloaded += len(chunk)
                 progress = f"Downloaded {humanbytes(bytes_downloaded)} of {humanbytes(total_size)} ({(bytes_downloaded / total_size) * 100:.2f}%)"
                 try:
-                    await bot.edit_message_text(msg.chat.id, sts.message_id, text=progress)
+                    await sts.edit_text(progress)
                 except:
                     pass
 
