@@ -28,7 +28,7 @@ async def youtube_link_handler(bot, msg):
     for stream in streams:
         res = stream.resolution
         size = humanbytes(stream.filesize)
-        buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"yt_{stream.itag}")])
+        buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"yt_{stream.itag}_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
 
@@ -36,10 +36,13 @@ async def youtube_link_handler(bot, msg):
 
     await bot.send_photo(msg.chat.id, thumb_url, caption=caption, reply_markup=markup)
 
-@Client.on_callback_query(filters.regex(r'^yt_\d+$'))
+@Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
-    itag = int(query.data.split('_')[1])
-    yt = YouTube(query.message.text.split("\n")[0].replace("**Title:** ", ""))
+    data = query.data.split('_')
+    itag = int(data[1])
+    url = '_'.join(data[2:])  # Join the rest of the data as URL in case it contains underscores
+
+    yt = YouTube(url)
     stream = yt.streams.get_by_itag(itag)
 
     sts = await query.message.reply_text("🔄 Downloading video.....📥")
