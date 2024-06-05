@@ -38,6 +38,22 @@ async def youtube_link_handler(bot, msg):
 
     await bot.send_photo(msg.chat.id, thumb_url, caption=caption, reply_markup=markup)
 
+def download_progress_callback(stream, chunk, bytes_remaining, message, start_time):
+    total_size = stream.filesize
+    bytes_downloaded = total_size - bytes_remaining
+    percentage = (bytes_downloaded / total_size) * 100
+    elapsed_time = time.time() - start_time
+    speed = bytes_downloaded / elapsed_time
+    estimated_total_time = total_size / speed
+    time_remaining = estimated_total_time - elapsed_time
+
+    progress_message = (
+        f"**Download Progress:** {humanbytes(bytes_downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
+        f"**Speed:** {humanbytes(speed)}/s\n"
+        f"**Estimated Time Remaining:** {time_remaining:.2f} seconds"
+    )
+    message.edit_text(progress_message)
+
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
@@ -49,7 +65,14 @@ async def yt_callback_handler(bot, query):
 
     sts = await query.message.reply_text("🔄 Downloading video.....📥")
     c_time = time.time()
-    downloaded = stream.download(output_path=DOWNLOAD_LOCATION)
+    
+    # Define the progress callback function
+    def progress_callback(stream, chunk, bytes_remaining):
+        download_progress_callback(stream, chunk, bytes_remaining, sts, c_time)
+    
+    # Download the video with the progress callback
+    downloaded = stream.download(output_path=DOWNLOAD_LOCATION, on_progress_callback=progress_callback)
+    
     duration = int(VideoFileClip(downloaded).duration)
     filesize = humanbytes(os.path.getsize(downloaded))
 
