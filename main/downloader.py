@@ -1,12 +1,12 @@
 import os
 import time
 import requests
-from pyrogram import Client, filters, enums
+from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pytube import YouTube
 from moviepy.editor import VideoFileClip
 from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
-from main.utils import progress_message, humanbytes
+from main.utils import progress_bar_style, humanbytes
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -38,21 +38,29 @@ async def youtube_link_handler(bot, msg):
 
     await bot.send_photo(msg.chat.id, thumb_url, caption=caption, reply_markup=markup)
 
-def download_progress_callback(stream, chunk, bytes_remaining, message, start_time):
+def download_video(url, filename):
+    yt = YouTube(url)
+    stream = yt.streams.filter(file_extension='mp4').order_by('resolution').first()
     total_size = stream.filesize
-    bytes_downloaded = total_size - bytes_remaining
-    percentage = (bytes_downloaded / total_size) * 100
-    elapsed_time = time.time() - start_time
-    speed = bytes_downloaded / elapsed_time
-    estimated_total_time = total_size / speed
-    time_remaining = estimated_total_time - elapsed_time
+    bytes_downloaded = 0
 
-    progress_message = (
-        f"**Downloading Progress:** {bytes_downloaded} of {total_size} ({percentage:.2f}%)\n"
-        f"**Speed:** {humanbytes(speed)}/s\n"
-        f"**Time Remaining:** {time_remaining:.2f} seconds"
-    )
-    message.edit_text(progress_message)
+    # Open the video file for writing in binary mode
+    with open(filename, 'wb') as video_file, progress_bar_style(
+            desc=f"Downloading {filename}",
+            total=total_size,
+            unit='B',
+            unit_scale=True,
+            unit_divisor=1024,
+            ascii=True,
+            miniters=1,
+            ncols=100
+    ) as progress_bar:
+        # Stream the video file from the internet and write to local file
+        for chunk in stream.stream().iter_content(chunk_size=1024):
+            if chunk:
+                video_file.write(chunk)
+                bytes_downloaded += len(chunk)
+                progress_bar.update(len(chunk))
 
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
@@ -60,25 +68,20 @@ async def yt_callback_handler(bot, query):
     itag = int(data[1])
     url = '_'.join(data[2:])  # Join the rest of the data as URL in case it contains underscores
 
-    yt = YouTube(url)
-    stream = yt.streams.get_by_itag(itag)
-
     sts = await query.message.reply_text("🔄 Downloading video.....📥")
     c_time = time.time()
+    filename = f"{DOWNLOAD_LOCATION}/video.mp4"
+
+    # Download the video
+    download_video(url, filename)
     
-    # Define the progress callback function
-    def progress_callback(stream, chunk, bytes_remaining):
-        download_progress_callback(stream, chunk, bytes_remaining, sts, c_time)
-    
-    # Download the video with the progress callback
-    downloaded = stream.download(output_path=DOWNLOAD_LOCATION, on_progress_callback=progress_callback)
-    
-    duration = int(VideoFileClip(downloaded).duration)
-    filesize = humanbytes(os.path.getsize(downloaded))
+    duration = int(VideoFileClip(filename).duration)
+    filesize = humanbytes(os.path.getsize(filename))
 
     # Download the thumbnail
+    yt = YouTube(url)
     thumb_url = yt.thumbnail_url
-    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
+    thumb_path = f"{DOWNLOAD_LOCATION}/thumbnail.jpg"
     response = requests.get(thumb_url)
     if response.status_code == 200:
         with open(thumb_path, 'wb') as thumb_file:
@@ -92,25 +95,12 @@ async def yt_callback_handler(bot, query):
     c_time = time.time()
 
     try:
-        await bot.send_video(query.message.chat.id, video=downloaded, thumb=thumb_path, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", sts, c_time))
+        await bot.send_video(query.message.chat.id, video=filename, thumb=thumb_path, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", sts, c_time))
     except Exception as e:
         return await sts.edit(f"Error: {e}")
 
     # Clean up downloaded files
-    os.remove(downloaded)
+    os.remove(filename)
     if thumb_path:
         os.remove(thumb_path)
     await sts.delete()
-
-# Helper function to format file sizes
-def humanbytes(size):
-    # Returns the human-readable file size
-    if not size:
-        return "0 B"
-    power = 2**10
-    n = 0
-    power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
-    while size > power:
-        size /= power
-        n += 1
-    return f"{round(size, 2)} {power_labels[n]}B"
