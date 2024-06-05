@@ -1,5 +1,4 @@
 import os
-import time
 import requests
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -47,7 +46,8 @@ async def download_video(url, filename, sts):
     # Open the video file for writing in binary mode
     with open(filename, 'wb') as video_file:
         # Stream the video file from the internet and write to local file
-        for chunk in stream.stream().iter_content(chunk_size=1024):
+        response = requests.get(stream.url, stream=True)
+        for chunk in response.iter_content(chunk_size=1024):
             if chunk:
                 video_file.write(chunk)
                 bytes_downloaded += len(chunk)
