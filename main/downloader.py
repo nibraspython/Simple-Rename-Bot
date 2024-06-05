@@ -38,7 +38,7 @@ async def youtube_link_handler(bot, msg):
 
     await bot.send_photo(msg.chat.id, thumb_url, caption=caption, reply_markup=markup)
 
-def download_video(url, filename):
+async def download_video(url, filename, sts):
     yt = YouTube(url)
     stream = yt.streams.filter(file_extension='mp4').order_by('resolution').first()
     total_size = stream.filesize
@@ -68,7 +68,7 @@ async def yt_callback_handler(bot, query):
     filename = f"{DOWNLOAD_LOCATION}/video.mp4"
 
     # Download the video
-    download_video(url, filename)
+    await download_video(url, filename, sts)
     
     duration = int(VideoFileClip(filename).duration)
     filesize = humanbytes(os.path.getsize(filename))
