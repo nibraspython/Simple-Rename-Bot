@@ -1,44 +1,18 @@
 import os
 import time
 import requests
-from pyrogram import Client, filters, enums
+from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pytube import YouTube
 from moviepy.editor import VideoFileClip
 from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
-from main.utils import progress_message, humanbytes
+from main.utils import humanbytes, progress_bar
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 Please send your YouTube links to download.")
 
-@Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
-async def youtube_link_handler(bot, msg):
-    url = msg.text.strip()
-    yt = YouTube(url)
-
-    # Fetch video details
-    title = yt.title
-    views = yt.views
-    likes = yt.rating  # Note: YouTube API might require a different way to fetch likes
-    thumb_url = yt.thumbnail_url
-
-    # Combine progressive and adaptive streams
-    streams = yt.streams.filter(file_extension='mp4').order_by('resolution')
-    buttons = []
-    for stream in streams:
-        if stream.resolution:  # Only include streams with a resolution
-            res = stream.resolution
-            size = humanbytes(stream.filesize) if stream.filesize else "Unknown size"
-            buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"yt_{stream.itag}_{url}")])
-
-    markup = InlineKeyboardMarkup(buttons)
-
-    caption = f"**Title:** {title}\n**Views:** {views}\n**Likes:** {likes}\n\nSelect your resolution:"
-
-    await bot.send_photo(msg.chat.id, thumb_url, caption=caption, reply_markup=markup)
-
-def download_progress_callback(stream, chunk, bytes_remaining, message, start_time):
+async def download_progress_callback(stream, chunk, bytes_remaining, sts, start_time):
     total_size = stream.filesize
     bytes_downloaded = total_size - bytes_remaining
     percentage = (bytes_downloaded / total_size) * 100
@@ -50,9 +24,10 @@ def download_progress_callback(stream, chunk, bytes_remaining, message, start_ti
     progress_message = (
         f"**Download Progress:** {humanbytes(bytes_downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
         f"**Speed:** {humanbytes(speed)}/s\n"
-        f"**Estimated Time Remaining:** {time_remaining:.2f} seconds"
+        f"**Estimated Time Remaining:** {time_remaining:.2f} seconds\n"
+        f"{progress_bar(percentage)}"  # Include progress bar
     )
-    message.edit_text(progress_message)
+    await sts.edit_text(progress_message)
 
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
@@ -74,7 +49,7 @@ async def yt_callback_handler(bot, query):
     downloaded = stream.download(output_path=DOWNLOAD_LOCATION, on_progress_callback=progress_callback)
     
     duration = int(VideoFileClip(downloaded).duration)
-    filesize = humanbytes(os.path.getsize(downloaded))
+    filesize = os.path.getsize(downloaded)
 
     # Download the thumbnail
     thumb_url = yt.thumbnail_url
@@ -86,13 +61,22 @@ async def yt_callback_handler(bot, query):
     else:
         thumb_path = None
 
-    cap = f"**{yt.title}**\n\n💽 Size: {filesize}\n🕒 Duration: {duration} seconds"
+    cap = f"**{yt.title}**\n\n💽 Size: {humanbytes(filesize)}\n🕒 Duration: {duration} seconds"
 
     await sts.edit("🚀 Uploading started..... 📤")
     c_time = time.time()
 
     try:
-        await bot.send_video(query.message.chat.id, video=downloaded, thumb=thumb_path, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", sts, c_time))
+        # Upload the video with the progress callback
+        await bot.send_video(
+            query.message.chat.id,
+            video=downloaded,
+            thumb=thumb_path,
+            caption=cap,
+            duration=duration,
+            progress=upload_progress_callback,
+            progress_args=(filesize, sts, c_time)  # Pass additional arguments
+        )
     except Exception as e:
         return await sts.edit(f"Error: {e}")
 
@@ -101,16 +85,3 @@ async def yt_callback_handler(bot, query):
     if thumb_path:
         os.remove(thumb_path)
     await sts.delete()
-
-# Helper function to format file sizes
-def humanbytes(size):
-    # Returns the human-readable file size
-    if not size:
-        return "0 B"
-    power = 2**10
-    n = 0
-    power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
-    while size > power:
-        size /= power
-        n += 1
-    return f"{round(size, 2)} {power_labels[n]}B"
