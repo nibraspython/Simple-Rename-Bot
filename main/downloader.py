@@ -1,83 +1,62 @@
 import os
 import time
-import logging
-from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, Message
+from pyrogram import Client, filters, enums
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pytube import YouTube
-from config import DOWNLOAD_LOCATION, ADMIN
+from moviepy.editor import VideoFileClip
+from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
 from main.utils import progress_message, humanbytes
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+@Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
+async def ytdl(bot, msg):
+    await msg.reply_text("🎥 Please send your YouTube links to download.")
 
-# Initialize Pyrogram client
-app = Client("your_renamer_bot")
+@Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
+async def youtube_link_handler(bot, msg):
+    url = msg.text.strip()
+    yt = YouTube(url)
 
-# /ytdl command handler
-@app.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
-async def youtube_download(bot, msg):
-    chat_id = msg.chat.id
-    logging.info(f"Received /ytdl command from chat_id: {chat_id}")
-    await msg.reply_text("🔄 Please send your YouTube video link to download.")
+    # Fetch video details
+    title = yt.title
+    views = yt.views
+    likes = yt.rating  # Note: YouTube API might require a different way to fetch likes
+    thumb_url = yt.thumbnail_url
 
-# Handler for receiving the YouTube video link
-@app.on_message(filters.private & filters.text & filters.user(ADMIN))
-async def receive_youtube_link(bot, msg: Message):
-    chat_id = msg.chat.id
-    link = msg.text.strip()
-    logging.info(f"Received YouTube link: {link} from chat_id: {chat_id}")
+    # Generate resolution options
+    streams = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution')
+    buttons = []
+    for stream in streams:
+        res = stream.resolution
+        size = humanbytes(stream.filesize)
+        buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"yt_{stream.itag}")])
+
+    markup = InlineKeyboardMarkup(buttons)
+
+    caption = f"**Title:** {title}\n**Views:** {views}\n**Likes:** {likes}\n\nSelect your resolution:"
+
+    await bot.send_photo(msg.chat.id, thumb_url, caption=caption, reply_markup=markup)
+
+@Client.on_callback_query(filters.regex(r'^yt_\d+$'))
+async def yt_callback_handler(bot, query):
+    itag = int(query.data.split('_')[1])
+    yt = YouTube(query.message.text.split("\n")[0].replace("**Title:** ", ""))
+    stream = yt.streams.get_by_itag(itag)
+
+    sts = await query.message.reply_text("🔄 Downloading video.....📥")
+    c_time = time.time()
+    downloaded = stream.download(output_path=DOWNLOAD_LOCATION)
+    duration = int(VideoFileClip(downloaded).duration)
+    filesize = humanbytes(os.path.getsize(downloaded))
+
+    cap = f"**{yt.title}**\n\n💽 Size: {filesize}\n🕒 Duration: {duration} seconds"
+
+    await sts.edit("🚀 Uploading started..... 📤")
+    c_time = time.time()
+
     try:
-        yt = YouTube(link)
-        title = yt.title
-        views = yt.views
-        likes = yt.likes
-        filesize = yt.streams.get_highest_resolution().filesize
-
-        caption = f"🎥 YouTube Video\n\n📺 Title: {title}\n👀 Views: {views}\n👍 Likes: {likes}\n💽 Size: {humanbytes(filesize)}"
-
-        await msg.reply_photo(
-            photo=yt.thumbnail_url,
-            caption=caption,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("Download", callback_data=f"download_{link}")]
-            ])
-        )
-        logging.info(f"Sent video details for: {link}")
+        await bot.send_video(query.message.chat.id, video=downloaded, thumb=yt.thumbnail_url, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", sts, c_time))
     except Exception as e:
-        logging.error(f"Error processing YouTube link: {e}")
-        await msg.reply_text(f"❌ Error: {e}")
+        return await sts.edit(f"Error: {e}")
 
-# Callback query handler for download process
-@app.on_callback_query(filters.regex(r"download_") & filters.user(ADMIN))
-async def initiate_download(bot, query: CallbackQuery):
-    chat_id = query.message.chat.id
-    link = query.data.split("_", 1)[1]
-    logging.info(f"Initiating download for link: {link} from chat_id: {chat_id}")
-    try:
-        yt = YouTube(link)
-        stream = yt.streams.get_highest_resolution()
-        await query.message.reply_text("🔄 Downloading video...")
-        sts = await query.message.reply_text("📥 Downloading...")
-        c_time = time.time()
-        try:
-            downloaded = stream.download(output_path=DOWNLOAD_LOCATION)
-            filesize = humanbytes(os.path.getsize(downloaded))
-            await sts.edit("🚀 Uploading video... 📤")
-            c_time = time.time()
-            await bot.send_video(
-                chat_id,
-                video=downloaded,
-                thumb=yt.thumbnail_url,
-                caption=f"🎥 YouTube Video\n\n📺 Title: {yt.title}\n👀 Views: {yt.views}\n👍 Likes: {yt.likes}\n💽 Size: {filesize}",
-                progress=progress_message,
-                progress_args=("🚀 Uploading video...", sts, c_time)
-            )
-        except Exception as e:
-            logging.error(f"Error during download/upload: {e}")
-            await sts.edit(f"❌ Error during download/upload: {e}")
-        finally:
-            os.remove(downloaded)
-            await sts.delete()
-    except Exception as e:
-        logging.error(f"Error initiating download: {e}")
-        await query.message.reply_text(f"❌ Error: {e}")
+    os.remove(downloaded)
+    await sts.delete()
