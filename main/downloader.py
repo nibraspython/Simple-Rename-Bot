@@ -1,11 +1,12 @@
 import os
+import time
 import requests
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pytube import YouTube
 from moviepy.editor import VideoFileClip
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import humanbytes
+from main.utils import progress_message, humanbytes
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -47,15 +48,12 @@ async def download_video(url, filename, sts):
     with open(filename, 'wb') as video_file:
         # Stream the video file from the internet and write to local file
         response = requests.get(stream.url, stream=True)
+        start_time = time.time()
         for chunk in response.iter_content(chunk_size=1024):
             if chunk:
                 video_file.write(chunk)
                 bytes_downloaded += len(chunk)
-                progress = f"Downloaded {humanbytes(bytes_downloaded)} of {humanbytes(total_size)} ({(bytes_downloaded / total_size) * 100:.2f}%)"
-                try:
-                    await sts.edit_text(progress)
-                except:
-                    pass
+                await progress_message(bytes_downloaded, total_size, "Downloading...", sts, start_time)
 
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
@@ -78,7 +76,7 @@ async def yt_callback_handler(bot, query):
     await sts.edit("🚀 Uploading started..... 📤")
 
     try:
-        await bot.send_video(query.message.chat.id, video=filename, caption=cap, duration=duration)
+        await bot.send_video(query.message.chat.id, video=filename, caption=cap, duration=duration, progress=progress_message, progress_args=("Uploading...", sts, time.time()))
     except Exception as e:
         return await sts.edit(f"Error: {e}")
 
