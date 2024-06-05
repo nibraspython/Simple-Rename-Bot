@@ -1,5 +1,6 @@
 import os
 import time
+import requests
 from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pytube import YouTube
@@ -51,15 +52,28 @@ async def yt_callback_handler(bot, query):
     duration = int(VideoFileClip(downloaded).duration)
     filesize = humanbytes(os.path.getsize(downloaded))
 
+    # Download the thumbnail
+    thumb_url = yt.thumbnail_url
+    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
+    response = requests.get(thumb_url)
+    if response.status_code == 200:
+        with open(thumb_path, 'wb') as thumb_file:
+            thumb_file.write(response.content)
+    else:
+        thumb_path = None
+
     cap = f"**{yt.title}**\n\n💽 Size: {filesize}\n🕒 Duration: {duration} seconds"
 
     await sts.edit("🚀 Uploading started..... 📤")
     c_time = time.time()
 
     try:
-        await bot.send_video(query.message.chat.id, video=downloaded, thumb=yt.thumbnail_url, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", sts, c_time))
+        await bot.send_video(query.message.chat.id, video=downloaded, thumb=thumb_path, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", sts, c_time))
     except Exception as e:
         return await sts.edit(f"Error: {e}")
 
+    # Clean up downloaded files
     os.remove(downloaded)
+    if thumb_path:
+        os.remove(thumb_path)
     await sts.delete()
