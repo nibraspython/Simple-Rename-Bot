@@ -31,11 +31,16 @@ async def youtube_link_handler(bot, msg):
         if stream.resolution:  # Only include streams with a resolution
             res = stream.resolution
             size = humanbytes(stream.filesize) if stream.filesize else "Unknown size"
-            buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"yt_{stream.itag}_{url}")])
+            buttons.append([InlineKeyboardButton(f"📹 {res} - {size}", callback_data=f"yt_{stream.itag}_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
 
-    caption = f"**Title:** {title}\n**Views:** {views}\n**Likes:** {likes}\n\nSelect your resolution:"
+    caption = (
+        f"**🎬 Title:** {title}\n"
+        f"**👀 Views:** {views}\n"
+        f"**👍 Likes:** {likes}\n\n"
+        f"📥 **Select your resolution:**"
+    )
 
     await bot.send_photo(msg.chat.id, thumb_url, caption=caption, reply_markup=markup)
 
@@ -49,9 +54,9 @@ def download_progress_callback(stream, chunk, bytes_remaining, message, start_ti
     time_remaining = estimated_total_time - elapsed_time
 
     progress_message = (
-        f"Download Progress: {bytes_downloaded} of {total_size} ({percentage:.2f}%)\n"
-        f"Speed: {humanbytes(speed)}/s\n"
-        f"Estimated Time Remaining: {time_remaining:.2f} seconds"
+        f"⬇️ **Download Progress:** {bytes_downloaded} of {total_size} ({percentage:.2f}%)\n"
+        f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
+        f"⏳ **Estimated Time Remaining:** {time_remaining:.2f} seconds"
     )
     message.edit_text(progress_message)
 
@@ -65,9 +70,9 @@ async def yt_callback_handler(bot, query):
     stream = yt.streams.get_by_itag(itag)
 
     # Edit the original message to remove resolution buttons
-    await query.message.edit_text("🔄 Downloading video.....📥")
+    await query.message.edit_text("🔄 **Downloading video...** 📥")
 
-    sts = await query.message.reply_text("🔄 Downloading video.....📥")
+    sts = await query.message.reply_text("🔄 **Downloading video...** 📥")
     c_time = time.time()
 
     # Register the progress callback
@@ -106,15 +111,19 @@ async def yt_callback_handler(bot, query):
     else:
         thumb_path = None
 
-    cap = f"**{yt.title}**\n\n💽 Size: {filesize}\n🕒 Duration: {duration} seconds"
+    cap = (
+        f"**🎬 {yt.title}**\n\n"
+        f"💽 **Size:** {filesize}\n"
+        f"🕒 **Duration:** {duration} seconds"
+    )
 
-    await sts.edit("🚀 Uploading started..... 📤")
+    await sts.edit("🚀 **Uploading started...** 📤")
     c_time = time.time()
 
     try:
-        await bot.send_video(query.message.chat.id, video=downloaded, thumb=thumb_path, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", sts, c_time))
+        await bot.send_video(query.message.chat.id, video=downloaded, thumb=thumb_path, caption=cap, duration=duration, progress=progress_message, progress_args=("📤 **Upload Started...** 🙏 **Thanks To All Who Supported** ❤️", sts, c_time))
     except Exception as e:
-        return await sts.edit(f"Error: {e}")
+        return await sts.edit(f"❌ **Error:** {e}")
 
     # Clean up downloaded files
     os.remove(downloaded)
