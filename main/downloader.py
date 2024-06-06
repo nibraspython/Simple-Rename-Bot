@@ -5,6 +5,7 @@ from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pytube import YouTube
 from moviepy.editor import VideoFileClip
+from PIL import Image
 from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
 from main.utils import progress_message, humanbytes
 
@@ -72,7 +73,9 @@ async def yt_callback_handler(bot, query):
     # Download the video
     downloaded = stream.download(output_path=DOWNLOAD_LOCATION)
     
-    duration = int(VideoFileClip(downloaded).duration)
+    video = VideoFileClip(downloaded)
+    duration = int(video.duration)
+    video_width, video_height = video.size
     filesize = humanbytes(os.path.getsize(downloaded))
 
     # Download the thumbnail
@@ -82,6 +85,11 @@ async def yt_callback_handler(bot, query):
     if response.status_code == 200:
         with open(thumb_path, 'wb') as thumb_file:
             thumb_file.write(response.content)
+        
+        # Resize the thumbnail to match the video's aspect ratio and dimensions
+        with Image.open(thumb_path) as img:
+            img = img.resize((video_width, video_height), Image.ANTIALIAS)
+            img.save(thumb_path)
     else:
         thumb_path = None
 
