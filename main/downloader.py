@@ -64,6 +64,9 @@ async def yt_callback_handler(bot, query):
     yt = YouTube(url)
     stream = yt.streams.get_by_itag(itag)
 
+    # Edit the original message to remove resolution buttons
+    await query.message.edit_text("🔄 Downloading video.....📥")
+
     sts = await query.message.reply_text("🔄 Downloading video.....📥")
     c_time = time.time()
 
