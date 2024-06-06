@@ -65,13 +65,12 @@ async def yt_callback_handler(bot, query):
 
     sts = await query.message.reply_text("🔄 Downloading video.....📥")
     c_time = time.time()
+
+    # Register the progress callback
+    yt.register_on_progress_callback(lambda stream, chunk, bytes_remaining: download_progress_callback(stream, chunk, bytes_remaining, sts, c_time))
     
-    # Define the progress callback function
-    def progress_callback(stream, chunk, bytes_remaining):
-        download_progress_callback(stream, chunk, bytes_remaining, sts, c_time)
-    
-    # Download the video with the progress callback
-    downloaded = stream.download(output_path=DOWNLOAD_LOCATION, on_progress_callback=progress_callback)
+    # Download the video
+    downloaded = stream.download(output_path=DOWNLOAD_LOCATION)
     
     duration = int(VideoFileClip(downloaded).duration)
     filesize = humanbytes(os.path.getsize(downloaded))
