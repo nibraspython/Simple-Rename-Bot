@@ -16,6 +16,10 @@ async def ytdl(bot, msg):
 @Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
+    
+    # Send processing message
+    processing_message = await msg.reply_text("🔄 **Processing your request...**")
+
     yt = YouTube(url)
 
     # Fetch video details
@@ -42,7 +46,8 @@ async def youtube_link_handler(bot, msg):
         f"📥 **Select your resolution:**"
     )
 
-    await bot.send_photo(msg.chat.id, thumb_url, caption=caption, reply_markup=markup)
+    # Edit the processing message to show the available resolutions
+    await processing_message.edit_text(caption, reply_markup=markup)
 
 def download_progress_callback(stream, chunk, bytes_remaining, message, start_time):
     total_size = stream.filesize
