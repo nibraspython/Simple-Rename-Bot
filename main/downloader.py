@@ -86,9 +86,19 @@ async def yt_callback_handler(bot, query):
         with open(thumb_path, 'wb') as thumb_file:
             thumb_file.write(response.content)
         
-        # Resize the thumbnail to match the video's aspect ratio and dimensions
+        # Resize and crop the thumbnail to match the video's aspect ratio and dimensions
         with Image.open(thumb_path) as img:
-            img = img.resize((video_width, video_height), Image.ANTIALIAS)
+            img_width, img_height = img.size
+            # Calculate the scale factor to cover the video dimensions
+            scale_factor = max(video_width / img_width, video_height / img_height)
+            new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
+            img = img.resize(new_size, Image.ANTIALIAS)
+            # Crop the image to the video dimensions
+            left = (img.width - video_width) / 2
+            top = (img.height - video_height) / 2
+            right = (img.width + video_width) / 2
+            bottom = (img.height + video_height) / 2
+            img = img.crop((left, top, right, bottom))
             img.save(thumb_path)
     else:
         thumb_path = None
