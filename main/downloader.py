@@ -69,6 +69,10 @@ async def yt_callback_handler(bot, query):
     yt = YouTube(url)
     stream = yt.streams.get_by_itag(itag)
 
+    if not stream:
+        await query.message.edit_text("❌ **Error:** Selected resolution not available. Please try again.")
+        return
+
     # Edit the original message to remove resolution buttons
     await query.message.edit_text("🔄 **Downloading video...** 📥")
 
@@ -78,8 +82,11 @@ async def yt_callback_handler(bot, query):
     # Register the progress callback
     yt.register_on_progress_callback(lambda stream, chunk, bytes_remaining: download_progress_callback(stream, chunk, bytes_remaining, sts, c_time))
     
-    # Download the video
-    downloaded = stream.download(output_path=DOWNLOAD_LOCATION)
+    try:
+        # Download the video
+        downloaded = stream.download(output_path=DOWNLOAD_LOCATION)
+    except Exception as e:
+        return await sts.edit(f"❌ **Error during download:** {e}")
     
     video = VideoFileClip(downloaded)
     duration = int(video.duration)
