@@ -3,3 +3,4 @@ Tgcrypto
 moviepy
 yt-dlp
 pytube
+pillow
