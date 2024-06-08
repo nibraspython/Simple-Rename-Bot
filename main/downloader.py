@@ -1,9 +1,9 @@
 import os
 import time
 import requests
+import youtube_dl
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from yt_dlp import YoutubeDL
 from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
@@ -36,7 +36,7 @@ async def youtube_link_handler(bot, msg):
         'quiet': True
     }
 
-    with YoutubeDL(ydl_opts) as ydl:
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=False)
         title = info_dict.get('title', 'Unknown Title')
         views = info_dict.get('view_count', 'N/A')
@@ -100,7 +100,7 @@ async def yt_callback_handler(bot, query):
     }
 
     try:
-        with YoutubeDL(ydl_opts) as ydl:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
     except Exception as e:
