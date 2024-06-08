@@ -1,13 +1,13 @@
 import os
 import time
 import requests
-from pyrogram import Client, filters, enums
+from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pytube import YouTube
 from moviepy.editor import VideoFileClip
 from PIL import Image
-from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
-from main.utils import progress_message, humanbytes
+from config import DOWNLOAD_LOCATION, ADMIN
+from main.utils import humanbytes
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -28,14 +28,18 @@ async def youtube_link_handler(bot, msg):
     likes = yt.rating  # Note: YouTube API might require a different way to fetch likes
     thumb_url = yt.thumbnail_url
 
-    # Combine progressive and adaptive streams
-    streams = yt.streams.filter(file_extension='mp4').order_by('resolution')
+    # Get unique resolutions
+    unique_resolutions = set(stream.resolution for stream in yt.streams.filter(file_extension='mp4'))
+
     buttons = []
-    for stream in streams:
-        if stream.resolution:  # Only include streams with a resolution
-            res = stream.resolution
-            size = humanbytes(stream.filesize) if stream.filesize else "Unknown size"
-            buttons.append([InlineKeyboardButton(f"📹 {res} - {size}", callback_data=f"yt_{stream.itag}_{url}")])
+    for resolution in sorted(unique_resolutions, key=lambda x: int(x[:-1]), reverse=True):
+        streams_with_resolution = [stream for stream in yt.streams.filter(file_extension='mp4', resolution=resolution)]
+        if streams_with_resolution:
+            # Sort streams by file size within the same resolution
+            streams_with_resolution.sort(key=lambda x: x.filesize, reverse=True)
+            highest_size_stream = streams_with_resolution[0]
+            size = humanbytes(highest_size_stream.filesize) if highest_size_stream.filesize else "Unknown size"
+            buttons.append([InlineKeyboardButton(f"📹 {resolution} - {size}", callback_data=f"yt_{highest_size_stream.itag}_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
 
@@ -148,20 +152,10 @@ async def yt_callback_handler(bot, query):
         return await sts.edit(f"❌ **Error:** {e}")
 
     # Clean up downloaded files
-    os.remove(downloaded)
-    if thumb_path:
-        os.remove(thumb_path)
-    await sts.delete()
+    os.remove(downloaded
 
-# Helper function to format file sizes
-def humanbytes(size):
-    # Returns the human-readable file size
-    if not size:
-        return "0 B"
-    power = 2**10
-    n = 0
-    power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
-    while size > power:
-        size /= power
-        n += 1
-    return f"{round(size, 2)} {power_labels[n]}B"
+    ) if thumb_path: os.remove(thumb_path) await sts.delete()
+    
+    #Helper function to format file sizes
+    
+    def humanbytes(size): # Returns the human-readable file size if not size: return "0 B" power = 2**10 n = 0 power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'} while size > power: size /= power n += 1 return f"{round(size, 2)} {power_labels[n]}B"
