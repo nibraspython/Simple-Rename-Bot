@@ -44,11 +44,17 @@ async def youtube_link_handler(bot, msg):
         thumb_url = info_dict.get('thumbnail', None)
         formats = info_dict.get('formats', [])
 
-    unique_resolutions = set(f['height'] for f in formats if f['ext'] == 'mp4' and f.get('filesize'))
+    unique_resolutions = set()
+    for f in formats:
+        try:
+            if f['ext'] == 'mp4' and f.get('filesize'):
+                unique_resolutions.add(f['height'])
+        except KeyError:
+            continue
 
     buttons = []
     for resolution in sorted(unique_resolutions, reverse=True):
-        streams_with_resolution = [f for f in formats if f['height'] == resolution and f['ext'] == 'mp4']
+        streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
         if streams_with_resolution:
             streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x['filesize'], reverse=True)
             highest_size_stream = streams_with_resolution[0]
