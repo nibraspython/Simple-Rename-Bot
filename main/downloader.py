@@ -16,7 +16,7 @@ async def ytdl(bot, msg):
 @Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
-    
+
     # Send processing message
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
@@ -78,6 +78,13 @@ async def yt_callback_handler(bot, query):
         await query.message.edit_text("❌ **Error:** Selected resolution not available. Please try again.")
         return
 
+    # Log stream details for debugging
+    print(f"Selected stream: {stream}")
+    print(f"Resolution: {stream.resolution}")
+    print(f"FPS: {stream.fps}")
+    print(f"Filesize: {stream.filesize}")
+    print(f"Mime Type: {stream.mime_type}")
+
     # Edit the original message to remove resolution buttons
     await query.message.edit_text("🔄 **Downloading video...** 📥")
 
@@ -97,6 +104,9 @@ async def yt_callback_handler(bot, query):
     duration = int(video.duration)
     video_width, video_height = video.size
     filesize = humanbytes(os.path.getsize(downloaded))
+
+    # Log downloaded file size for comparison
+    print(f"Downloaded file size: {filesize}")
 
     # Download the thumbnail
     thumb_url = yt.thumbnail_url
