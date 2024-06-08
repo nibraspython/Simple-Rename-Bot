@@ -7,7 +7,17 @@ from pytube import YouTube
 from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import humanbytes
+
+def humanbytes(size):
+    if not size:
+        return "0 B"
+    power = 2**10
+    n = 0
+    power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
+    while size > power:
+        size /= power
+        n += 1
+    return f"{round(size, 2)} {power_labels[n]}B"
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -147,15 +157,13 @@ async def yt_callback_handler(bot, query):
     c_time = time.time()
 
     try:
-        await bot.send_video(query.message.chat.id, video=downloaded, thumb=thumb_path, caption=cap, duration=duration, progress=progress_message, progress_args=("📤 **Upload Started...** 🙏 **Thanks To All Who Supported** ❤️", sts, c_time))
+        await bot.send_video(query.message.chat.id, video=downloaded, thumb=thumb_path, caption=cap, duration=duration, progress=download_progress_callback, progress_args=("📤 **Upload Started...** 🙏 **Thanks To All Who Supported** ❤️", sts, c_time))
     except Exception as e:
         return await sts.edit(f"❌ **Error:** {e}")
 
     # Clean up downloaded files
-    os.remove(downloaded
+    os.remove(downloaded)
+    if thumb_path:
+        os.remove(thumb_path)
 
-    ) if thumb_path: os.remove(thumb_path) await sts.delete()
-    
-    #Helper function to format file sizes
-    
-    def humanbytes(size): # Returns the human-readable file size if not size: return "0 B" power = 2**10 n = 0 power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'} while size > power: size /= power n += 1 return f"{round(size, 2)} {power_labels[n]}B"
+    await sts.delete()
