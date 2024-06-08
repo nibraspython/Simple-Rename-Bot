@@ -39,7 +39,7 @@ async def youtube_link_handler(bot, msg):
     thumb_url = yt.thumbnail_url
 
     # Get unique resolutions
-    unique_resolutions = set(stream.resolution for stream in yt.streams.filter(file_extension='mp4'))
+    unique_resolutions = set(stream.resolution for stream in yt.streams.filter(file_extension='mp4') if stream.resolution)
 
     buttons = []
     for resolution in sorted(unique_resolutions, key=lambda x: int(x[:-1]), reverse=True):
