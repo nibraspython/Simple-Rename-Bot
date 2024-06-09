@@ -74,7 +74,14 @@ async def youtube_link_handler(bot, msg):
         f"📥 **Select your resolution:**"
     )
 
-    await processing_message.edit_text(caption, reply_markup=markup)
+    # Send thumbnail with caption
+    thumb_response = requests.get(thumb_url)
+    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
+    with open(thumb_path, 'wb') as thumb_file:
+        thumb_file.write(thumb_response.content)
+    await bot.send_photo(chat_id=msg.chat.id, photo=thumb_path, caption=caption, reply_markup=markup)
+
+    await processing_message.delete()
 
 def download_progress_callback(d, message):
     if d['status'] == 'downloading':
@@ -107,6 +114,8 @@ async def yt_callback_handler(bot, query):
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'progress_hooks': [progress_hook]
     }
+
+    await query.message.edit_text("⬇️ **Download started...**")
 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -145,7 +154,8 @@ async def yt_callback_handler(bot, query):
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
         f"💽 **Size:** {filesize}\n"
-        f"🕒 **Duration:** {duration} seconds"
+        f"🕒 **Duration:** {duration} seconds\n"
+        f"✅ **Download completed!**"
     )
 
     await query.message.edit_text("🚀 **Uploading started...** 📤")
