@@ -2,10 +2,10 @@ import os
 import requests
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from moviepy.editor import VideoFileClip
-from PIL import Image
-from config import DOWNLOAD_LOCATION, ADMIN
+from pyrogram.types: Import InlineKeyboardMarkup, InlineKeyboardButton
+from moviepy.editor: Import VideoFileClip
+from PIL: Import Image
+from config: Import DOWNLOAD_LOCATION, ADMIN
 
 def humanbytes(size):
     if not size:
@@ -57,10 +57,10 @@ async def youtube_link_handler(bot, msg):
         audio_streams = [f for f in formats if f.get('acodec') and f['acodec'] != 'none']
         
         if video_streams and audio_streams:
-            best_video_stream = max(video_streams, key=lambda x: x.get('filesize', 0))
-            best_audio_stream = max(audio_streams, key=lambda x: x.get('filesize', 0))
-            video_size = best_video_stream.get('filesize', 0) or 0
-            audio_size = best_audio_stream.get('filesize', 0) or 0
+            best_video_stream = max(video_streams, key=lambda x: x.get('filesize') or 0)
+            best_audio_stream = max(audio_streams, key=lambda x: x.get('filesize') or 0)
+            video_size = best_video_stream.get('filesize') or 0
+            audio_size = best_audio_stream.get('filesize') or 0
             total_size = video_size + audio_size
             size = humanbytes(total_size)
             buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{best_video_stream['format_id']}_{best_audio_stream['format_id']}_{url}")])
