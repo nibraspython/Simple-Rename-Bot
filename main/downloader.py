@@ -57,11 +57,11 @@ async def youtube_link_handler(bot, msg):
 
     buttons = []
     for resolution, formats_list in unique_resolutions.items():
-        resolution_button = []
+        resolution_buttons = []
         for f in formats_list:
             size = humanbytes(f.get('filesize', 0))
-            resolution_button.append(InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{f['format_id']}_{url}"))
-        buttons.append(resolution_button)
+            resolution_buttons.append(InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{f['format_id']}_{url}"))
+        buttons.append(resolution_buttons)
 
     markup = InlineKeyboardMarkup(buttons)
 
@@ -158,3 +158,5 @@ async def yt_callback_handler(bot, query):
         os.remove(thumb_path)
 
     await query.message.delete()
+
+app.run()
