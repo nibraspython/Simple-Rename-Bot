@@ -31,7 +31,7 @@ async def youtube_link_handler(bot, msg):
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
+        'format': 'bestvideo+bestaudio/best',
         'noplaylist': True,
         'quiet': True
     }
@@ -44,22 +44,22 @@ async def youtube_link_handler(bot, msg):
         thumb_url = info_dict.get('thumbnail', None)
         formats = info_dict.get('formats', [])
 
-    unique_resolutions = {}
+    unique_resolutions = set()
     for f in formats:
         try:
             if f['ext'] == 'mp4' and f.get('filesize'):
-                resolution = f['height']
-                if resolution not in unique_resolutions:
-                    unique_resolutions[resolution] = []
-                unique_resolutions[resolution].append(f)
+                unique_resolutions.add(f['height'])
         except KeyError:
             continue
 
     buttons = []
-    for resolution in sorted(unique_resolutions.keys(), reverse=True):
-        for f in sorted(unique_resolutions[resolution], key=lambda x: x.get('filesize', 0), reverse=True):
-            size = humanbytes(f.get('filesize', 0))
-            buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{f['format_id']}_{url}")])
+    for resolution in sorted(unique_resolutions, reverse=True):
+        streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
+        if streams_with_resolution:
+            streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x.get('filesize') or 0, reverse=True)
+            highest_size_stream = streams_with_resolution[0]
+            size = humanbytes(highest_size_stream.get('filesize', 0))
+            buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{highest_size_stream['format_id']}_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
 
@@ -98,7 +98,7 @@ async def yt_callback_handler(bot, query):
         download_progress_callback(d, query.message)
 
     ydl_opts = {
-        'format': format_id,
+        'format': f'{format_id}+bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'progress_hooks': [progress_hook]
     }
