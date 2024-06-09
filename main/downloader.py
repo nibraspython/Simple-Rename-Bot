@@ -56,9 +56,9 @@ async def youtube_link_handler(bot, msg):
     for resolution in sorted(unique_resolutions, reverse=True):
         streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
         if streams_with_resolution:
-            streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x['filesize'], reverse=True)
+            streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x.get('filesize', 0), reverse=True)
             highest_size_stream = streams_with_resolution[0]
-            size = humanbytes(highest_size_stream['filesize']) if highest_size_stream['filesize'] else "Unknown size"
+            size = humanbytes(highest_size_stream.get('filesize', 0))
             buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{highest_size_stream['format_id']}_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
