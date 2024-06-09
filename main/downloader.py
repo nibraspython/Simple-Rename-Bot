@@ -1,5 +1,4 @@
 import os
-import time
 import requests
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters
@@ -56,10 +55,11 @@ async def youtube_link_handler(bot, msg):
     for resolution in sorted(unique_resolutions, reverse=True):
         streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
         if streams_with_resolution:
-            streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x.get('filesize') or 0, reverse=True)
-            highest_size_stream = streams_with_resolution[0]
-            size = humanbytes(highest_size_stream.get('filesize', 0))
-            buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{highest_size_stream['format_id']}_{url}")])
+            video_size = streams_with_resolution[0].get('filesize', 0)
+            audio_size = next((f.get('filesize', 0) for f in formats if f['format_id'].startswith('140')), 0)  # '140' is usually for m4a audio
+            total_size = video_size + audio_size
+            size = humanbytes(total_size)
+            buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{streams_with_resolution[0]['format_id']}_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
 
