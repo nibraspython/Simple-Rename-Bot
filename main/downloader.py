@@ -56,7 +56,7 @@ async def youtube_link_handler(bot, msg):
     for resolution in sorted(unique_resolutions, reverse=True):
         streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
         if streams_with_resolution:
-            streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x.get('filesize', 0), reverse=True)
+            streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x.get('filesize') or 0, reverse=True)
             highest_size_stream = streams_with_resolution[0]
             size = humanbytes(highest_size_stream.get('filesize', 0))
             buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{highest_size_stream['format_id']}_{url}")])
@@ -128,7 +128,7 @@ async def yt_callback_handler(bot, query):
             top = (img.height - video_height) / 2
             right = (img.width + video_width) / 2
             bottom = (img.height + video_height) / 2
-            img = img.crop((left, top, right, bottom))
+            img = crop((left, top, right, bottom))
             img.save(thumb_path)
     else:
         thumb_path = None
