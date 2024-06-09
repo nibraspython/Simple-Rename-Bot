@@ -72,7 +72,7 @@ async def youtube_link_handler(bot, msg):
 
     await processing_message.edit_text(caption, reply_markup=markup)
 
-def download_progress_callback(d):
+def download_progress_callback(d, message):
     if d['status'] == 'downloading':
         total_size = d.get('total_bytes', 0)
         downloaded = d.get('downloaded_bytes', 0)
@@ -85,7 +85,7 @@ def download_progress_callback(d):
             f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
             f"⏳ **Estimated Time Remaining:** {eta:.2f} seconds"
         )
-        d['message'].edit_text(progress_message)
+        message.edit_text(progress_message)
 
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
@@ -93,10 +93,14 @@ async def yt_callback_handler(bot, query):
     format_id = data[1]
     url = '_'.join(data[2:])
 
+    # Create a wrapper for the progress hook to pass additional context
+    def progress_hook(d):
+        download_progress_callback(d, query.message)
+
     ydl_opts = {
         'format': format_id,
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-        'progress_hooks': [download_progress_callback]
+        'progress_hooks': [progress_hook]
     }
 
     try:
@@ -128,7 +132,7 @@ async def yt_callback_handler(bot, query):
             top = (img.height - video_height) / 2
             right = (img.width + video_width) / 2
             bottom = (img.height + video_height) / 2
-            img = crop((left, top, right, bottom))
+            img = img.crop((left, top, right, bottom))
             img.save(thumb_path)
     else:
         thumb_path = None
