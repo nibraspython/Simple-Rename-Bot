@@ -2,10 +2,10 @@ import os
 import requests
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters
-from pyrogram.types Import InlineKeyboardMarkup, InlineKeyboardButton
-from moviepy.editor Import VideoFileClip
-from PIL Import Image
-from config Import DOWNLOAD_LOCATION, ADMIN
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from moviepy.editor import VideoFileClip
+from PIL import Image
+from config import DOWNLOAD_LOCATION, ADMIN
 
 def humanbytes(size):
     if not size:
@@ -54,7 +54,7 @@ async def youtube_link_handler(bot, msg):
     buttons = []
     for resolution in sorted(unique_resolutions, reverse=True):
         video_streams = [f for f in formats if f.get('height') == resolution and f['vcodec'] != 'none']
-        audio_streams = [f for f in formats if f.get('acodec') and f['acodec'] != 'none']
+        audio_streams = [f for f in formats if 'acodec' in f and f['acodec'] != 'none']
         
         if video_streams and audio_streams:
             best_video_stream = max(video_streams, key=lambda x: x.get('filesize') or 0)
