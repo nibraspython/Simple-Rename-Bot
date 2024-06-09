@@ -54,7 +54,7 @@ async def youtube_link_handler(bot, msg):
     buttons = []
     for resolution in sorted(unique_resolutions, reverse=True):
         video_streams = [f for f in formats if f.get('height') == resolution and f['vcodec'] != 'none']
-        audio_streams = [f for f in formats if f['acodec'] != 'none']
+        audio_streams = [f for f in formats if f.get('acodec') and f['acodec'] != 'none']
         
         if video_streams and audio_streams:
             best_video_stream = max(video_streams, key=lambda x: x.get('filesize', 0))
