@@ -46,20 +46,24 @@ async def youtube_link_handler(bot, msg):
     unique_resolutions = set()
     for f in formats:
         try:
-            if f['ext'] == 'mp4' and f.get('filesize'):
+            if f['vcodec'] != 'none' and f.get('filesize'):
                 unique_resolutions.add(f['height'])
         except KeyError:
             continue
 
     buttons = []
     for resolution in sorted(unique_resolutions, reverse=True):
-        streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
-        if streams_with_resolution:
-            video_size = streams_with_resolution[0].get('filesize', 0) or 0
-            audio_size = next((f.get('filesize', 0) for f in formats if f['format_id'].startswith('140')), 0) or 0  # '140' is usually for m4a audio
+        video_streams = [f for f in formats if f.get('height') == resolution and f['vcodec'] != 'none']
+        audio_streams = [f for f in formats if f['acodec'] != 'none']
+        
+        if video_streams and audio_streams:
+            best_video_stream = max(video_streams, key=lambda x: x.get('filesize', 0))
+            best_audio_stream = max(audio_streams, key=lambda x: x.get('filesize', 0))
+            video_size = best_video_stream.get('filesize', 0) or 0
+            audio_size = best_audio_stream.get('filesize', 0) or 0
             total_size = video_size + audio_size
             size = humanbytes(total_size)
-            buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{streams_with_resolution[0]['format_id']}_{url}")])
+            buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{best_video_stream['format_id']}_{best_audio_stream['format_id']}_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
 
@@ -87,18 +91,19 @@ def download_progress_callback(d, message):
         )
         message.edit_text(progress_message)
 
-@Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
+@Client.on_callback_query(filters.regex(r'^yt_\d+_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
-    format_id = data[1]
-    url = '_'.join(data[2:])
+    video_format_id = data[1]
+    audio_format_id = data[2]
+    url = '_'.join(data[3:])
 
     # Create a wrapper for the progress hook to pass additional context
     def progress_hook(d):
         download_progress_callback(d, query.message)
 
     ydl_opts = {
-        'format': f'{format_id}+bestaudio/best',
+        'format': f'{video_format_id}+{audio_format_id}',
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'progress_hooks': [progress_hook]
     }
