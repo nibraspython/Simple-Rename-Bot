@@ -31,7 +31,7 @@ async def youtube_link_handler(bot, msg):
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
-        'format': 'best',
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
         'noplaylist': True,
         'quiet': True
     }
