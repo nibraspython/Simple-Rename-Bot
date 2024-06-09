@@ -2,10 +2,10 @@ import os
 import requests
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters
-from pyrogram.types: Import InlineKeyboardMarkup, InlineKeyboardButton
-from moviepy.editor: Import VideoFileClip
-from PIL: Import Image
-from config: Import DOWNLOAD_LOCATION, ADMIN
+from pyrogram.types Import InlineKeyboardMarkup, InlineKeyboardButton
+from moviepy.editor Import VideoFileClip
+from PIL Import Image
+from config Import DOWNLOAD_LOCATION, ADMIN
 
 def humanbytes(size):
     if not size:
