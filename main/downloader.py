@@ -28,7 +28,7 @@ async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
 
     # Send processing message
-    processing_message = await msg.reply_text("🔄 **Processing your request...**")
+    processing_message = await msg.reply_text("🔄 Processing your request...")
 
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
@@ -56,18 +56,20 @@ async def youtube_link_handler(bot, msg):
             continue
 
     buttons = []
-    for resolution in sorted(unique_resolutions.keys(), reverse=True):
-        for f in sorted(unique_resolutions[resolution], key=lambda x: x.get('filesize', 0), reverse=True):
+    for resolution, formats_list in unique_resolutions.items():
+        resolution_button = []
+        for f in formats_list:
             size = humanbytes(f.get('filesize', 0))
-            buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{f['format_id']}_{url}")])
+            resolution_button.append(InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{f['format_id']}_{url}"))
+        buttons.append(resolution_button)
 
     markup = InlineKeyboardMarkup(buttons)
 
     caption = (
-        f"**🎬 Title:** {title}\n"
-        f"**👀 Views:** {views}\n"
-        f"**👍 Likes:** {likes}\n\n"
-        f"📥 **Select your resolution:**"
+        f"🎬 Title: {title}\n"
+        f"👀 Views: {views}\n"
+        f"👍 Likes: {likes}\n\n"
+        f"📥 Select your resolution:"
     )
 
     await processing_message.edit_text(caption, reply_markup=markup)
@@ -81,9 +83,9 @@ def download_progress_callback(d, message):
         eta = d.get('eta', 0) or 0
 
         progress_message = (
-            f"⬇️ **Download Progress:** {humanbytes(downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
-            f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
-            f"⏳ **Estimated Time Remaining:** {eta} seconds"
+            f"⬇️ Download Progress: {humanbytes(downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
+            f"⚡️ Speed: {humanbytes(speed)}/s\n"
+            f"⏳ Estimated Time Remaining: {eta} seconds"
         )
         message.edit_text(progress_message)
 
@@ -108,7 +110,7 @@ async def yt_callback_handler(bot, query):
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error during download:** {e}")
+        await query.message.edit_text(f"❌ Error during download: {e}")
         return
 
     video = VideoFileClip(downloaded_path)
@@ -138,17 +140,17 @@ async def yt_callback_handler(bot, query):
         thumb_path = None
 
     caption = (
-        f"**🎬 {info_dict['title']}**\n\n"
-        f"💽 **Size:** {filesize}\n"
-        f"🕒 **Duration:** {duration} seconds"
+        f"🎬 {info_dict['title']}\n\n"
+        f"💽 Size: {filesize}\n"
+        f"🕒 Duration: {duration} seconds"
     )
 
-    await query.message.edit_text("🚀 **Uploading started...** 📤")
+    await query.message.edit_text("🚀 Uploading started... 📤")
 
     try:
         await bot.send_video(query.message.chat.id, video=downloaded_path, thumb=thumb_path, caption=caption, duration=duration)
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error:** {e}")
+        await query.message.edit_text(f"❌ Error: {e}")
         return
 
     os.remove(downloaded_path)
