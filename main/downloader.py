@@ -74,16 +74,16 @@ async def youtube_link_handler(bot, msg):
 
 def download_progress_callback(d, message):
     if d['status'] == 'downloading':
-        total_size = d.get('total_bytes', 0)
-        downloaded = d.get('downloaded_bytes', 0)
+        total_size = d.get('total_bytes', 0) or 0
+        downloaded = d.get('downloaded_bytes', 0) or 0
         percentage = downloaded / total_size * 100 if total_size else 0
-        speed = d.get('speed', 0)
-        eta = d.get('eta', 0)
+        speed = d.get('speed', 0) or 0
+        eta = d.get('eta', 0) or 0
 
         progress_message = (
             f"⬇️ **Download Progress:** {humanbytes(downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
             f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
-            f"⏳ **Estimated Time Remaining:** {eta:.2f} seconds"
+            f"⏳ **Estimated Time Remaining:** {eta} seconds"
         )
         message.edit_text(progress_message)
 
