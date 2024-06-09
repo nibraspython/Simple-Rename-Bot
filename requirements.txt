@@ -4,3 +4,4 @@ moviepy
 yt-dlp
 pytube
 pillow
+youtube-dl
