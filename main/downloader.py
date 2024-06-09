@@ -6,6 +6,9 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 def humanbytes(size):
     if not size:
@@ -25,6 +28,7 @@ async def ytdl(bot, msg):
 @Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
+    logging.info(f"Received URL: {url}")
 
     # Send processing message
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
@@ -35,13 +39,19 @@ async def youtube_link_handler(bot, msg):
         'quiet': True
     }
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=False)
-        title = info_dict.get('title', 'Unknown Title')
-        views = info_dict.get('view_count', 'N/A')
-        likes = info_dict.get('like_count', 'N/A')
-        thumb_url = info_dict.get('thumbnail', None)
-        formats = info_dict.get('formats', [])
+    try:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=False)
+            title = info_dict.get('title', 'Unknown Title')
+            views = info_dict.get('view_count', 'N/A')
+            likes = info_dict.get('like_count', 'N/A')
+            thumb_url = info_dict.get('thumbnail', None)
+            formats = info_dict.get('formats', [])
+            logging.info("Fetched video info successfully.")
+    except Exception as e:
+        logging.error(f"Error fetching video info: {e}")
+        await processing_message.edit_text(f"❌ **Error fetching video info:** {e}")
+        return
 
     unique_resolutions = set()
     for f in formats:
@@ -55,7 +65,7 @@ async def youtube_link_handler(bot, msg):
     for resolution in sorted(unique_resolutions, reverse=True):
         video_streams = [f for f in formats if f.get('height') == resolution and f['vcodec'] != 'none']
         audio_streams = [f for f in formats if 'acodec' in f and f['acodec'] != 'none']
-        
+
         if video_streams and audio_streams:
             best_video_stream = max(video_streams, key=lambda x: x.get('filesize') or 0)
             best_audio_stream = max(audio_streams, key=lambda x: x.get('filesize') or 0)
@@ -121,53 +131,60 @@ async def yt_callback_handler(bot, query):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
+            logging.info(f"Downloaded path: {downloaded_path}")
     except Exception as e:
+        logging.error(f"Error during download: {e}")
         await query.message.edit_text(f"❌ **Error during download:** {e}")
         return
 
-    video = VideoFileClip(downloaded_path)
-    duration = int(video.duration)
-    video_width, video_height = video.size
-    filesize = humanbytes(os.path.getsize(downloaded_path))
-
-    thumb_url = info_dict.get('thumbnail', None)
-    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
-    response = requests.get(thumb_url)
-    if response.status_code == 200:
-        with open(thumb_path, 'wb') as thumb_file:
-            thumb_file.write(response.content)
-
-        with Image.open(thumb_path) as img:
-            img_width, img_height = img.size
-            scale_factor = max(video_width / img_width, video_height / img_height)
-            new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
-            img = img.resize(new_size, Image.ANTIALIAS)
-            left = (img.width - video_width) / 2
-            top = (img.height - video_height) / 2
-            right = (img.width + video_width) / 2
-            bottom = (img.height + video_height) / 2
-            img = img.crop((left, top, right, bottom))
-            img.save(thumb_path)
-    else:
-        thumb_path = None
-
-    caption = (
-        f"**🎬 {info_dict['title']}**\n\n"
-        f"💽 **Size:** {filesize}\n"
-        f"🕒 **Duration:** {duration} seconds\n"
-        f"✅ **Download completed!**"
-    )
-
-    await query.message.edit_text("🚀 **Uploading started...** 📤")
-
     try:
-        await bot.send_video(query.message.chat.id, video=downloaded_path, thumb=thumb_path, caption=caption, duration=duration)
+        video = VideoFileClip(downloaded_path)
+        duration = int(video.duration)
+        video_width, video_height = video.size
+        filesize = humanbytes(os.path.getsize(downloaded_path))
+
+        thumb_url = info_dict.get('thumbnail', None)
+        thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
+        response = requests.get(thumb_url)
+        if response.status_code == 200:
+            with open(thumb_path, 'wb') as thumb_file:
+                thumb_file.write(response.content)
+
+            with Image.open(thumb_path) as img:
+                img_width, img_height = img.size
+                scale_factor = max(video_width / img_width, video_height / img_height)
+                new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
+                img = img.resize(new_size, Image.ANTIALIAS)
+                left = (img.width - video_width) / 2
+                top = (img.height - video_height) / 2
+                right = (img.width + video_width) / 2
+                bottom = (img.height + video_height) / 2
+                img = img.crop((left, top, right, bottom))
+                img.save(thumb_path)
+        else:
+            thumb_path = None
+
+        caption = (
+            f"**🎬 {info_dict['title']}**\n\n"
+            f"💽 **Size:** {filesize}\n"
+            f"🕒 **Duration:** {duration} seconds\n"
+            f"✅ **Download completed!**"
+        )
+
+        await query.message.edit_text("🚀 **Uploading started...** 📤")
+
+        try:
+            await bot.send_video(query.message.chat.id, video=downloaded_path, thumb=thumb_path, caption=caption, duration=duration)
+        except Exception as e:
+            logging.error(f"Error during upload: {e}")
+            await query.message.edit_text(f"❌ **Error:** {e}")
+            return
+
+        os.remove(downloaded_path)
+        if thumb_path:
+            os.remove(thumb_path)
+
+        await query.message.delete()
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error:** {e}")
-        return
-
-    os.remove(downloaded_path)
-    if thumb_path:
-        os.remove(thumb_path)
-
-    await query.message.delete()
+        logging.error(f"Error handling video: {e}")
+        await query.message.edit_text(f"❌ **Error handling video:** {e}")
