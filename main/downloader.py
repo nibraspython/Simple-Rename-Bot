@@ -137,10 +137,13 @@ async def yt_callback_handler(bot, query):
     else:
         thumb_path = None
 
+    button_text = query.data.split('_')[2]
+
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
         f"💽 **Size:** {filesize}\n"
-        f"🕒 **Duration:** {duration} seconds"
+        f"🕒 **Duration:** {duration} seconds\n"
+        f"📹 **Resolution:** {button_text}"
     )
 
     await query.message.edit_text("🚀 **Uploading started...** 📤")
