@@ -9,6 +9,17 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
+def humanbytes(size):
+    if not size:
+        return "0 B"
+    power = 2**10
+    n = 0
+    power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
+    while size > power:
+        size /= power
+        n += 1
+    return f"{round(size, 2)} {power_labels[n]}B"
+
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 Please send your YouTube links to download.")
@@ -75,7 +86,7 @@ async def youtube_link_handler(bot, msg):
 
     await processing_message.delete()
 
-def download_progress_callback(d, message, c_time):
+def download_progress_callback(d, message, c_time, update_interval=5):
     if d['status'] == 'downloading':
         total_size = d.get('total_bytes', 0) or 0
         downloaded = d.get('downloaded_bytes', 0) or 0
@@ -83,15 +94,18 @@ def download_progress_callback(d, message, c_time):
         speed = d.get('speed', 0) or 0
         eta = d.get('eta', 0) or 0
 
-        progress_message_text = (
-            f"⬇️ **Download Progress:** {humanbytes(downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
-            f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
-            f"⏳ **Estimated Time Remaining:** {eta} seconds"
-        )
-        try:
-            message.edit_text(progress_message_text)
-        except Exception as e:
-            print(f"Error updating progress message: {e}")
+        current_time = time.time()
+        if current_time - c_time >= update_interval:
+            progress_message_text = (
+                f"⬇️ **Download Progress:** {humanbytes(downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
+                f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
+                f"⏳ **Estimated Time Remaining:** {eta} seconds"
+            )
+            try:
+                message.edit_text(progress_message_text)
+            except Exception as e:
+                print(f"Error updating progress message: {e}")
+            c_time = current_time
 
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
