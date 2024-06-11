@@ -2,9 +2,10 @@ import os
 import time
 import requests
 import yt_dlp as youtube_dl
-import ffmpeg
+import subprocess
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
@@ -132,11 +133,9 @@ async def yt_callback_handler(bot, query):
             if not downloaded_path.endswith(".mp4"):
                 # Convert video to MP4 if it is not already in MP4 format
                 mp4_path = downloaded_path.rsplit('.', 1)[0] + ".mp4"
-                (
-                    ffmpeg
-                    .input(downloaded_path)
-                    .output(mp4_path, vcodec='libx264', acodec='aac')
-                    .run()
+                subprocess.run(
+                    ['ffmpeg', '-i', downloaded_path, '-c:v', 'libx264', '-c:a', 'aac', mp4_path],
+                    check=True
                 )
                 os.remove(downloaded_path)
                 downloaded_path = mp4_path
@@ -144,7 +143,11 @@ async def yt_callback_handler(bot, query):
         await query.message.edit_text(f"❌ **Error during download:** {e}")
         return
 
-    duration = int(info_dict['duration'])
+    video = VideoFileClip(downloaded_path)
+    duration = int(video.duration)
+    video_width, video_height = video.size
+    filesize = humanbytes(os.path.getsize(downloaded_path))
+
     thumb_url = info_dict.get('thumbnail', None)
     thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
     response = requests.get(thumb_url)
@@ -154,8 +157,6 @@ async def yt_callback_handler(bot, query):
 
         with Image.open(thumb_path) as img:
             img_width, img_height = img.size
-            video_width = info_dict.get('width', img_width)
-            video_height = info_dict.get('height', img_height)
             scale_factor = max(video_width / img_width, video_height / img_height)
             new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
             img = img.resize(new_size, Image.ANTIALIAS)
@@ -172,17 +173,27 @@ async def yt_callback_handler(bot, query):
 
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
-        f"💽 **Size:** {humanbytes(os.path.getsize(downloaded_path))}\n"
+        f"💽 **Size:** {filesize}\n"
         f"🕒 **Duration:** {duration} seconds\n"
-        f"📹 **Resolution:** {button_text}"
+        f"📹 **Resolution:** {button_text}\n\n"
+        f"✅ **Download completed!**"
     )
 
     await query.message.edit_text("🚀 **Uploading started...** 📤")
 
+    c_time = time.time()
     try:
-        await bot.send_video(query.message.chat.id, video=downloaded_path, thumb=thumb_path, caption=caption, duration=duration)
+        await bot.send_video(
+            chat_id=query.message.chat.id,
+            video=downloaded_path,
+            thumb=thumb_path,
+            caption=caption,
+            duration=duration,
+            progress=progress_message,
+            progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time)
+        )
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error:** {e}")
+        await query.message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
     os.remove(downloaded_path)
