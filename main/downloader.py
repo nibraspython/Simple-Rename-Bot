@@ -99,7 +99,11 @@ def download_progress_callback(d, message):
             f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
             f"⏳ **Estimated Time Remaining:** {eta} seconds"
         )
-        message.edit_text(progress_message)
+        # Update progress message
+        try:
+            message.edit_text(progress_message)
+        except:
+            pass
 
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
