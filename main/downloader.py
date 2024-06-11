@@ -132,7 +132,12 @@ async def yt_callback_handler(bot, query):
             if not downloaded_path.endswith(".mp4"):
                 # Convert video to MP4 if it is not already in MP4 format
                 mp4_path = downloaded_path.rsplit('.', 1)[0] + ".mp4"
-                ffmpeg.input(downloaded_path).output(mp4_path).run()
+                (
+                    ffmpeg
+                    .input(downloaded_path)
+                    .output(mp4_path, vcodec='libx264', acodec='aac')
+                    .run()
+                )
                 os.remove(downloaded_path)
                 downloaded_path = mp4_path
     except Exception as e:
