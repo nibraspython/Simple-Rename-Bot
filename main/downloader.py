@@ -53,6 +53,7 @@ async def youtube_link_handler(bot, msg):
             continue
 
     buttons = []
+    resolution_options = ""
     for resolution in sorted(unique_resolutions, reverse=True):
         streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
         if streams_with_resolution:
@@ -60,6 +61,7 @@ async def youtube_link_handler(bot, msg):
             highest_size_stream = streams_with_resolution[0]
             size = humanbytes(highest_size_stream.get('filesize', 0))
             buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{highest_size_stream['format_id']}_{url}")])
+            resolution_options += f"📹 {resolution}p - {size}\n"
 
     markup = InlineKeyboardMarkup(buttons)
 
@@ -67,7 +69,8 @@ async def youtube_link_handler(bot, msg):
         f"**🎬 Title:** {title}\n"
         f"**👀 Views:** {views}\n"
         f"**👍 Likes:** {likes}\n\n"
-        f"📥 **Select your resolution:**"
+        f"📥 **Select your resolution:**\n"
+        f"{resolution_options}"
     )
 
     await processing_message.edit_text(caption, reply_markup=markup)
