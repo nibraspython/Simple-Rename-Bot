@@ -6,7 +6,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
-from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
+from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
