@@ -65,7 +65,7 @@ async def youtube_link_handler(bot, msg):
             highest_size_stream = streams_with_resolution[0]
             video_size = highest_size_stream.get('filesize', 0)
             size_text = humanbytes(video_size)
-            button_text = f"📹 {resolution}p - {size_text}"
+            button_text = f"🎬 {resolution}p - {size_text}"
             callback_data = f"yt_{highest_size_stream['format_id']}_{url}"
             buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
 
@@ -117,10 +117,10 @@ async def yt_callback_handler(bot, query):
     url = '_'.join(data[2:])
 
     c_time = time.time()
-    await query.message.edit_text("⬇️ **Download started...**")
+    progress_message = await query.message.reply_text("⬇️ **Download started...**")
 
     def progress_hook(d):
-        download_progress_callback(d, query.message, c_time)
+        download_progress_callback(d, progress_message, c_time)
 
     ydl_opts = {
         'format': f'{format_id}+bestaudio/best',
@@ -134,7 +134,7 @@ async def yt_callback_handler(bot, query):
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error during download:** {e}")
+        await progress_message.edit_text(f"❌ **Error during download:** {e}")
         return
 
     # If the downloaded file is not already in MP4 format, convert it to MP4
@@ -183,7 +183,7 @@ async def yt_callback_handler(bot, query):
         f"✅ **Download completed!**"
     )
 
-    await query.message.edit_text("🚀 **Uploading started...** 📤")
+    await progress_message.edit_text("🚀 **Uploading started...** 📤")
 
     c_time = time.time()
     try:
@@ -194,10 +194,10 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time)
+            progress_args=("Upload Started..... Thanks To All Who Supported ❤", progress_message, c_time)
         )
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error during upload:** {e}")
+        await progress_message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
     os.remove(downloaded_path)
