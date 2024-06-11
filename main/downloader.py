@@ -140,7 +140,7 @@ async def yt_callback_handler(bot, query):
             top = (img.height - video_height) / 2
             right = (img.width + video_width) / 2
             bottom = (img.height + video_height) / 2
-            img = crop((left, top, right, bottom))
+            img = img.crop((left, top, right, bottom))
             img.save(thumb_path)
     else:
         thumb_path = None
