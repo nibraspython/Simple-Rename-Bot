@@ -129,14 +129,6 @@ async def yt_callback_handler(bot, query):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
-            if not downloaded_path.endswith(".mp4"):
-                # Convert video to MP4 if it is not already in MP4 format
-                video_clip = VideoFileClip(downloaded_path)
-                mp4_path = downloaded_path.rsplit('.', 1)[0] + ".mp4"
-                video_clip.write_videofile(mp4_path)
-                video_clip.close()
-                os.remove(downloaded_path)
-                downloaded_path = mp4_path
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during download:** {e}")
         return
