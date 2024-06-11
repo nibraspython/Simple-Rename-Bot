@@ -74,7 +74,7 @@ async def youtube_link_handler(bot, msg):
 
     await processing_message.delete()
 
-def download_progress_callback(d, message):
+def download_progress_callback(d, message, c_time):
     if d['status'] == 'downloading':
         total_size = d.get('total_bytes', 0) or 0
         downloaded = d.get('downloaded_bytes', 0) or 0
@@ -88,7 +88,7 @@ def download_progress_callback(d, message):
             f"⏳ **Estimated Time Remaining:** {eta} seconds"
         )
         try:
-            message.edit_text(progress_message_text)
+            progress_message(progress_message_text, message, c_time)
         except:
             pass
 
@@ -98,16 +98,17 @@ async def yt_callback_handler(bot, query):
     format_id = data[1]
     url = '_'.join(data[2:])
 
+    c_time = time.time()
+    await query.message.edit_text("⬇️ **Download started...**")
+
     def progress_hook(d):
-        download_progress_callback(d, query.message)
+        download_progress_callback(d, query.message, c_time)
 
     ydl_opts = {
         'format': f'{format_id}+bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'progress_hooks': [progress_hook]
     }
-
-    await query.message.edit_text("⬇️ **Download started...**")
 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
