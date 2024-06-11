@@ -1,7 +1,8 @@
-import time,os
+import os
+import time
 import requests
 import yt_dlp as youtube_dl
-from pyrogram import Client, filters, enums
+from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
@@ -139,7 +140,7 @@ async def yt_callback_handler(bot, query):
             top = (img.height - video_height) / 2
             right = (img.width + video_width) / 2
             bottom = (img.height + video_height) / 2
-            img = img.crop((left, top, right, bottom))
+            img = crop((left, top, right, bottom))
             img.save(thumb_path)
     else:
         thumb_path = None
