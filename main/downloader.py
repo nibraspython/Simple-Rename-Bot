@@ -51,14 +51,21 @@ async def youtube_link_handler(bot, msg):
         except KeyError:
             continue
 
+    # Find the best audio stream to pair with each video stream
+    audio_streams = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
+    best_audio_stream = max(audio_streams, key=lambda x: x.get('filesize', 0), default=None)
+
     buttons = []
     for resolution in sorted(unique_resolutions, reverse=True):
         streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
         if streams_with_resolution:
             streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x.get('filesize') or 0, reverse=True)
             highest_size_stream = streams_with_resolution[0]
-            size = humanbytes(highest_size_stream.get('filesize', 0))
-            buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size}", callback_data=f"yt_{highest_size_stream['format_id']}_{url}")])
+            video_size = highest_size_stream.get('filesize', 0)
+            audio_size = best_audio_stream.get('filesize', 0) if best_audio_stream else 0
+            total_size = video_size + audio_size
+            size_text = humanbytes(total_size)
+            buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size_text}", callback_data=f"yt_{highest_size_stream['format_id']}_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
 
