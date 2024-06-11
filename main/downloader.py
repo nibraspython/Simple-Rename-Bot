@@ -69,7 +69,8 @@ async def youtube_link_handler(bot, msg):
             callback_data = f"yt_{highest_size_stream['format_id']}_{url}"
             buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
 
-    buttons = [buttons[i:i+2] for i in range(0, len(buttons), 2)]  # Split buttons into rows of 2
+    # Add "Progress" button
+    buttons.append([InlineKeyboardButton("🔄 Progress", callback_data=f"progress_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
 
@@ -88,6 +89,17 @@ async def youtube_link_handler(bot, msg):
     os.remove(thumb_path)
 
     await processing_message.delete()
+
+@Client.on_callback_query(filters.regex(r'^progress_'))
+async def progress_callback_handler(bot, query):
+    url = query.data.split('_')[1]
+
+    # You can implement your logic here to display the progress message
+    # For example, you can retrieve the progress from a database if you're tracking progress
+    # Or you can simulate a progress message based on the download progress of the video
+
+    # For demonstration, let's send a simple progress message
+    await query.message.edit_text("⬇️ **Downloading progress...**")
 
 def download_progress_callback(d, message, c_time, update_interval=5):
     if d['status'] == 'downloading':
@@ -117,10 +129,10 @@ async def yt_callback_handler(bot, query):
     url = '_'.join(data[2:])
 
     c_time = time.time()
-    progress_message = await query.message.reply_text("⬇️ **Download started...**")
+    await query.message.edit_text("⬇️ **Download started...**")
 
     def progress_hook(d):
-        download_progress_callback(d, progress_message, c_time)
+        download_progress_callback(d, query.message, c_time)
 
     ydl_opts = {
         'format': f'{format_id}+bestaudio/best',
@@ -134,7 +146,7 @@ async def yt_callback_handler(bot, query):
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
     except Exception as e:
-        await progress_message.edit_text(f"❌ **Error during download:** {e}")
+        await query.message.edit_text(f"❌ **Error during download:** {e}")
         return
 
     # If the downloaded file is not already in MP4 format, convert it to MP4
@@ -183,7 +195,7 @@ async def yt_callback_handler(bot, query):
         f"✅ **Download completed!**"
     )
 
-    await progress_message.edit_text("🚀 **Uploading started...** 📤")
+    await query.message.edit_text("🚀 **Uploading started...** 📤")
 
     c_time = time.time()
     try:
@@ -194,10 +206,10 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=("Upload Started..... Thanks To All Who Supported ❤", progress_message, c_time)
+            progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time)
         )
     except Exception as e:
-        await progress_message.edit_text(f"❌ **Error during upload:** {e}")
+        await query.message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
     os.remove(downloaded_path)
@@ -205,3 +217,4 @@ async def yt_callback_handler(bot, query):
         os.remove(thumb_path)
 
     await query.message.delete()
+
