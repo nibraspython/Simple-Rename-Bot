@@ -58,6 +58,7 @@ async def youtube_link_handler(bot, msg):
     best_audio_stream = max(audio_streams, key=lambda x: x.get('filesize', 0), default=None)
 
     buttons = []
+    row = []
     for resolution in sorted(unique_resolutions, reverse=True):
         streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
         if streams_with_resolution:
@@ -67,7 +68,16 @@ async def youtube_link_handler(bot, msg):
             size_text = humanbytes(video_size)
             button_text = f"🎬 {resolution}p - {size_text}"
             callback_data = f"yt_{highest_size_stream['format_id']}_{url}"
-            buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+            row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+        
+        # Check if row has 2 buttons
+        if len(row) == 2:
+            buttons.append(row)
+            row = []
+
+    # If there are leftover buttons in the row, add them
+    if row:
+        buttons.append(row)
 
     # Add "Progress" button
     buttons.append([InlineKeyboardButton("🔄 Progress", callback_data=f"progress_{url}")])
@@ -217,4 +227,3 @@ async def yt_callback_handler(bot, query):
         os.remove(thumb_path)
 
     await query.message.delete()
-
