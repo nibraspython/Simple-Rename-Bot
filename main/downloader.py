@@ -2,9 +2,9 @@ import os
 import time
 import requests
 import yt_dlp as youtube_dl
+import ffmpeg
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
@@ -129,15 +129,17 @@ async def yt_callback_handler(bot, query):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
+            if not downloaded_path.endswith(".mp4"):
+                # Convert video to MP4 if it is not already in MP4 format
+                mp4_path = downloaded_path.rsplit('.', 1)[0] + ".mp4"
+                ffmpeg.input(downloaded_path).output(mp4_path).run()
+                os.remove(downloaded_path)
+                downloaded_path = mp4_path
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during download:** {e}")
         return
 
-    video = VideoFileClip(downloaded_path)
-    duration = int(video.duration)
-    video_width, video_height = video.size
-    filesize = humanbytes(os.path.getsize(downloaded_path))
-
+    duration = int(info_dict['duration'])
     thumb_url = info_dict.get('thumbnail', None)
     thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
     response = requests.get(thumb_url)
@@ -147,6 +149,8 @@ async def yt_callback_handler(bot, query):
 
         with Image.open(thumb_path) as img:
             img_width, img_height = img.size
+            video_width = info_dict.get('width', img_width)
+            video_height = info_dict.get('height', img_height)
             scale_factor = max(video_width / img_width, video_height / img_height)
             new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
             img = img.resize(new_size, Image.ANTIALIAS)
@@ -163,27 +167,17 @@ async def yt_callback_handler(bot, query):
 
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
-        f"💽 **Size:** {filesize}\n"
+        f"💽 **Size:** {humanbytes(os.path.getsize(downloaded_path))}\n"
         f"🕒 **Duration:** {duration} seconds\n"
-        f"📹 **Resolution:** {button_text}\n\n"
-        f"✅ **Download completed!**"
+        f"📹 **Resolution:** {button_text}"
     )
 
     await query.message.edit_text("🚀 **Uploading started...** 📤")
 
-    c_time = time.time()
     try:
-        await bot.send_video(
-            chat_id=query.message.chat.id,
-            video=downloaded_path,
-            thumb=thumb_path,
-            caption=caption,
-            duration=duration,
-            progress=progress_message,
-            progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time)
-        )
+        await bot.send_video(query.message.chat.id, video=downloaded_path, thumb=thumb_path, caption=caption, duration=duration)
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error during upload:** {e}")
+        await query.message.edit_text(f"❌ **Error:** {e}")
         return
 
     os.remove(downloaded_path)
