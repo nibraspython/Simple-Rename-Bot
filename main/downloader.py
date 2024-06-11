@@ -1,4 +1,4 @@
-import os
+import time,os
 import requests
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters, enums
