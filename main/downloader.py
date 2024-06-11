@@ -64,10 +64,12 @@ async def youtube_link_handler(bot, msg):
             streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x.get('filesize') or 0, reverse=True)
             highest_size_stream = streams_with_resolution[0]
             video_size = highest_size_stream.get('filesize', 0)
-            audio_size = best_audio_stream.get('filesize', 0) if best_audio_stream else 0
-            total_size = video_size + audio_size
-            size_text = humanbytes(total_size)
-            buttons.append([InlineKeyboardButton(f"📹 {resolution}p - {size_text}", callback_data=f"yt_{highest_size_stream['format_id']}_{url}")])
+            size_text = humanbytes(video_size)
+            button_text = f"📹 {resolution}p - {size_text}"
+            callback_data = f"yt_{highest_size_stream['format_id']}_{url}"
+            buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+
+    buttons = [buttons[i:i+2] for i in range(0, len(buttons), 2)]  # Split buttons into rows of 2
 
     markup = InlineKeyboardMarkup(buttons)
 
@@ -203,4 +205,3 @@ async def yt_callback_handler(bot, query):
         os.remove(thumb_path)
 
     await query.message.delete()
-
