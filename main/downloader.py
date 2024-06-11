@@ -123,25 +123,27 @@ async def yt_callback_handler(bot, query):
     ydl_opts = {
         'format': f'{format_id}+bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-        'progress_hooks': [progress_hook]
+        'progress_hooks': [progress_hook],
+        'merge_output_format': 'mp4'  # Specify to merge to mp4 format
     }
 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
-            if not downloaded_path.endswith(".mp4"):
-                # Convert video to MP4 if it is not already in MP4 format
-                mp4_path = downloaded_path.rsplit('.', 1)[0] + ".mp4"
-                subprocess.run(
-                    ['ffmpeg', '-i', downloaded_path, '-c:v', 'libx264', '-c:a', 'aac', mp4_path],
-                    check=True
-                )
-                os.remove(downloaded_path)
-                downloaded_path = mp4_path
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during download:** {e}")
         return
+
+    # If the downloaded file is not already in MP4 format, convert it to MP4
+    if not downloaded_path.endswith(".mp4"):
+        mp4_path = downloaded_path.rsplit('.', 1)[0] + ".mp4"
+        subprocess.run(
+            ['ffmpeg', '-i', downloaded_path, '-c:v', 'libx264', '-c:a', 'aac', mp4_path],
+            check=True
+        )
+        os.remove(downloaded_path)
+        downloaded_path = mp4_path
 
     video = VideoFileClip(downloaded_path)
     duration = int(video.duration)
@@ -201,3 +203,4 @@ async def yt_callback_handler(bot, query):
         os.remove(thumb_path)
 
     await query.message.delete()
+
