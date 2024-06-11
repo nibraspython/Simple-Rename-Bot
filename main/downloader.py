@@ -73,7 +73,15 @@ async def youtube_link_handler(bot, msg):
         f"{resolution_options}"
     )
 
-    await processing_message.edit_text(caption, reply_markup=markup)
+    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
+    response = requests.get(thumb_url)
+    if response.status_code == 200:
+        with open(thumb_path, 'wb') as thumb_file:
+            thumb_file.write(response.content)
+    else:
+        thumb_path = None
+
+    await processing_message.edit_photo(photo=thumb_path, caption=caption, reply_markup=markup)
 
 def download_progress_callback(d, message):
     if d['status'] == 'downloading':
