@@ -1,22 +1,12 @@
 import os
 import requests
 import yt_dlp as youtube_dl
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
-from config import DOWNLOAD_LOCATION, ADMIN
-
-def humanbytes(size):
-    if not size:
-        return "0 B"
-    power = 2**10
-    n = 0
-    power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
-    while size > power:
-        size /= power
-        n += 1
-    return f"{round(size, 2)} {power_labels[n]}B"
+from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
+from main.utils import progress_message, humanbytes
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -51,7 +41,6 @@ async def youtube_link_handler(bot, msg):
         except KeyError:
             continue
 
-    # Find the best audio stream to pair with each video stream
     audio_streams = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
     best_audio_stream = max(audio_streams, key=lambda x: x.get('filesize', 0), default=None)
 
@@ -76,13 +65,12 @@ async def youtube_link_handler(bot, msg):
         f"📥 **Select your resolution:**"
     )
 
-    # Send thumbnail with caption
     thumb_response = requests.get(thumb_url)
     thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
     with open(thumb_path, 'wb') as thumb_file:
         thumb_file.write(thumb_response.content)
     await bot.send_photo(chat_id=msg.chat.id, photo=thumb_path, caption=caption, reply_markup=markup)
-    os.remove(thumb_path)  # Clean up thumbnail file
+    os.remove(thumb_path)
 
     await processing_message.delete()
 
@@ -94,14 +82,13 @@ def download_progress_callback(d, message):
         speed = d.get('speed', 0) or 0
         eta = d.get('eta', 0) or 0
 
-        progress_message = (
+        progress_message_text = (
             f"⬇️ **Download Progress:** {humanbytes(downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
             f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
             f"⏳ **Estimated Time Remaining:** {eta} seconds"
         )
-        # Update progress message
         try:
-            message.edit_text(progress_message)
+            message.edit_text(progress_message_text)
         except:
             pass
 
@@ -111,7 +98,6 @@ async def yt_callback_handler(bot, query):
     format_id = data[1]
     url = '_'.join(data[2:])
 
-    # Create a wrapper for the progress hook to pass additional context
     def progress_hook(d):
         download_progress_callback(d, query.message)
 
@@ -169,10 +155,19 @@ async def yt_callback_handler(bot, query):
 
     await query.message.edit_text("🚀 **Uploading started...** 📤")
 
+    c_time = time.time()
     try:
-        await bot.send_video(query.message.chat.id, video=downloaded_path, thumb=thumb_path, caption=caption, duration=duration)
+        await bot.send_video(
+            chat_id=query.message.chat.id,
+            video=downloaded_path,
+            thumb=thumb_path,
+            caption=caption,
+            duration=duration,
+            progress=progress_message,
+            progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time)
+        )
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error:** {e}")
+        await query.message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
     os.remove(downloaded_path)
