@@ -67,7 +67,7 @@ async def youtube_link_handler(bot, msg):
             callback_data = f"yt_{highest_size_stream['format_id']}_{url}"
             buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
 
-    buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
+    buttons.append(InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}"))
     buttons = [buttons[i:i+2] for i in range(0, len(buttons), 2)]  # Split buttons into rows of 2
 
     markup = InlineKeyboardMarkup(buttons)
@@ -171,7 +171,7 @@ async def yt_callback_handler(bot, query):
             top = (img.height - video_height) / 2
             right = (img.width + video_width) / 2
             bottom = (img.height + video_height) / 2
-            img = crop((left, top, right, bottom))
+            img = img.crop((left, top, right, bottom))
             img.save(thumb_path)
     else:
         thumb_path = None
