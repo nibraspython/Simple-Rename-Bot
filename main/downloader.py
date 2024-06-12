@@ -108,7 +108,8 @@ def download_progress_callback(d, message, c_time, update_interval=5):
                 message.edit_text(progress_message_text)
             except Exception as e:
                 print(f"Error updating progress message: {e}")
-            c_time = current_time
+            return current_time  # Return the updated c_time
+    return c_time  # Return the unchanged c_time if update_interval has not passed
 
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
@@ -120,7 +121,8 @@ async def yt_callback_handler(bot, query):
     await query.message.edit_text("⬇️ **Download started...**")
 
     def progress_hook(d):
-        download_progress_callback(d, query.message, c_time)
+        nonlocal c_time  # Access c_time from the enclosing scope
+        c_time = download_progress_callback(d, query.message, c_time)
 
     ydl_opts = {
         'format': f'{format_id}+bestaudio/best',
