@@ -1,8 +1,8 @@
 import os
 import time
 import requests
-import yt_dlp as youtube_dl
 import subprocess
+from pytube import YouTube
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
@@ -32,42 +32,24 @@ async def youtube_link_handler(bot, msg):
     # Send processing message
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
-    ydl_opts = {
-        'format': 'bestvideo+bestaudio/best',
-        'noplaylist': True,
-        'quiet': True
-    }
+    yt = YouTube(url)
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=False)
-        title = info_dict.get('title', 'Unknown Title')
-        views = info_dict.get('view_count', 'N/A')
-        likes = info_dict.get('like_count', 'N/A')
-        thumb_url = info_dict.get('thumbnail', None)
-        formats = info_dict.get('formats', [])
+    title = yt.title
+    views = yt.views
+    likes = yt.rating
+    thumb_url = yt.thumbnail_url
 
-    unique_resolutions = set()
-    for f in formats:
-        try:
-            if f['ext'] == 'mp4' and f.get('filesize'):
-                unique_resolutions.add(f['height'])
-        except KeyError:
-            continue
-
-    audio_streams = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
-    best_audio_stream = max(audio_streams, key=lambda x: x.get('filesize', 0), default=None)
+    streams = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc()
+    unique_resolutions = sorted({stream.resolution for stream in streams}, reverse=True)
 
     buttons = []
-    for resolution in sorted(unique_resolutions, reverse=True):
-        streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
-        if streams_with_resolution:
-            streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x.get('filesize') or 0, reverse=True)
-            highest_size_stream = streams_with_resolution[0]
-            video_size = highest_size_stream.get('filesize', 0)
-            size_text = humanbytes(video_size)
-            button_text = f"🎬 {resolution}p - {size_text}"
-            callback_data = f"yt_{highest_size_stream['format_id']}_{url}"
-            buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+    for resolution in unique_resolutions:
+        stream = streams.filter(res=resolution).first()
+        video_size = stream.filesize
+        size_text = humanbytes(video_size)
+        button_text = f"🎬 {resolution} - {size_text}"
+        callback_data = f"yt_{resolution}_{url}"
+        buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
 
     buttons = [buttons[i:i+2] for i in range(0, len(buttons), 2)]  # Split buttons into rows of 2
 
@@ -89,72 +71,52 @@ async def youtube_link_handler(bot, msg):
 
     await processing_message.delete()
 
-def download_progress_callback(d, message, c_time, update_interval=5):
-    if d['status'] == 'downloading':
-        total_size = d.get('total_bytes', 0) or 0
-        downloaded = d.get('downloaded_bytes', 0) or 0
-        percentage = downloaded / total_size * 100 if total_size else 0
-        speed = d.get('speed', 0) or 0
-        eta = d.get('eta', 0) or 0
+def download_progress_callback(stream, chunk, bytes_remaining, message, c_time, update_interval=5):
+    total_size = stream.filesize
+    downloaded = total_size - bytes_remaining
+    percentage = downloaded / total_size * 100
+    speed = downloaded / (time.time() - c_time)
+    eta = bytes_remaining / speed
 
-        current_time = time.time()
-        if current_time - c_time >= update_interval:
-            progress_message_text = (
-                f"⬇️ **Download Progress:** {humanbytes(downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
-                f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
-                f"⏳ **Estimated Time Remaining:** {eta} seconds"
-            )
-            try:
-                message.edit_text(progress_message_text)
-            except Exception as e:
-                print(f"Error updating progress message: {e}")
-            return current_time  # Return the updated c_time
+    current_time = time.time()
+    if current_time - c_time >= update_interval:
+        progress_message_text = (
+            f"⬇️ **Download Progress:** {humanbytes(downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
+            f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
+            f"⏳ **Estimated Time Remaining:** {eta:.2f} seconds"
+        )
+        try:
+            message.edit_text(progress_message_text)
+        except Exception as e:
+            print(f"Error updating progress message: {e}")
+        return current_time  # Return the updated c_time
     return c_time  # Return the unchanged c_time if update_interval has not passed
 
-@Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
+@Client.on_callback_query(filters.regex(r'^yt_\d+p?_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
-    format_id = data[1]
+    resolution = data[1]
     url = '_'.join(data[2:])
 
     c_time = time.time()
     await query.message.edit_text("⬇️ **Download started...**")
 
-    def progress_hook(d):
-        nonlocal c_time  # Access c_time from the enclosing scope
-        c_time = download_progress_callback(d, query.message, c_time)
+    yt = YouTube(url, on_progress_callback=lambda stream, chunk, bytes_remaining: download_progress_callback(stream, chunk, bytes_remaining, query.message, c_time))
 
-    ydl_opts = {
-        'format': f'{format_id}+bestaudio/best',
-        'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-        'progress_hooks': [progress_hook],
-        'merge_output_format': 'mp4'  # Specify to merge to mp4 format
-    }
-
-    try:
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            downloaded_path = ydl.prepare_filename(info_dict)
-    except Exception as e:
-        await query.message.edit_text(f"❌ **Error during download:** {e}")
+    stream = yt.streams.filter(progressive=True, res=resolution, file_extension='mp4').first()
+    if not stream:
+        await query.message.edit_text("❌ **No suitable stream found.**")
         return
 
-    # If the downloaded file is not already in MP4 format, convert it to MP4
-    if not downloaded_path.endswith(".mp4"):
-        mp4_path = downloaded_path.rsplit('.', 1)[0] + ".mp4"
-        subprocess.run(
-            ['ffmpeg', '-i', downloaded_path, '-c:v', 'libx264', '-c:a', 'aac', mp4_path],
-            check=True
-        )
-        os.remove(downloaded_path)
-        downloaded_path = mp4_path
+    downloaded_path = os.path.join(DOWNLOAD_LOCATION, stream.default_filename)
+    stream.download(output_path=DOWNLOAD_LOCATION)
 
     video = VideoFileClip(downloaded_path)
     duration = int(video.duration)
     video_width, video_height = video.size
     filesize = humanbytes(os.path.getsize(downloaded_path))
 
-    thumb_url = info_dict.get('thumbnail', None)
+    thumb_url = yt.thumbnail_url
     thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
     response = requests.get(thumb_url)
     if response.status_code == 200:
@@ -175,10 +137,10 @@ async def yt_callback_handler(bot, query):
     else:
         thumb_path = None
 
-    button_text = query.data.split('_')[2]
+    button_text = query.data.split('_')[1]
 
     caption = (
-        f"**🎬 {info_dict['title']}**\n\n"
+        f"**🎬 {yt.title}**\n\n"
         f"💽 **Size:** {filesize}\n"
         f"🕒 **Duration:** {duration} seconds\n"
         f"📹 **Resolution:** {button_text}\n\n"
