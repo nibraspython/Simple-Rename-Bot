@@ -47,27 +47,26 @@ async def youtube_link_handler(bot, msg):
         description = info_dict.get('description', 'No description available.')
         formats = info_dict.get('formats', [])
 
-    unique_resolutions = set()
+    unique_resolutions = {}
     for f in formats:
         try:
             if f['ext'] == 'mp4' and f.get('filesize'):
-                unique_resolutions.add(f['height'])
+                resolution = f['height']
+                if resolution not in unique_resolutions:
+                    unique_resolutions[resolution] = f['filesize']
+                else:
+                    unique_resolutions[resolution] += f['filesize']
         except KeyError:
             continue
 
     buttons = []
-    for resolution in sorted(unique_resolutions, reverse=True):
-        streams_with_resolution = [f for f in formats if f.get('height') == resolution and f['ext'] == 'mp4']
-        if streams_with_resolution:
-            streams_with_resolution = sorted(streams_with_resolution, key=lambda x: x.get('filesize') or 0, reverse=True)
-            highest_size_stream = streams_with_resolution[0]
-            video_size = highest_size_stream.get('filesize', 0)
-            size_text = humanbytes(video_size)
-            button_text = f"🎬 {resolution}p - {size_text}"
-            callback_data = f"yt_{highest_size_stream['format_id']}_{url}"
-            buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+    for resolution, total_size in sorted(unique_resolutions.items(), reverse=True):
+        size_text = humanbytes(total_size)
+        button_text = f"🎬 {resolution}p - {size_text}"
+        callback_data = f"yt_{resolution}_{url}"
+        buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
 
-    buttons.append(InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}"))
+    buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
     buttons = [buttons[i:i+2] for i in range(0, len(buttons), 2)]  # Split buttons into rows of 2
 
     markup = InlineKeyboardMarkup(buttons)
@@ -114,7 +113,7 @@ def download_progress_callback(d, message, c_time, update_interval=5):
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
-    format_id = data[1]
+    resolution = data[1]
     url = '_'.join(data[2:])
 
     c_time = time.time()
@@ -125,7 +124,7 @@ async def yt_callback_handler(bot, query):
         c_time = download_progress_callback(d, query.message, c_time)
 
     ydl_opts = {
-        'format': f'{format_id}+bestaudio/best',
+        'format': f'bestvideo[height={resolution}]+bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'progress_hooks': [progress_hook],
         'merge_output_format': 'mp4'  # Specify to merge to mp4 format
@@ -176,13 +175,11 @@ async def yt_callback_handler(bot, query):
     else:
         thumb_path = None
 
-    button_text = query.data.split('_')[1]
-
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
         f"💽 **Size:** {filesize}\n"
         f"🕒 **Duration:** {duration} seconds\n"
-        f"📹 **Resolution:** {button_text}\n\n"
+        f"📹 **Resolution:** {resolution}p\n\n"
         f"✅ **Download completed!**"
     )
 
