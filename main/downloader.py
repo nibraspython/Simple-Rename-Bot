@@ -1,7 +1,6 @@
 import os
 import time
 import requests
-import subprocess
 from pytube import YouTube
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -76,7 +75,7 @@ def download_progress_callback(stream, chunk, bytes_remaining, message, c_time, 
     downloaded = total_size - bytes_remaining
     percentage = downloaded / total_size * 100
     speed = downloaded / (time.time() - c_time)
-    eta = bytes_remaining / speed
+    eta = bytes_remaining / speed if speed > 0 else 0
 
     current_time = time.time()
     if current_time - c_time >= update_interval:
@@ -101,7 +100,11 @@ async def yt_callback_handler(bot, query):
     c_time = time.time()
     await query.message.edit_text("⬇️ **Download started...**")
 
-    yt = YouTube(url, on_progress_callback=lambda stream, chunk, bytes_remaining: download_progress_callback(stream, chunk, bytes_remaining, query.message, c_time))
+    def progress_hook(stream, chunk, bytes_remaining):
+        nonlocal c_time
+        c_time = download_progress_callback(stream, chunk, bytes_remaining, query.message, c_time)
+
+    yt = YouTube(url, on_progress_callback=progress_hook)
 
     stream = yt.streams.filter(progressive=True, res=resolution, file_extension='mp4').first()
     if not stream:
