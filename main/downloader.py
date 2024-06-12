@@ -10,6 +10,7 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
+
 def humanbytes(size):
     if not size:
         return "0 B"
@@ -21,15 +22,15 @@ def humanbytes(size):
         n += 1
     return f"{round(size, 2)} {power_labels[n]}B"
 
+
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 Please send your YouTube links to download.")
 
+
 @Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
-
-    # Send processing message
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
@@ -70,7 +71,6 @@ async def youtube_link_handler(bot, msg):
             buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
 
     buttons = [buttons[i:i+2] for i in range(0, len(buttons), 2)]  # Split buttons into rows of 2
-
     markup = InlineKeyboardMarkup(buttons)
 
     caption = (
@@ -88,6 +88,7 @@ async def youtube_link_handler(bot, msg):
     os.remove(thumb_path)
 
     await processing_message.delete()
+
 
 def download_progress_callback(d, message, c_time, update_interval=5):
     if d['status'] == 'downloading':
@@ -110,6 +111,7 @@ def download_progress_callback(d, message, c_time, update_interval=5):
                 print(f"Error updating progress message: {e}")
             return current_time  # Return the updated c_time
     return c_time  # Return the unchanged c_time if update_interval has not passed
+
 
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
