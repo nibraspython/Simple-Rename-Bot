@@ -64,11 +64,9 @@ async def youtube_link_handler(bot, msg):
         size_text = humanbytes(total_size)
         button_text = f"🎬 {resolution}p - {size_text}"
         callback_data = f"yt_{resolution}_{url}"
-        buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+        buttons.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
 
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
-    buttons = [buttons[i:i+2] for i in range(0, len(buttons), 2)]  # Split buttons into rows of 2
-
     markup = InlineKeyboardMarkup(buttons)
 
     caption = (
