@@ -52,20 +52,22 @@ async def youtube_link_handler(bot, msg):
         try:
             if f['ext'] == 'mp4' and f.get('filesize'):
                 resolution = f['height']
+                audio_size = next((af['filesize'] for af in formats if af.get('acodec') != 'none' and af.get('vcodec') == 'none'), 0)
                 if resolution not in unique_resolutions:
-                    unique_resolutions[resolution] = f['filesize']
+                    unique_resolutions[resolution] = f['filesize'] + audio_size
                 else:
-                    unique_resolutions[resolution] += f['filesize']
+                    unique_resolutions[resolution] += f['filesize'] + audio_size
         except KeyError:
             continue
 
     buttons = []
-    for resolution, total_size in sorted(unique_resolutions.items(), reverse=True):
+    for resolution, total_size in sorted(unique_resolutions.items(), reverse=False):
         size_text = humanbytes(total_size)
-        button_text = f"🎬 {resolution}p - {size_text}"
+        button_text = f"{resolution}p - {size_text}"
         callback_data = f"yt_{resolution}_{url}"
-        buttons.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+        buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
 
+    buttons = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]  # Split buttons into rows of 2
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
     markup = InlineKeyboardMarkup(buttons)
 
@@ -192,7 +194,7 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time)
+            progress_args=("Upload Started... Thanks To All Who Supported ❤️", query.message, c_time)
         )
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
@@ -203,13 +205,14 @@ async def yt_callback_handler(bot, query):
         os.remove(thumb_path)
 
 @Client.on_callback_query(filters.regex(r'^desc_https?://(www\.)?youtube\.com/watch\?v='))
-async def description_callback_handler(bot, query):
+async def desc_callback_handler(bot, query):
     url = '_'.join(query.data.split('_')[1:])
     ydl_opts = {
-        'format': 'bestvideo+bestaudio/best',
+        'format': 'best',
         'noplaylist': True,
         'quiet': True
     }
+
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=False)
         description = info_dict.get('description', 'No description available.')
