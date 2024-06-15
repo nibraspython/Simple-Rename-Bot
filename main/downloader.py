@@ -60,11 +60,20 @@ async def youtube_link_handler(bot, msg):
             continue
 
     buttons = []
+    row = []
     for resolution, total_size in sorted(unique_resolutions.items(), reverse=True):
         size_text = humanbytes(total_size)
         button_text = f"🎬 {resolution}p - {size_text}"
         callback_data = f"yt_{resolution}_{url}"
-        buttons.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+        row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+        # Assuming 2 buttons per row for demonstration, you can adjust as needed
+        if len(row) == 2:
+            buttons.append(row)
+            row = []
+
+    # Add the last row if there are remaining buttons
+    if row:
+        buttons.append(row)
 
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
     markup = InlineKeyboardMarkup(buttons)
