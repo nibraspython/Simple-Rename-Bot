@@ -38,52 +38,65 @@ async def youtube_link_handler(bot, msg):
         'quiet': True
     }
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=False)
-        title = info_dict.get('title', 'Unknown Title')
-        views = info_dict.get('view_count', 'N/A')
-        likes = info_dict.get('like_count', 'N/A')
-        thumb_url = info_dict.get('thumbnail', None)
-        description = info_dict.get('description', 'No description available.')
-        formats = info_dict.get('formats', [])
+    try:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=False)
+            title = info_dict.get('title', 'Unknown Title')
+            views = info_dict.get('view_count', 'N/A')
+            likes = info_dict.get('like_count', 'N/A')
+            thumb_url = info_dict.get('thumbnail', None)
+            description = info_dict.get('description', 'No description available.')
+            formats = info_dict.get('formats', [])
 
-    unique_resolutions = {}
-    for f in formats:
-        try:
-            if f['ext'] == 'mp4' and f.get('filesize'):
-                resolution = f['height']
-                audio_size = next((af['filesize'] for af in formats if af.get('acodec') != 'none' and af.get('vcodec') == 'none'), 0)
-                if resolution not in unique_resolutions:
-                    unique_resolutions[resolution] = f['filesize'] + audio_size
-                else:
-                    unique_resolutions[resolution] += f['filesize'] + audio_size
-        except KeyError:
-            continue
+        unique_resolutions = {}
+        for f in formats:
+            try:
+                if f['ext'] == 'mp4' and f.get('filesize'):
+                    resolution = f['height']
+                    audio_size = next((af['filesize'] for af in formats if af.get('acodec') != 'none' and af.get('vcodec') == 'none'), 0)
+                    if resolution not in unique_resolutions:
+                        unique_resolutions[resolution] = f['filesize'] + audio_size
+                    else:
+                        unique_resolutions[resolution] += f['filesize'] + audio_size
+            except KeyError:
+                continue
 
-    buttons = []
-    for resolution, total_size in sorted(unique_resolutions.items(), reverse=False):
-        size_text = humanbytes(total_size)
-        button_text = f"{resolution}p - {size_text}"
-        callback_data = f"yt_{resolution}_{url}"
-        buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+        buttons = []
+        for resolution, total_size in sorted(unique_resolutions.items(), reverse=False):
+            size_text = humanbytes(total_size)
+            button_text = f"{resolution}p - {size_text}"
+            callback_data = f"yt_{resolution}_{url}"
+            buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
 
-    buttons = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]  # Split buttons into rows of 2
-    buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
-    markup = InlineKeyboardMarkup(buttons)
+        if buttons:
+            buttons = [buttons[i:i + 2] for i in range(0, len(buttons), 2)]  # Split buttons into rows of 2
+            buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
+            markup = InlineKeyboardMarkup(buttons)
+        else:
+            markup = None
 
-    caption = (
-        f"**🎬 Title:** {title}\n"
-        f"**👀 Views:** {views}\n"
-        f"**👍 Likes:** {likes}\n\n"
-        f"📥 **Select your resolution:**"
-    )
+        caption = (
+            f"**🎬 Title:** {title}\n"
+            f"**👀 Views:** {views}\n"
+            f"**👍 Likes:** {likes}\n\n"
+            f"📥 **Select your resolution:**"
+        )
 
-    thumb_response = requests.get(thumb_url)
-    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
-    with open(thumb_path, 'wb') as thumb_file:
-        thumb_file.write(thumb_response.content)
-    await bot.send_photo(chat_id=msg.chat.id, photo=thumb_path, caption=caption, reply_markup=markup)
-    os.remove(thumb_path)
+        thumb_response = requests.get(thumb_url)
+        thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
+        with open(thumb_path, 'wb') as thumb_file:
+            thumb_file.write(thumb_response.content)
+
+        if markup:
+            await bot.send_photo(chat_id=msg.chat.id, photo=thumb_path, caption=caption, reply_markup=markup)
+        else:
+            await bot.send_photo(chat_id=msg.chat.id, photo=thumb_path, caption=f"{caption}\n\nNo available resolutions.")
+
+        os.remove(thumb_path)
+
+    except Exception as e:
+        await processing_message.edit_text(f"❌ **Error processing the request:** {e}")
+        return
 
     await msg.delete()
     await processing_message.delete()
