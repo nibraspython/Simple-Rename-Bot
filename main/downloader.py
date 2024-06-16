@@ -53,7 +53,7 @@ async def youtube_link_handler(bot, msg):
     for f in formats:
         try:
             if f['ext'] == 'mp4':
-                if f['acodec'] != 'none':
+                if f['acodec'] != 'none' and f.get('filesize'):
                     audio_sizes.append(f['filesize'])
                 if f.get('filesize') and f['vcodec'] != 'none':
                     resolution = f['height']
@@ -64,7 +64,8 @@ async def youtube_link_handler(bot, msg):
         except KeyError:
             continue
 
-    total_audio_size = max(audio_sizes, default=0)  # Taking the largest audio size as a default
+    # Filter out None values and find the maximum audio size
+    total_audio_size = max([size for size in audio_sizes if size is not None], default=0)
 
     buttons = []
     row = []
