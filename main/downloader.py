@@ -48,23 +48,28 @@ async def youtube_link_handler(bot, msg):
         formats = info_dict.get('formats', [])
 
     unique_resolutions = {}
-    audio_size = 0
+    audio_sizes = []
+
     for f in formats:
         try:
-            if f['ext'] == 'mp4' and f.get('filesize'):
-                resolution = f['height']
+            if f['ext'] == 'mp4':
                 if f['acodec'] != 'none':
-                    audio_size = f['filesize']
-                if resolution not in unique_resolutions:
-                    unique_resolutions[resolution] = f['filesize'] + audio_size
-                else:
-                    unique_resolutions[resolution] += f['filesize']
+                    audio_sizes.append(f['filesize'])
+                if f.get('filesize') and f['vcodec'] != 'none':
+                    resolution = f['height']
+                    if resolution not in unique_resolutions:
+                        unique_resolutions[resolution] = f['filesize']
+                    else:
+                        unique_resolutions[resolution] += f['filesize']
         except KeyError:
             continue
 
+    total_audio_size = max(audio_sizes, default=0)  # Taking the largest audio size as a default
+
     buttons = []
     row = []
-    for resolution, total_size in sorted(unique_resolutions.items(), reverse=True):
+    for resolution, video_size in sorted(unique_resolutions.items(), reverse=True):
+        total_size = video_size + total_audio_size
         size_text = humanbytes(total_size)
         button_text = f"🎬 {resolution}p - {size_text}"
         callback_data = f"yt_{resolution}_{url}"
@@ -180,7 +185,7 @@ async def yt_callback_handler(bot, query):
             top = (img.height - video_height) / 2
             right = (img.width + video_width) / 2
             bottom = (img.height + video_height) / 2
-            img = crop((left, top, right, bottom))
+            img = img.crop((left, top, right, bottom))  # Use img.crop instead of crop
             img.save(thumb_path)
     else:
         thumb_path = None
@@ -226,4 +231,3 @@ async def description_callback_handler(bot, query):
         info_dict = ydl.extract_info(url, download=False)
         description = info_dict.get('description', 'No description available.')
     await query.message.reply_text(f"📝 **Description:**\n\n{description}")
-
