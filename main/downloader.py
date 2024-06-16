@@ -48,12 +48,15 @@ async def youtube_link_handler(bot, msg):
         formats = info_dict.get('formats', [])
 
     unique_resolutions = {}
+    audio_size = 0
     for f in formats:
         try:
             if f['ext'] == 'mp4' and f.get('filesize'):
                 resolution = f['height']
+                if f['acodec'] != 'none':
+                    audio_size = f['filesize']
                 if resolution not in unique_resolutions:
-                    unique_resolutions[resolution] = f['filesize']
+                    unique_resolutions[resolution] = f['filesize'] + audio_size
                 else:
                     unique_resolutions[resolution] += f['filesize']
         except KeyError:
@@ -177,7 +180,7 @@ async def yt_callback_handler(bot, query):
             top = (img.height - video_height) / 2
             right = (img.width + video_width) / 2
             bottom = (img.height + video_height) / 2
-            img = img.crop((left, top, right, bottom))
+            img = crop((left, top, right, bottom))
             img.save(thumb_path)
     else:
         thumb_path = None
@@ -223,3 +226,4 @@ async def description_callback_handler(bot, query):
         info_dict = ydl.extract_info(url, download=False)
         description = info_dict.get('description', 'No description available.')
     await query.message.reply_text(f"📝 **Description:**\n\n{description}")
+
