@@ -11,7 +11,7 @@ class ZipManager:
         self.chat_data = {}
 
     def start_zip_process(self, chat_id):
-        self.chat_data[chat_id] = {"files": [], "waiting_for_name": False}
+        self.chat_data[chat_id] = {"files": [], "waiting_for_name": False, "active": True}
 
     def add_file(self, chat_id, file):
         if chat_id not in self.chat_data:
@@ -32,6 +32,13 @@ class ZipManager:
 
     def is_waiting_for_name(self, chat_id):
         return self.chat_data.get(chat_id, {}).get("waiting_for_name", False)
+    
+    def is_active(self, chat_id):
+        return self.chat_data.get(chat_id, {}).get("active", False)
+
+    def deactivate(self, chat_id):
+        if chat_id in self.chat_data:
+            self.chat_data[chat_id]["active"] = False
 
 zip_manager = ZipManager()
 
@@ -44,6 +51,9 @@ async def start_zip_process(bot, msg):
 @Client.on_message(filters.private & filters.user(ADMIN) & ~filters.command(["archive", "done", "cancel"]))
 async def add_file_to_zip(bot, msg):
     chat_id = msg.chat.id
+    if not zip_manager.is_active(chat_id):
+        return  # Ignore messages if zipping process is not active
+    
     media = msg.document or msg.audio or msg.video
     if not media:
         return await msg.reply_text("Please send a valid file.")
@@ -64,6 +74,7 @@ async def handle_done_cancel(bot, query):
     chat_id = query.message.chat.id
     if query.data == "cancel":
         zip_manager.clear_files(chat_id)
+        zip_manager.deactivate(chat_id)
         await query.message.edit_text("❌ Zipping process canceled.")
         return
     
@@ -73,6 +84,9 @@ async def handle_done_cancel(bot, query):
 @Client.on_message(filters.private & filters.user(ADMIN))
 async def handle_custom_name(bot, msg):
     chat_id = msg.chat.id
+    if not zip_manager.is_active(chat_id):
+        return  # Ignore messages if zipping process is not active
+    
     if zip_manager.is_waiting_for_name(chat_id):
         custom_name = msg.text.strip()
         if not custom_name:
@@ -111,4 +125,5 @@ async def handle_custom_name(bot, msg):
         
         zip_manager.clear_files(chat_id)
         zip_manager.set_waiting_for_name(chat_id, False)
+        zip_manager.deactivate(chat_id)
         await sts.delete()
