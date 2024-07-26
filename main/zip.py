@@ -6,11 +6,11 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
 from main.utils import progress_message, humanbytes
 
-@Client.on_message(filters.private & filters.command("zip") & filters.user(ADMIN))
+@Client.on_message(filters.private & filters.command("archive") & filters.user(ADMIN))
 async def start_zip_process(bot, msg):
     await msg.reply_text("📦 Send your files to add to the zip file.\n\nUse /done when finished or /cancel to abort.")
 
-@Client.on_message(filters.private & filters.user(ADMIN) & ~filters.command(["zip", "done", "cancel"]))
+@Client.on_message(filters.private & filters.user(ADMIN) & ~filters.command(["archive", "done", "cancel"]))
 async def add_file_to_zip(bot, msg):
     chat_id = msg.chat.id
     files = bot.get_chat_data(chat_id).get("files", [])
