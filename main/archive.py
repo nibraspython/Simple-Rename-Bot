@@ -1,14 +1,44 @@
 import time
 import os
 import zipfile
-from pyrogram import Client, filters, enums
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
-from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
+
+class ZipManager:
+    def __init__(self):
+        self.chat_data = {}
+
+    def start_zip_process(self, chat_id):
+        self.chat_data[chat_id] = {"files": [], "waiting_for_name": False}
+
+    def add_file(self, chat_id, file):
+        if chat_id not in self.chat_data:
+            self.start_zip_process(chat_id)
+        self.chat_data[chat_id]["files"].append(file)
+
+    def get_files(self, chat_id):
+        return self.chat_data.get(chat_id, {}).get("files", [])
+
+    def clear_files(self, chat_id):
+        if chat_id in self.chat_data:
+            self.chat_data[chat_id]["files"] = []
+
+    def set_waiting_for_name(self, chat_id, state):
+        if chat_id not in self.chat_data:
+            self.start_zip_process(chat_id)
+        self.chat_data[chat_id]["waiting_for_name"] = state
+
+    def is_waiting_for_name(self, chat_id):
+        return self.chat_data.get(chat_id, {}).get("waiting_for_name", False)
+
+zip_manager = ZipManager()
 
 @Client.on_message(filters.private & filters.command("archive") & filters.user(ADMIN))
 async def start_zip_process(bot, msg):
-    print(f"Received /archive command from {msg.from_user.id}")
+    chat_id = msg.chat.id
+    zip_manager.start_zip_process(chat_id)
     await msg.reply_text("📦 Send your files to add to the zip file.\n\nUse /done when finished or /cancel to abort.")
 
 @Client.on_message(filters.private & filters.user(ADMIN) & ~filters.command(["archive", "done", "cancel"]))
@@ -18,14 +48,11 @@ async def add_file_to_zip(bot, msg):
     if not media:
         return await msg.reply_text("Please send a valid file.")
     
-    # Retrieve and update chat data
-    files = bot.get_chat_data(chat_id).get("files", [])
-    files.append(media)
-    bot.set_chat_data(chat_id, {"files": files})
-    
-    # Create a response with the current file list
+    zip_manager.add_file(chat_id, media)
+    files = zip_manager.get_files(chat_id)
     file_names = "\n".join([file.file_name for file in files])
     file_count = len(files)
+    
     await msg.reply_text(f"📄 Files added: {file_count}\n{file_names}",
                          reply_markup=InlineKeyboardMarkup([
                              [InlineKeyboardButton("✅ Done", callback_data="done")],
@@ -36,22 +63,22 @@ async def add_file_to_zip(bot, msg):
 async def handle_done_cancel(bot, query):
     chat_id = query.message.chat.id
     if query.data == "cancel":
-        bot.set_chat_data(chat_id, {"files": []})
+        zip_manager.clear_files(chat_id)
         await query.message.edit_text("❌ Zipping process canceled.")
         return
     
     await query.message.edit_text("📛 Send your custom name without extension for the zip file.")
-    bot.set_chat_data(chat_id, {"waiting_for_name": True})
+    zip_manager.set_waiting_for_name(chat_id, True)
 
 @Client.on_message(filters.private & filters.user(ADMIN))
 async def handle_custom_name(bot, msg):
     chat_id = msg.chat.id
-    if bot.get_chat_data(chat_id).get("waiting_for_name"):
+    if zip_manager.is_waiting_for_name(chat_id):
         custom_name = msg.text.strip()
         if not custom_name:
             return await msg.reply_text("Please provide a valid name for the zip file.")
         
-        files = bot.get_chat_data(chat_id).get("files", [])
+        files = zip_manager.get_files(chat_id)
         if not files:
             return await msg.reply_text("No files to zip.")
         
@@ -81,5 +108,7 @@ async def handle_custom_name(bot, msg):
         for file_path in downloaded_files:
             os.remove(file_path)
         os.remove(zip_path)
-        bot.set_chat_data(chat_id, {"files": [], "waiting_for_name": False})
+        
+        zip_manager.clear_files(chat_id)
+        zip_manager.set_waiting_for_name(chat_id, False)
         await sts.delete()
