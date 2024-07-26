@@ -78,7 +78,8 @@ async def handle_done_cancel(bot, query):
         await query.message.edit_text("❌ Zipping process canceled.")
         return
     
-    await query.message.edit_text("📛 Send your custom name without extension for the zip file.")
+    if query.message.text != "📛 Send your custom name without extension for the zip file.":
+        await query.message.edit_text("📛 Send your custom name without extension for the zip file.")
     zip_manager.set_waiting_for_name(chat_id, True)
 
 @Client.on_message(filters.private & filters.user(ADMIN))
