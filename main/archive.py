@@ -1,21 +1,21 @@
 import time
 import os
-import zipfile
+from moviepy.editor import VideoFileClip, concatenate_videoclips
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
-class ZipManager:
+class VideoManager:
     def __init__(self):
         self.chat_data = {}
 
-    def start_zip_process(self, chat_id):
+    def start_merge_process(self, chat_id):
         self.chat_data[chat_id] = {"files": [], "waiting_for_name": False, "active": True}
 
     def add_file(self, chat_id, file):
         if chat_id not in self.chat_data:
-            self.start_zip_process(chat_id)
+            self.start_merge_process(chat_id)
         self.chat_data[chat_id]["files"].append(file)
 
     def get_files(self, chat_id):
@@ -27,7 +27,7 @@ class ZipManager:
 
     def set_waiting_for_name(self, chat_id, state):
         if chat_id not in self.chat_data:
-            self.start_zip_process(chat_id)
+            self.start_merge_process(chat_id)
         self.chat_data[chat_id]["waiting_for_name"] = state
 
     def is_waiting_for_name(self, chat_id):
@@ -40,30 +40,30 @@ class ZipManager:
         if chat_id in self.chat_data:
             self.chat_data[chat_id]["active"] = False
 
-zip_manager = ZipManager()
+video_manager = VideoManager()
 
-@Client.on_message(filters.private & filters.command("archive") & filters.user(ADMIN))
-async def start_zip_process(bot, msg):
+@Client.on_message(filters.private & filters.command("merge") & filters.user(ADMIN))
+async def start_merge_process(bot, msg):
     chat_id = msg.chat.id
-    zip_manager.start_zip_process(chat_id)
-    await msg.reply_text("📦 Send your files to add to the zip file.\n\nUse /done when finished or /cancel to abort.")
+    video_manager.start_merge_process(chat_id)
+    await msg.reply_text("🎬 Send your video files (.mp4 or .mkv) to merge.\n\nUse /done when finished or /cancel to abort.")
 
-@Client.on_message(filters.private & filters.user(ADMIN) & ~filters.command(["archive", "done", "cancel"]))
-async def add_file_to_zip(bot, msg):
+@Client.on_message(filters.private & filters.user(ADMIN) & ~filters.command(["merge", "done", "cancel"]))
+async def add_file_to_merge(bot, msg):
     chat_id = msg.chat.id
-    if not zip_manager.is_active(chat_id):
-        return  # Ignore messages if zipping process is not active
+    if not video_manager.is_active(chat_id):
+        return  # Ignore messages if merging process is not active
     
-    media = msg.document or msg.audio or msg.video
-    if not media:
-        return await msg.reply_text("Please send a valid file.")
+    media = msg.video
+    if not media or not (media.file_name.endswith(".mp4") or media.file_name.endswith(".mkv")):
+        return await msg.reply_text("Please send a valid video file (.mp4 or .mkv).")
     
-    zip_manager.add_file(chat_id, media)
-    files = zip_manager.get_files(chat_id)
+    video_manager.add_file(chat_id, media)
+    files = video_manager.get_files(chat_id)
     file_names = "\n".join([file.file_name for file in files])
     file_count = len(files)
     
-    await msg.reply_text(f"📄 Files added: {file_count}\n{file_names}",
+    await msg.reply_text(f"🎥 Videos added: {file_count}\n{file_names}",
                          reply_markup=InlineKeyboardMarkup([
                              [InlineKeyboardButton("✅ Done", callback_data="done")],
                              [InlineKeyboardButton("❌ Cancel", callback_data="cancel")]
@@ -73,32 +73,32 @@ async def add_file_to_zip(bot, msg):
 async def handle_done_cancel(bot, query):
     chat_id = query.message.chat.id
     if query.data == "cancel":
-        zip_manager.clear_files(chat_id)
-        zip_manager.deactivate(chat_id)
-        await query.message.edit_text("❌ Zipping process canceled.")
+        video_manager.clear_files(chat_id)
+        video_manager.deactivate(chat_id)
+        await query.message.edit_text("❌ Merging process canceled.")
         return
     
-    if query.message.text != "📛 Send your custom name without extension for the zip file.":
-        await query.message.edit_text("📛 Send your custom name without extension for the zip file.")
-    zip_manager.set_waiting_for_name(chat_id, True)
+    if query.message.text != "📛 Send your custom name without extension for the merged video file.":
+        await query.message.edit_text("📛 Send your custom name without extension for the merged video file.")
+    video_manager.set_waiting_for_name(chat_id, True)
 
 @Client.on_message(filters.private & filters.user(ADMIN))
 async def handle_custom_name(bot, msg):
     chat_id = msg.chat.id
-    if not zip_manager.is_active(chat_id):
-        return  # Ignore messages if zipping process is not active
+    if not video_manager.is_active(chat_id):
+        return  # Ignore messages if merging process is not active
     
-    if zip_manager.is_waiting_for_name(chat_id):
+    if video_manager.is_waiting_for_name(chat_id):
         custom_name = msg.text.strip()
         if not custom_name:
-            return await msg.reply_text("Please provide a valid name for the zip file.")
+            return await msg.reply_text("Please provide a valid name for the merged video file.")
         
-        files = zip_manager.get_files(chat_id)
+        files = video_manager.get_files(chat_id)
         if not files:
-            return await msg.reply_text("No files to zip.")
+            return await msg.reply_text("No videos to merge.")
         
-        zip_path = os.path.join(DOWNLOAD_LOCATION, f"{custom_name}.zip")
-        sts = await msg.reply_text("🔄 Downloading files...")
+        video_path = os.path.join(DOWNLOAD_LOCATION, f"{custom_name}.mp4")
+        sts = await msg.reply_text("🔄 Downloading videos...")
         
         # Download files
         c_time = time.time()
@@ -108,23 +108,23 @@ async def handle_custom_name(bot, msg):
                                                   progress_args=("Downloading...", sts, c_time))
             downloaded_files.append(downloaded)
         
-        # Create zip file
-        sts = await sts.edit("🔄 Creating zip file...")
-        with zipfile.ZipFile(zip_path, 'w') as zipf:
-            for file_path in downloaded_files:
-                zipf.write(file_path, os.path.basename(file_path))
+        # Merge videos
+        sts = await sts.edit("🔄 Merging videos...")
+        clips = [VideoFileClip(file_path) for file_path in downloaded_files]
+        final_clip = concatenate_videoclips(clips)
+        final_clip.write_videofile(video_path)
         
-        # Upload zip file
+        # Upload merged video
         c_time = time.time()
-        await bot.send_document(chat_id, zip_path, caption=f"🎉 Here is your zip file: {custom_name}.zip",
+        await bot.send_document(chat_id, video_path, caption=f"🎉 Here is your merged video: {custom_name}.mp4",
                                 progress=progress_message, progress_args=("Uploading...", sts, c_time))
         
         # Cleanup
         for file_path in downloaded_files:
             os.remove(file_path)
-        os.remove(zip_path)
+        os.remove(video_path)
         
-        zip_manager.clear_files(chat_id)
-        zip_manager.set_waiting_for_name(chat_id, False)
-        zip_manager.deactivate(chat_id)
+        video_manager.clear_files(chat_id)
+        video_manager.set_waiting_for_name(chat_id, False)
+        video_manager.deactivate(chat_id)
         await sts.delete()
