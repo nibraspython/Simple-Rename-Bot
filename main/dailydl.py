@@ -23,7 +23,7 @@ async def ask_for_video_url(bot, msg):
 @bot.on_message(filters.private & filters.user(ADMIN))
 async def download_and_upload_video(bot, msg):
     video_url = msg.text
-    if not video_url.startswith("https://www.dailymotion.com/video/"):
+    if not video_url.startswith("https://www.dailymotion.com/embed/video/"):
         return await msg.reply_text("Invalid URL. Please provide a valid Dailymotion video URL.")
     
     output_directory = "/content"
