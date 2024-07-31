@@ -7,7 +7,7 @@ from moviepy.editor import VideoFileClip
 
 bot = Client("my_bot")
 
-@bot.on_message(filters.private & filters.command("upload") & filters.user(ADMIN))
+@bot.on_message(filters.private & filters.command("video") & filters.user(ADMIN))
 async def upload_video(bot, msg):
     await msg.reply_text("Please send me the path to your video in Colab.")
 
