@@ -61,4 +61,3 @@ def download_dailymotion_video(url, output_path='.'):
     }
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
-
