@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-import youtube_dl
+import yt_dlp as youtube_dl
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from moviepy.editor import VideoFileClip
