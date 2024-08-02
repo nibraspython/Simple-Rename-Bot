@@ -28,16 +28,16 @@ async def handle_youtube_link(bot, msg):
         try:
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
-                title = info.get('title')
-                thumbnail_url = info.get('thumbnail')
-                views = info.get('view_count')
-                likes = info.get('like_count')
-                formats = info.get('formats')
+                title = info.get('title', 'Unknown Title')
+                thumbnail_url = info.get('thumbnail', '')
+                views = info.get('view_count', 'Unknown')
+                likes = info.get('like_count', 'Unknown')
+                formats = info.get('formats', [])
 
                 buttons = []
                 for fmt in formats:
                     if fmt.get('vcodec') != 'none':
-                        resolution = fmt.get('format_note')
+                        resolution = fmt.get('format_note', 'Unknown Resolution')
                         size = humanbytes(fmt.get('filesize', 0))
                         buttons.append(InlineKeyboardButton(f"{resolution} - {size}", callback_data=f"{fmt['format_id']}|{url}"))
 
@@ -90,13 +90,13 @@ async def download_video(bot, callback_query):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url)
             filepath = ydl.prepare_filename(info)
-            title = info.get('title')
-            thumbnail_url = info.get('thumbnail')
+            title = info.get('title', 'Unknown Title')
+            thumbnail_url = info.get('thumbnail', '')
 
         await msg.edit_text(f"✅ **Download finished. Now starting upload...** 📤\n\n📹 **{title}**")
 
         video_clip = VideoFileClip(filepath)
-        duration = int(video_clip.duration)
+        duration = int(video_clip.duration) if video_clip.duration else 0
         video_clip.close()
 
         await bot.send_video(
@@ -117,8 +117,8 @@ async def download_video(bot, callback_query):
 
 def progress_hook(d, bot, message):
     if d['status'] == 'downloading':
-        current = d['downloaded_bytes']
-        total = d['total_bytes']
+        current = d.get('downloaded_bytes', 0)
+        total = d.get('total_bytes', 1)  # Avoid division by zero
         percent = current * 100 / total
         time.sleep(1)
         bot.edit_message_text(
