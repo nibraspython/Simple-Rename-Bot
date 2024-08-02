@@ -10,9 +10,10 @@ from moviepy.editor import VideoFileClip
 async def ask_for_video_url(bot, msg):
     await msg.reply_text("Please send me the Dailymotion video URL.")
 
-@Client.on_message(filters.private & filters.user(ADMIN))
+@Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def download_and_upload_video(bot, msg):
-    video_url = msg.text
+    video_url = msg.text.strip()
+    
     if not video_url.startswith("https://www.dailymotion.com/video/"):
         return await msg.reply_text("Invalid URL. Please provide a valid Dailymotion video URL.")
     
@@ -40,10 +41,10 @@ async def download_and_upload_video(bot, msg):
     
     cap = f"{video_title}\n\n💽 size: {filesize}\n🕒 duration: {duration} seconds"
     
-    await sts.edit("🚀 Uploading started..... 📤**Thanks To All Who Supported ❤**")
+    await sts.edit("🚀 Uploading started..... 📤")
     c_time = time.time()
     try:
-        await bot.send_video(msg.chat.id, video=video_path, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started..... **Thanks To All Who Supported ❤**", sts, c_time))
+        await bot.send_video(msg.chat.id, video=video_path, caption=cap, duration=duration, progress=progress_message, progress_args=("Upload Started.....", sts, c_time))
     except Exception as e:
         return await sts.edit(f"Error: {e}")
     
