@@ -210,4 +210,6 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=("Upload Started
+            progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time) ) except Exception as e: await query.message.edit_text(f"❌ Error during upload: {e}") returnos.remove(downloaded_path)
+if thumb_path:
+    os.remove(thumb_path)@Client.on_callback_query(filters.regex(r'^desc_https?://(www.)?youtube.com/watch?v=')) async def description_callback_handler(bot, query): url = ''.join(query.data.split('')[1:]) ydl_opts = { 'format': 'bestvideo+bestaudio/best', 'noplaylist': True, 'quiet': True } with youtube_dl.YoutubeDL(ydl_opts) as ydl: info_dict = ydl.extract_info(url, download=False) description = info_dict.get('description', 'No description available.') await query.message.reply_text(f"📝 Description:\n\n{description}")
