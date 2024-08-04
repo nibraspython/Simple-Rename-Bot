@@ -114,12 +114,12 @@ def progress_hook(d, bot, message):
         time.sleep(1)
         bot.edit_message_text(
             chat_id=message.chat.id,
-            message_id=message.message_id,
+            message_id=message.id,  # Use `id` instead of `message_id`
             text=f"⬇️ **Downloading... {percent:.2f}%**"
         )
     elif d['status'] == 'finished':
         bot.edit_message_text(
             chat_id=message.chat.id,
-            message_id=message.message_id,
+            message_id=message.id,  # Use `id` instead of `message_id`
             text="✅ **Download finished. Now starting upload...**"
         )
