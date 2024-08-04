@@ -31,7 +31,8 @@ async def handle_youtube_link(bot, msg):
             for fmt in formats:
                 if fmt.get('vcodec') != 'none':
                     resolution = fmt.get('format_note')
-                    size = humanbytes(fmt.get('filesize', 0))
+                    filesize = fmt.get('filesize') or 0  # Handle NoneType
+                    size = humanbytes(filesize)
                     buttons.append(InlineKeyboardButton(f"{resolution} - {size}", callback_data=f"{fmt['format_id']}|{url}"))
 
             # Arrange buttons in a grid
