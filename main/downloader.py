@@ -1,144 +1,124 @@
-import logging
-import asyncio
-import aiohttp
 import os
 import time
-from datetime import datetime
-from pyrogram import Client, filters, enums
-from config import DOWNLOAD_LOCATION, CAPTION, TG_MAX_FILE_SIZE, CHUNK_SIZE, PROCESS_MAX_TIMEOUT, ADMIN
-from main.utils import progress_message, humanbytes
-from hachoir.metadata import extractMetadata
-from hachoir.parser import createParser
-from PIL import Image
+import yt_dlp as youtube_dl
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from moviepy.editor import VideoFileClip
-
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from config import DOWNLOAD_LOCATION, ADMIN
+from main.utils import progress_message, humanbytes
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
-async def youtube_url_handler(bot, message):
-    await message.reply_text("📥 Please send your YouTube links to download.")
+async def ytdl_command(bot, msg):
+    await msg.reply_text("📥 **Send your YouTube links to download**")
 
-@Client.on_message(filters.private & filters.regex(r'(https?://)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)/.+') & filters.user(ADMIN))
-async def youtube_download(bot, message):
-    youtube_dl_url = message.text.strip()
-    custom_file_name = os.path.basename(youtube_dl_url)
-    description = CAPTION
-    start = datetime.now()
-    
-    await message.reply_text("🔄 Initiating download...", parse_mode=enums.ParseMode.HTML)
-    
-    tmp_directory_for_each_user = os.path.join(DOWNLOAD_LOCATION, str(message.from_user.id))
-    if not os.path.isdir(tmp_directory_for_each_user):
-        os.makedirs(tmp_directory_for_each_user)
-    download_directory = os.path.join(tmp_directory_for_each_user, custom_file_name)
-    
-    async with aiohttp.ClientSession() as session:
-        c_time = time.time()
-        try:
-            await download_coroutine(bot, session, youtube_dl_url, download_directory, message.chat.id, message.id, c_time)
-        except asyncio.TimeoutError:
-            await bot.edit_message_text(chat_id=message.chat.id, message_id=message.id, text="⚠️ The download speed is too slow.", parse_mode=enums.ParseMode.HTML)
-            return False
+@Client.on_message(filters.private & filters.text & filters.user(ADMIN))
+async def handle_youtube_link(bot, msg):
+    urls = msg.text.split()
+    for url in urls:
+        ydl_opts = {
+            'format': 'bestvideo+bestaudio',
+            'noplaylist': True
+        }
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            title = info.get('title')
+            thumbnail_url = info.get('thumbnail')
+            views = info.get('view_count')
+            likes = info.get('like_count')
+            formats = info.get('formats')
 
-    if os.path.exists(download_directory):
-        end_one = datetime.now()
-        await message.reply_text("🚀 Uploading started...", parse_mode=enums.ParseMode.HTML)
-        
-        file_size = TG_MAX_FILE_SIZE + 1
-        try:
-            file_size = os.stat(download_directory).st_size
-        except FileNotFoundError as exc:
-            download_directory = os.path.splitext(download_directory)[0] + "." + "mkv"
-            file_size = os.stat(download_directory).st_size
-        
-        if file_size > TG_MAX_FILE_SIZE:
-            await message.reply_text("❌ The file size exceeds the Telegram limit.", parse_mode=enums.ParseMode.HTML)
-        else:
-            start_time = time.time()
-            video_clip = VideoFileClip(download_directory)
-            duration = int(video_clip.duration)
-            video_clip.close()
+            buttons = []
+            for fmt in formats:
+                if fmt.get('vcodec') != 'none':
+                    resolution = fmt.get('format_note')
+                    size = humanbytes(fmt.get('filesize', 0))
+                    buttons.append(InlineKeyboardButton(f"{resolution} - {size}", callback_data=f"{fmt['format_id']}|{url}"))
 
-            if description:
-                try:
-                    cap = description.format(file_name=custom_file_name, file_size=humanbytes(file_size), duration=duration)
-                except Exception as e:
-                    return await message.reply_text(f"❌ Your caption Error: unexpected keyword ●> ({e})")
-            else:
-                cap = f"{custom_file_name}\n\n💽 size: {humanbytes(file_size)}\n🕒 duration: {duration} seconds"
-
-            thumbnail_path = await get_thumbnail(bot, message, download_directory)
-
-            await bot.send_video(
-                message.chat.id,
-                video=download_directory,
-                caption=cap,
-                duration=duration,
-                thumb=thumbnail_path,
-                progress=progress_message,
-                progress_args=("Upload Started..... Thanks To All Who Supported ❤", message, start_time)
+            # Arrange buttons in a grid
+            grid_buttons = []
+            for i in range(0, len(buttons), 2):
+                grid_buttons.append(buttons[i:i+2])
+                
+            inline_kb_markup = InlineKeyboardMarkup(grid_buttons)
+            
+            await bot.send_photo(
+                msg.chat.id,
+                thumbnail_url,
+                caption=f"📹 **{title}**\n👀 Views: {views} | 👍 Likes: {likes}\n\n📊 **Select your resolution:**",
+                reply_markup=inline_kb_markup
             )
 
-            end_two = datetime.now()
-            try:
-                os.remove(download_directory)
-                os.remove(thumbnail_path)
-            except:
-                pass
-            
-            time_taken_for_download = (end_one - start).seconds
-            time_taken_for_upload = (end_two - end_one).seconds
-            await message.reply_text(f"✅ Successfully uploaded in {time_taken_for_upload} seconds.\n📥 Download time: {time_taken_for_download} seconds.", parse_mode=enums.ParseMode.HTML)
-    else:
-        await message.reply_text("❌ Invalid link: Incorrect Link", parse_mode=enums.ParseMode.HTML)
+            # Add resolution buttons to the menu
+            kb_markup = ReplyKeyboardMarkup(
+                [[KeyboardButton(button.text)] for button in buttons],
+                resize_keyboard=True,
+                one_time_keyboard=True
+            )
+            await bot.send_message(
+                msg.chat.id,
+                "📲 **Select resolution from the menu below:**",
+                reply_markup=kb_markup
+            )
 
-async def download_coroutine(bot, session, url, file_name, chat_id, message_id, start):
-    downloaded = 0
-    display_message = ""
-    async with session.get(url, timeout=PROCESS_MAX_TIMEOUT) as response:
-        total_length = int(response.headers["Content-Length"])
-        content_type = response.headers["Content-Type"]
-        if "text" in content_type and total_length < 500:
-            return await response.release()
-        await bot.edit_message_text(
-            chat_id,
-            message_id,
-            text=f"""Initiating Download
-🔗 **URL:** `{url}`
-🗂️ **Size:** {humanbytes(total_length)}"""
+@Client.on_callback_query(filters.regex(r'^\d+\|.+$'))
+async def download_video(bot, callback_query):
+    data = callback_query.data
+    format_id, url = data.split('|')
+
+    ydl_opts = {
+        'format': format_id,
+        'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
+        'progress_hooks': [lambda d: progress_hook(d, bot, callback_query.message)]
+    }
+
+    msg = callback_query.message
+    c_time = time.time()
+
+    await msg.edit_text("🔄 **Download started...** 📥")
+
+    try:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url)
+            filepath = ydl.prepare_filename(info)
+            title = info.get('title')
+            thumbnail_url = info.get('thumbnail')
+
+        await msg.edit_text(f"✅ **Download finished. Now starting upload...** 📤\n\n📹 **{title}**")
+
+        video_clip = VideoFileClip(filepath)
+        duration = int(video_clip.duration)
+        video_clip.close()
+
+        await bot.send_video(
+            msg.chat.id,
+            video=filepath,
+            thumb=thumbnail_url,
+            caption=f"📹 **{title}**",
+            duration=duration,
+            progress=progress_message,
+            progress_args=("🚀 **Upload Started...** ❤️ Thanks To All Who Supported", msg, c_time)
         )
-        with open(file_name, "wb") as f_handle:
-            while True:
-                chunk = await response.content.read(CHUNK_SIZE)
-                if not chunk:
-                    break
-                f_handle.write(chunk)
-                downloaded += CHUNK_SIZE
-                now = time.time()
-                diff = now - start
-                if round(diff % 5.00) == 0 or downloaded == total_length:
-                    percentage = downloaded * 100 / total_length
-                    speed = downloaded / diff
-                    elapsed_time = round(diff) * 1000
-                    time_to_completion = round((total_length - downloaded) / speed) * 1000
-                    estimated_total_time = elapsed_time + time_to_completion
-                    try:
-                        current_message = f"""**Download Status**
-🔗 **URL:** `{url}`
-🗂️ **Size:** {humanbytes(total_length)}
-✅ **Done:** {humanbytes(downloaded)}
-⏱️ **ETA:** {TimeFormatter(estimated_total_time)}"""
-                        if current_message != display_message:
-                            await bot.edit_message_text(chat_id, message_id, text=current_message)
-                            display_message = current_message
-                    except Exception as e:
-                        logger.info(str(e))
-                        pass
-        return await response.release()
 
-async def get_thumbnail(bot, message, download_directory):
-    thumb_image_path = os.path.join(DOWNLOAD_LOCATION, f"{message.from_user.id}.jpg")
-    if not os.path.exists(thumb_image_path):
-        thumb_image_path = await bot.download_media(message.reply_to_message.video.thumbs[0].file_id)
-    return thumb_image_path
+        os.remove(filepath)
+        await msg.delete()
+
+    except Exception as e:
+        await msg.edit_text(f"⚠️ **Error:** {e}")
+
+def progress_hook(d, bot, message):
+    if d['status'] == 'downloading':
+        current = d['downloaded_bytes']
+        total = d['total_bytes']
+        percent = current * 100 / total
+        time.sleep(1)
+        bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            text=f"⬇️ **Downloading... {percent:.2f}%**"
+        )
+    elif d['status'] == 'finished':
+        bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            text="✅ **Download finished. Now starting upload...**"
+        )
