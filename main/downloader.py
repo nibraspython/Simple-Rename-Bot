@@ -8,18 +8,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import progress_message, humanbytes
-
-def humanbytes(size):
-    if not size:
-        return "0 B"
-    power = 2**10
-    n = 0
-    power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
-    while size > power:
-        size /= power
-        n += 1
-    return f"{round(size, 2)} {power_labels[n]}B"
+from main.utils import progress_message, humanbytes  # Importing from your existing utils.py
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -75,12 +64,10 @@ async def youtube_link_handler(bot, msg):
         button_text = f"🎬 {resolution}p - {size_text}"
         callback_data = f"yt_{resolution}_{url}"
         row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
-        # Assuming 2 buttons per row for demonstration, you can adjust as needed
         if len(row) == 2:
             buttons.append(row)
             row = []
 
-    # Add the last row if there are remaining buttons
     if row:
         buttons.append(row)
 
@@ -104,28 +91,6 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
-def download_progress_callback(d, message, c_time, update_interval=5):
-    if d['status'] == 'downloading':
-        total_size = d.get('total_bytes', 0) or 0
-        downloaded = d.get('downloaded_bytes', 0) or 0
-        percentage = downloaded / total_size * 100 if total_size else 0
-        speed = d.get('speed', 0) or 0
-        eta = d.get('eta', 0) or 0
-
-        current_time = time.time()
-        if current_time - c_time >= update_interval:
-            progress_message_text = (
-                f"⬇️ **Download Progress:** {humanbytes(downloaded)} of {humanbytes(total_size)} ({percentage:.2f}%)\n"
-                f"⚡️ **Speed:** {humanbytes(speed)}/s\n"
-                f"⏳ **Estimated Time Remaining:** {eta} seconds"
-            )
-            try:
-                message.edit_text(progress_message_text)
-            except Exception as e:
-                print(f"Error updating progress message: {e}")
-            return current_time  # Return the updated c_time
-    return c_time  # Return the unchanged c_time if update_interval has not passed
-
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
@@ -136,7 +101,7 @@ async def yt_callback_handler(bot, query):
     await query.message.edit_text("⬇️ **Download started...**")
 
     def progress_hook(d):
-        nonlocal c_time  # Access c_time from the enclosing scope
+        nonlocal c_time
         c_time = download_progress_callback(d, query.message, c_time)
 
     ydl_opts = {
@@ -155,7 +120,6 @@ async def yt_callback_handler(bot, query):
         await query.message.edit_text(f"❌ **Error during download:** {e}")
         return
 
-    # If the downloaded file is not already in MP4 format, convert it to MP4
     if not downloaded_path.endswith(".mp4"):
         mp4_path = downloaded_path.rsplit('.', 1)[0] + ".mp4"
         subprocess.run(
