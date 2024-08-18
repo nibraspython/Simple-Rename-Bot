@@ -46,22 +46,27 @@ async def youtube_link_handler(bot, msg):
                 if resolution not in unique_resolutions:
                     unique_resolutions[resolution] = {
                         "video_size": f['filesize'],
-                        "audio_size": 0,
                         "format_id": f['format_id']
                     }
                 else:
-                    unique_resolutions[resolution]["video_size"] += f['filesize']
+                    unique_resolutions[resolution]["video_size"] = max(unique_resolutions[resolution]["video_size"], f['filesize'])
             elif f['acodec'] != 'none' and f.get('filesize'):
                 for res in unique_resolutions:
-                    unique_resolutions[res]["audio_size"] = max(unique_resolutions[res]["audio_size"], f['filesize'])
+                    unique_resolutions[res]["audio_size"] = f['filesize']
         except KeyError:
             continue
 
+    # Ensure audio size is added to each resolution
+    for resolution, data in unique_resolutions.items():
+        audio_size = data.get("audio_size", 0)
+        total_size = data["video_size"] + audio_size
+        unique_resolutions[resolution]["total_size"] = total_size
+
+    # Generate buttons for each resolution
     buttons = []
     row = []
     for resolution, data in sorted(unique_resolutions.items(), reverse=True):
-        total_size = data["video_size"] + data["audio_size"]
-        size_text = humanbytes(total_size)
+        size_text = humanbytes(data["total_size"])
         button_text = f"🎬 {resolution}p - {size_text}"
         callback_data = f"yt_{resolution}_{data['format_id']}_{url}"
         row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
