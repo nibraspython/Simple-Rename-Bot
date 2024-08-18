@@ -97,17 +97,11 @@ async def yt_callback_handler(bot, query):
     resolution = data[1]
     url = '_'.join(data[2:])
 
-    c_time = time.time()
     await query.message.edit_text("⬇️ **Download started...**")
-
-    def progress_hook(d):
-        nonlocal c_time
-        c_time = download_progress_callback(d, query.message, c_time)
 
     ydl_opts = {
         'format': f'bestvideo[height={resolution}]+bestaudio/best',
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-        'progress_hooks': [progress_hook],
         'merge_output_format': 'mp4'  # Specify to merge to mp4 format
     }
 
