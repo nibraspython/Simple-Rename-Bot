@@ -11,7 +11,7 @@ user_data = {}
 @Client.on_callback_query(filters.regex('create_archive'))
 async def create_archive_callback(bot, callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
-    user_data[user_id] = {'action': 'create_archive', 'files': []}
+    user_data[user_id] = {'action': 'create_archive', 'files': [], 'awaiting_name': False}
     await callback_query.message.edit_text(
         "📁 **Send all files you want to include in the archive.**\n\n🗂️ Files added: 0",
         reply_markup=InlineKeyboardMarkup([
@@ -22,15 +22,9 @@ async def create_archive_callback(bot, callback_query: CallbackQuery):
 @Client.on_message(filters.private & (filters.document | filters.video) & filters.user(ADMIN))
 async def add_file_to_archive(bot, msg):
     user_id = msg.from_user.id
-    if user_id in user_data and user_data[user_id]['action'] == 'create_archive':
-        if msg.document:
-            file_name = msg.document.file_name
-            file_type = 'document'
-        elif msg.video:
-            file_name = msg.video.file_name
-            file_type = 'video'
-        else:
-            return  # Ignore other media types
+    if user_id in user_data and user_data[user_id]['action'] == 'create_archive' and not user_data[user_id]['awaiting_name']:
+        file_name = msg.document.file_name if msg.document else msg.video.file_name
+        file_type = 'document' if msg.document else 'video'
 
         # Append the file to the user's data
         user_data[user_id]['files'].append({
@@ -53,7 +47,7 @@ async def add_file_to_archive(bot, msg):
 @Client.on_callback_query(filters.regex('archive_done'))
 async def archive_done_callback(bot, callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
-    if user_id in user_data:
+    if user_id in user_data and user_data[user_id]['files']:
         await callback_query.message.edit_text("🎨 **Send your custom name for the ZIP file:**")
         user_data[user_id]['awaiting_name'] = True
 
@@ -67,8 +61,9 @@ async def get_custom_zip_name(bot, msg):
 
 async def handle_archive_creation(bot: Client, msg, user_data, custom_name):
     user_id = msg.from_user.id
+    files_to_zip = user_data[user_id]['files']
 
-    if user_id not in user_data:
+    if not files_to_zip:
         await msg.reply_text("No files found to create an archive.")
         return
 
@@ -78,7 +73,7 @@ async def handle_archive_creation(bot: Client, msg, user_data, custom_name):
         os.makedirs(download_dir)
 
     media_files = []
-    for file_info in user_data[user_id]['files']:
+    for file_info in files_to_zip:
         media = file_info['message']
         file_name = file_info['file_name']
         file_path = os.path.join(download_dir, file_name)
