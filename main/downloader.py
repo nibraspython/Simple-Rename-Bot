@@ -123,10 +123,12 @@ async def yt_callback_handler(bot, query):
         os.remove(downloaded_path)
         downloaded_path = mp4_path
 
+    # Recalculate file size after merging
+    final_filesize = os.path.getsize(downloaded_path)
     video = VideoFileClip(downloaded_path)
     duration = int(video.duration)
     video_width, video_height = video.size
-    filesize = humanbytes(os.path.getsize(downloaded_path))
+    filesize = humanbytes(final_filesize)
 
     thumb_url = info_dict.get('thumbnail', None)
     thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
@@ -169,7 +171,7 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time)
+            progress_args=("Upload Started..... Thanks To All Who Supported ❤️", query.message, c_time)
         )
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
