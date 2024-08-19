@@ -1,7 +1,8 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from config import ADMIN
-from main.archive_creator import handle_archive_creation  # Archive creation logic in another file
+from main.archive_creator import handle_archive_creation
+from main.trimmer import start_trim_process, receive_durations, trim_confirm_callback, trim_cancel_callback
 
 user_data = {}
 
@@ -72,3 +73,23 @@ async def get_custom_zip_name(bot, msg):
         custom_name = msg.text
         await handle_archive_creation(bot, msg, user_data, custom_name)
         del user_data[user_id]  # Clear user data after completion
+
+@Client.on_callback_query(filters.regex("video_trimmer"))
+async def video_trimmer_callback(bot, callback_query: CallbackQuery):
+    await start_trim_process(bot, callback_query.message)
+
+@Client.on_message(filters.private & filters.media & filters.user(ADMIN))
+async def receive_media_for_trimming(bot, msg):
+    await receive_media(bot, msg)
+
+@Client.on_message(filters.private & filters.text & filters.user(ADMIN))
+async def receive_trim_durations(bot, msg):
+    await receive_durations(bot, msg)
+
+@Client.on_callback_query(filters.regex("trim_confirm") & filters.user(ADMIN))
+async def trim_confirm_callback_wrapper(bot, callback_query: CallbackQuery):
+    await trim_confirm_callback(bot, callback_query)
+
+@Client.on_callback_query(filters.regex("trim_cancel") & filters.user(ADMIN))
+async def trim_cancel_callback_wrapper(bot, callback_query: CallbackQuery):
+    await trim_cancel_callback(bot, callback_query)
