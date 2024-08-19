@@ -1,58 +1,52 @@
 import os
+import time
 import zipfile
-from pyrogram import Client, CallbackQuery
-from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import progress_message  # Assuming you have a progress_message function
+from pyrogram import Client
+from config import DOWNLOAD_LOCATION
+from main.utils import progress_message, humanbytes
 
-async def handle_archive_creation(bot: Client, query: CallbackQuery):
-    user_id = query.from_user.id
+async def handle_archive_creation(bot: Client, msg, user_data, custom_name):
+    user_id = msg.from_user.id
 
-    # Request the user to send files for archiving
-    await query.message.reply_text(
-        "📦 **Please send the files you want to archive.**\n\n"
-        "You can send multiple files, and when you're done, use the `/done` command."
-    )
+    if user_id not in user_data:
+        await msg.reply_text("No files found to create an archive.")
+        return
 
-    # Placeholder for storing files before zipping
-    user_data[user_id] = []
+    # Create the directory for the downloaded files if it doesn't exist
+    download_dir = os.path.join(DOWNLOAD_LOCATION, f"{custom_name}_temp")
+    if not os.path.exists(download_dir):
+        os.makedirs(download_dir)
 
-    @Client.on_message(filters.private & filters.user(ADMIN) & ~filters.command(["done"]))
-    async def collect_files(bot, msg):
-        if user_id in user_data:
-            file_id = msg.document.file_id
-            user_data[user_id].append(file_id)
-            await msg.reply_text("✅ **File added to the archive list.**")
+    media_files = []
+    for file_info in user_data[user_id]['files']:
+        media = file_info['message']
+        file_name = file_info['file_name']
+        file_path = os.path.join(download_dir, file_name)
 
-    @Client.on_message(filters.private & filters.command("done") & filters.user(ADMIN))
-    async def create_archive(bot, msg):
-        if user_id not in user_data or len(user_data[user_id]) == 0:
-            await msg.reply_text("❌ **No files added. Please send some files first.**")
-            return
-
-        # Creating a zip file
-        zip_filename = os.path.join(DOWNLOAD_LOCATION, f"{user_id}_archive.zip")
-        with zipfile.ZipFile(zip_filename, 'w') as zipf:
-            for file_id in user_data[user_id]:
-                file_path = await bot.download_media(file_id)
-                zipf.write(file_path, os.path.basename(file_path))
-                os.remove(file_path)  # Clean up the file after adding to the zip
-
-        await msg.reply_text("🚀 **Uploading the archive...**")
+        # Download each file
+        sts = await msg.reply_text(f"🔄 Downloading {file_name}.....📥")
         c_time = time.time()
-        await bot.send_document(
-            chat_id=user_id,
-            document=zip_filename,
-            caption="**Here's your archive!**",
-            progress=progress_message,
-            progress_args=("Upload Started..... Thanks To All Who Supported ❤", msg, c_time)
-        )
+        downloaded = await media.download(file_name=file_path, progress=progress_message, progress_args=(f"Download Started: {file_name}..... Thanks To All Who Supported ❤", sts, c_time))
+        media_files.append(downloaded)
 
-        # Clean up
-        os.remove(zip_filename)
-        del user_data[user_id]
+    # Create a ZIP file
+    zip_file_path = os.path.join(DOWNLOAD_LOCATION, f"{custom_name}.zip")
+    with zipfile.ZipFile(zip_file_path, 'w') as zipf:
+        for file_path in media_files:
+            zipf.write(file_path, os.path.basename(file_path))
 
-    @Client.on_message(filters.private & filters.command("cancel") & filters.user(ADMIN))
-    async def cancel_archiving(bot, msg):
-        if user_id in user_data:
-            del user_data[user_id]
-        await msg.reply_text("❌ **Archiving process canceled.**")
+    # Clean up downloaded files
+    for file_path in media_files:
+        os.remove(file_path)
+    os.rmdir(download_dir)
+
+    # Upload the ZIP file
+    filesize = humanbytes(os.path.getsize(zip_file_path))
+    await sts.edit("🚀 Uploading started..... 📤Thanks To All Who Supported ❤")
+    c_time = time.time()
+    try:
+        await bot.send_document(msg.chat.id, document=zip_file_path, caption=f"{custom_name}.zip\n\n💽 size: {filesize}", progress=progress_message, progress_args=(f"Upload Started: {custom_name}.zip..... Thanks To All Who Supported ❤", sts, c_time))
+    except Exception as e:
+        await msg.reply_text(f"Error: {e}")
+    finally:
+        os.remove(zip_file_path)  # Remove the ZIP file after uploading
