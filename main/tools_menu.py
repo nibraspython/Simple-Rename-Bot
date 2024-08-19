@@ -1,7 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from config import ADMIN
-from main.archive_creator import handle_archive_creation  # Archive creation logic in another file
+from main.archive_creator import handle_archive_creation  # Import archive creation function
 
 user_data = {}
 
@@ -16,3 +16,9 @@ async def tools_menu(bot, msg):
     ]
     await msg.reply_text("🎛️ **Tools Menu**\n\nSelect the tool you'd like to use:", reply_markup=InlineKeyboardMarkup(keyboard))
 
+@Client.on_callback_query(filters.regex(r"create_archive") & filters.user(ADMIN))
+async def on_create_archive(bot, query: CallbackQuery):
+    # Handle the archive creation interaction
+    await handle_archive_creation(bot, query)
+
+# Other callback queries for different tools can be added here
