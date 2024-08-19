@@ -8,31 +8,31 @@ async def handle_archive_creation(bot, msg, user_data, custom_name):
     user_id = msg.from_user.id
     files_to_zip = []
     
-    await msg.reply_text(f"📦 **Creating archive `{custom_name}.zip`**...\n\n⬇️ Downloading files... Please wait.")
+    download_message = await msg.reply_text(f"📦 **Creating archive `{custom_name}.zip`**...\n\n⬇️ Downloading files... Please wait.")
     
     for media in user_data[user_id]['files']:
         c_time = time.time()
         downloaded = await media.download(
             progress=progress_message, 
-            progress_args=("⬇️ Download Started... Thanks To All Who Supported ❤", msg, c_time)
+            progress_args=("⬇️ Download Started... Thanks To All Who Supported ❤", download_message, c_time)
         )
         files_to_zip.append(downloaded)
     
-    await msg.reply_text("✅ **Download completed.**\n\n📦 **Creating ZIP file...**")
+    await download_message.edit_text("✅ **Download completed.**\n\n📦 **Creating ZIP file...**")
     
     zip_path = create_zip_archive(custom_name, files_to_zip)
     
-    await msg.reply_text("🚀 **Uploading ZIP file...**")
+    upload_message = await download_message.edit_text("🚀 **Uploading ZIP file...**")
     c_time = time.time()
     await bot.send_document(
         chat_id=msg.chat.id,
         document=zip_path,
         caption=f"{custom_name}.zip",
         progress=progress_message,
-        progress_args=("📤 Upload Started... Thanks To All Who Supported ❤", msg, c_time)
+        progress_args=("📤 Upload Started... Thanks To All Who Supported ❤", upload_message, c_time)
     )
     
-    await msg.reply_text("✅ **Upload completed!**")
+    await upload_message.edit_text("✅ **Upload completed!**")
     
     # Cleanup
     for file_path in files_to_zip:
