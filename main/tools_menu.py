@@ -31,8 +31,15 @@ async def create_archive_callback(bot, callback_query: CallbackQuery):
 async def add_file_to_archive(bot, msg):
     user_id = msg.from_user.id
     if user_id in user_data and user_data[user_id]['action'] == 'create_archive':
+        if msg.document:
+            file_name = msg.document.file_name
+        elif msg.video:
+            file_name = msg.video.file_name
+        else:
+            return  # Ignore other media types
+
         user_data[user_id]['files'].append(msg)
-        file_list = "\n".join([f"{i+1}. {file.document.file_name}" for i, file in enumerate(user_data[user_id]['files'])])
+        file_list = "\n".join([f"{i+1}. {file.document.file_name or file.video.file_name}" for i, file in enumerate(user_data[user_id]['files'])])
         await msg.reply_text(
             f"📁 **Files added:** {len(user_data[user_id]['files'])}\n\n{file_list}",
             reply_markup=InlineKeyboardMarkup([
