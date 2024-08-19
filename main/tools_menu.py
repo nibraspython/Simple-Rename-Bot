@@ -33,16 +33,24 @@ async def add_file_to_archive(bot, msg):
     if user_id in user_data and user_data[user_id]['action'] == 'create_archive':
         if msg.document:
             file_name = msg.document.file_name
+            file_type = 'document'
         elif msg.video:
             file_name = msg.video.file_name
+            file_type = 'video'
         else:
             return  # Ignore other media types
 
-        user_data[user_id]['files'].append(msg)
+        # Append the file to the user's data
+        user_data[user_id]['files'].append({
+            'message': msg,
+            'file_name': file_name,
+            'file_type': file_type
+        })
 
-        file_list = "\n".join([f"{i+1}. {file.document.file_name or file.video.file_name}" for i, file in enumerate(user_data[user_id]['files'])])
+        # Generate the file list text
+        file_list = "\n".join([f"{i+1}. {file['file_name']}" for i, file in enumerate(user_data[user_id]['files'])])
 
-        # Update message after every file sent with new file count and list
+        # Send updated file count and list as a new message
         await msg.reply_text(
             f"📁 **Files added:** {len(user_data[user_id]['files'])}\n\n{file_list}",
             reply_markup=InlineKeyboardMarkup([
