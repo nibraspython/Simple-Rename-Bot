@@ -39,7 +39,10 @@ async def add_file_to_archive(bot, msg):
             return  # Ignore other media types
 
         user_data[user_id]['files'].append(msg)
+
         file_list = "\n".join([f"{i+1}. {file.document.file_name or file.video.file_name}" for i, file in enumerate(user_data[user_id]['files'])])
+
+        # Update message after every file sent with new file count and list
         await msg.reply_text(
             f"📁 **Files added:** {len(user_data[user_id]['files'])}\n\n{file_list}",
             reply_markup=InlineKeyboardMarkup([
