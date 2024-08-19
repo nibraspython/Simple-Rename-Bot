@@ -2,6 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from config import ADMIN
 from main.archive_creator import handle_archive_creation  # Archive creation logic in another file
+from main.trimmer import start_trim_process  # Import the trimming logic
 
 user_data = {}
 
@@ -26,6 +27,11 @@ async def create_archive_callback(bot, callback_query: CallbackQuery):
             [InlineKeyboardButton("Done ✅", callback_data="archive_done"), InlineKeyboardButton("Cancel ❌", callback_data="archive_cancel")]
         ])
     )
+
+# Add this for the Video Trimmer option
+@Client.on_callback_query(filters.regex('video_trimmer'))
+async def video_trimmer_callback(bot, callback_query: CallbackQuery):
+    await start_trim_process(bot, callback_query.message)
 
 @Client.on_message(filters.private & (filters.document | filters.video) & filters.user(ADMIN))
 async def add_file_to_archive(bot, msg):
