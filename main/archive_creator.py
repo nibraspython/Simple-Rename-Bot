@@ -8,6 +8,8 @@ async def handle_archive_creation(bot, msg, user_data, custom_name):
     user_id = msg.from_user.id
     files_to_zip = []
     
+    await msg.reply_text(f"📦 **Creating archive `{custom_name}.zip`**...\n\n⬇️ Downloading files... Please wait.")
+    
     for media in user_data[user_id]['files']:
         c_time = time.time()
         downloaded = await media.download(
