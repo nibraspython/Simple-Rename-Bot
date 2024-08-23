@@ -13,7 +13,7 @@ class Bot(Client):
             api_hash=API_HASH,
             bot_token=BOT_TOKEN,
             workers=100,
-            plugins={"root": "main"},  # Ensure the "main" folder is where your commands are located
+            plugins={"root": "bot_commands"},  # Updated to point to the new combined commands file
             sleep_threshold=10,
         )
 
