@@ -1,5 +1,5 @@
 from pyrogram import Client
-from config import API_ID, API_HASH, BOT_TOKEN, DOWNLOAD_LOCATION
+from config import *
 import os
 
 class Bot(Client):
@@ -13,18 +13,18 @@ class Bot(Client):
             api_hash=API_HASH,
             bot_token=BOT_TOKEN,
             workers=100,
-            plugins={"root": "plugins", "include": ["bot_commands"]},  # Explicitly include bot_commands
+            plugins={"root": "main"},
             sleep_threshold=10,
         )
-
     async def start(self):
         await super().start()
-        me = await self.get_me()
+        me = await self.get_me()      
         print(f"{me.first_name} | @{me.username} 𝚂𝚃𝙰𝚁𝚃𝙴𝙳...⚡️")
-
+       
     async def stop(self, *args):
-        await super().stop()
-        print("Bot Stopped...")
+       await super().stop()      
+       print("Bot Restarting........")
+
 
 bot = Bot()
 bot.run()
