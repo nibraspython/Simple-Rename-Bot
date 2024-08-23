@@ -1,6 +1,7 @@
 from pyrogram import Client
 from config import *
 import os
+from bot_commands import register_commands
 
 class Bot(Client):
     if not os.path.isdir(DOWNLOAD_LOCATION):
@@ -16,15 +17,16 @@ class Bot(Client):
             plugins={"root": "main"},
             sleep_threshold=10,
         )
+
     async def start(self):
         await super().start()
+        register_commands(self)  # Register commands from bot_commands.py
         me = await self.get_me()      
         print(f"{me.first_name} | @{me.username} 𝚂𝚃𝙰𝚁𝚃𝙴𝙳...⚡️")
-       
-    async def stop(self, *args):
-       await super().stop()      
-       print("Bot Restarting........")
 
+    async def stop(self, *args):
+        await super().stop()      
+        print("Bot Restarting........")
 
 bot = Bot()
 bot.run()
