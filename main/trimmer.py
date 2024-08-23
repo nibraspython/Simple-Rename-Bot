@@ -33,8 +33,10 @@ async def receive_durations(bot, msg):
         if len(durations) == 2:
             start_time_str, end_time_str = durations
             try:
-                start_time = sum(x * int(t) for x, t in zip([3600, 60, 1], start_time_str.split(":")))
-                end_time = sum(x * int(t) for x, t in zip([3600, 60, 1], end_time_str.split(":")))
+                # Convert time strings to seconds
+                start_time = sum(int(x) * 60 ** i for i, x in enumerate(reversed(start_time_str.split(":"))))
+                end_time = sum(int(x) * 60 ** i for i, x in enumerate(reversed(end_time_str.split(":"))))
+                
                 trim_data[chat_id]['start_time'] = start_time
                 trim_data[chat_id]['end_time'] = end_time
 
