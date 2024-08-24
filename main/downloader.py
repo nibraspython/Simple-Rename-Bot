@@ -48,7 +48,7 @@ async def youtube_link_handler(bot, msg):
     row = []
     for resolution, size, format_id in available_resolutions:
         button_text = f"🎬 {resolution} - {size}"
-        callback_data = f"yt_{format_id}_{url}"
+        callback_data = f"yt_{format_id}_{resolution}_{url}"
         row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
         if len(row) == 2:  # Adjust the number of buttons per row if needed
             buttons.append(row)
@@ -77,11 +77,12 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
-@Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
+@Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
     format_id = data[1]
-    url = '_'.join(data[2:])
+    resolution = data[2]
+    url = '_'.join(data[3:])
 
     await query.message.edit_text("⬇️ **Download started...**")
 
