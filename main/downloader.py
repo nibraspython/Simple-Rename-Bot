@@ -52,14 +52,14 @@ async def ytdl_process(bot, msg):
         except Exception as e:
             await sts.edit(f"Error: {e}")
 
-@Client.on_callback_query(filters.regex(r'^https://www\.youtube\.com'))
+@Client.on_callback_query(filters.regex(r'^https://'))
 async def ytdl_download(bot, query):
     url, format_id = query.data.split('|')
     sts = await query.message.reply_text("🔄 Downloading video.....📥")
     c_time = time.time()
     try:
         ydl_opts = {
-            'format': f'{format_id}+bestaudio',  # Download video with best audio
+            'format': f'{format_id}+bestaudio/best',  # Download video with best audio
             'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
             'quiet': True,
             'no_warnings': True,
@@ -68,7 +68,7 @@ async def ytdl_download(bot, query):
             info = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info)
             title = info.get('title', 'Unknown Title')
-            filesize = info.get('filesize_approx', 0)
+            filesize = info.get('filesize_approx') or info.get('filesize') or 0
             filesize = humanbytes(filesize) if filesize else "Unknown size"
             duration = info.get('duration', 0) or 0
 
