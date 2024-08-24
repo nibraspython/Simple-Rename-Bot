@@ -1,4 +1,5 @@
 import time
+import os  # Import the os module
 from pyrogram import Client, filters, enums
 from main.utils import progress_message, humanbytes
 from config import DOWNLOAD_LOCATION, ADMIN
@@ -25,7 +26,7 @@ async def ytdl_process(bot, msg):
                 formats = info.get('formats', [])
                 keyboard = []
                 for f in formats:
-                    if f.get('vcodec') != 'none':
+                    if f.get('vcodec') != 'none' and f.get('acodec') != 'none':  # Ensure the format has both video and audio
                         res = f.get('format_note', 'N/A')
                         size = f.get('filesize', 0) or 0
                         size = humanbytes(size)
@@ -54,7 +55,7 @@ async def ytdl_download(bot, query):
     c_time = time.time()
     try:
         ydl_opts = {
-            'format': format_id,
+            'format': format_id + '+bestaudio',  # Download video with best audio
             'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
             'quiet': True,
             'no_warnings': True,
@@ -63,7 +64,7 @@ async def ytdl_download(bot, query):
             info = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info)
             title = info.get('title', 'Unknown Title')
-            filesize = info.get('filesize', 0) or 0
+            filesize = info.get('filesize_approx', 0) or 0  # Use filesize_approx for more reliable size
             filesize = humanbytes(filesize)
             duration = info.get('duration', 0) or 0
 
