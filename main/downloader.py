@@ -7,7 +7,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import progress_message, humanbytes  # Importing from your existing utils.py
+from main.utils import progress_message, humanbytes
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -41,9 +41,11 @@ async def youtube_link_handler(bot, msg):
     for f in formats:
         if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
             resolution = f"{f['height']}p"  # e.g., '720p'
-            filesize = humanbytes(f.get('filesize', 0))  # Convert size to human-readable format
-            format_id = f['format_id']
-            available_resolutions.append((resolution, filesize, format_id))
+            filesize = f.get('filesize')  # Fetch the filesize
+            if filesize:  # Only process if filesize is not None
+                filesize_str = humanbytes(filesize)  # Convert size to human-readable format
+                format_id = f['format_id']
+                available_resolutions.append((resolution, filesize_str, format_id))
 
     buttons = []
     row = []
