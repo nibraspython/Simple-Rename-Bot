@@ -35,21 +35,22 @@ async def youtube_link_handler(bot, msg):
         description = info_dict.get('description', 'No description available.')
         formats = info_dict.get('formats', [])
 
-    unique_resolutions = {}
+    # Extract all available resolutions with their sizes
+    available_resolutions = []
 
     for f in formats:
         if f['ext'] == 'mp4' and f.get('filesize') and f['vcodec'] != 'none':
-            resolution = f"{f['height']}p"  # Get resolution in '720p' format
-            filesize = f['filesize']
-            unique_resolutions[resolution] = humanbytes(filesize)
+            resolution = f"{f['height']}p"  # e.g., '720p'
+            filesize = humanbytes(f['filesize'])  # Convert size to human-readable format
+            available_resolutions.append((resolution, filesize, f['format_id']))
 
     buttons = []
     row = []
-    for resolution, size in unique_resolutions.items():
+    for resolution, size, format_id in available_resolutions:
         button_text = f"🎬 {resolution} - {size}"
-        callback_data = f"yt_{resolution}_{url}"
+        callback_data = f"yt_{format_id}_{url}"
         row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
-        if len(row) == 2:
+        if len(row) == 2:  # Adjust the number of buttons per row if needed
             buttons.append(row)
             row = []
 
@@ -76,16 +77,16 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
-@Client.on_callback_query(filters.regex(r'^yt_\d+p_https?://(www\.)?youtube\.com/watch\?v='))
+@Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
-    resolution = data[1]
+    format_id = data[1]
     url = '_'.join(data[2:])
 
     await query.message.edit_text("⬇️ **Download started...**")
 
     ydl_opts = {
-        'format': f"bestvideo[height={resolution[:-1]}]+bestaudio/best",
+        'format': format_id,
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
         'postprocessors': [{
