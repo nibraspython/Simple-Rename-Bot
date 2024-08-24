@@ -22,7 +22,7 @@ async def youtube_link_handler(bot, msg):
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'format': 'best',
         'noplaylist': True,
         'quiet': True
     }
@@ -36,37 +36,20 @@ async def youtube_link_handler(bot, msg):
         description = info_dict.get('description', 'No description available.')
         formats = info_dict.get('formats', [])
 
-    unique_resolutions = {}
-    audio_sizes = []
-
-    for f in formats:
-        try:
-            if f['ext'] == 'mp4':
-                if f['acodec'] != 'none' and f.get('filesize'):
-                    audio_sizes.append(f['filesize'])
-                if f.get('filesize') and f['vcodec'] != 'none':
-                    resolution = f['height']
-                    if resolution not in unique_resolutions:
-                        unique_resolutions[resolution] = f['filesize']
-                    else:
-                        unique_resolutions[resolution] = max(unique_resolutions[resolution], f['filesize'])
-        except KeyError:
-            continue
-
-    # Find the maximum audio size to use with all resolutions
-    total_audio_size = max(audio_sizes, default=0)
-
     buttons = []
     row = []
-    for resolution, video_size in sorted(unique_resolutions.items(), reverse=True):
-        total_size = video_size + total_audio_size
-        size_text = humanbytes(total_size)
-        button_text = f"🎬 {resolution}p - {size_text}"
-        callback_data = f"yt_{resolution}_{url}"
-        row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
-        if len(row) == 2:
-            buttons.append(row)
-            row = []
+
+    for f in formats:
+        if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('filesize'):
+            resolution = f.get('format_note', 'Unknown')
+            video_size = f.get('filesize', 0)
+            size_text = humanbytes(video_size)
+            button_text = f"🎬 {resolution} - {size_text}"
+            callback_data = f"yt_{f['format_id']}_{url}"
+            row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+            if len(row) == 2:
+                buttons.append(row)
+                row = []
 
     if row:
         buttons.append(row)
@@ -94,13 +77,13 @@ async def youtube_link_handler(bot, msg):
 @Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
-    resolution = data[1]
+    format_id = data[1]
     url = '_'.join(data[2:])
 
     await query.message.edit_text("⬇️ **Download started...**")
 
     ydl_opts = {
-        'format': f'bestvideo[height={resolution}]+bestaudio/best',
+        'format': format_id,
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4'  # Specify to merge to mp4 format
     }
@@ -155,7 +138,7 @@ async def yt_callback_handler(bot, query):
         f"**🎬 {info_dict['title']}**\n\n"
         f"💽 **Size:** {filesize}\n"
         f"🕒 **Duration:** {duration} seconds\n"
-        f"📹 **Resolution:** {resolution}p\n\n"
+        f"📹 **Resolution:** {format_id}\n\n"
         f"✅ **Download completed!**"
     )
 
