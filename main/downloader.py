@@ -21,7 +21,7 @@ async def youtube_link_handler(bot, msg):
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
-        'format': 'bestvideo+bestaudio/best',
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',  # Prefer AVC/AAC format
         'noplaylist': True,
         'quiet': True
     }
@@ -90,7 +90,7 @@ async def yt_callback_handler(bot, query):
     await query.message.edit_text("⬇️ **Download started...**")
 
     ydl_opts = {
-        'format': f"{format_id}+bestaudio",  # Ensure audio is merged
+        'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
         'postprocessors': [{
