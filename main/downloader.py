@@ -21,7 +21,7 @@ async def youtube_link_handler(bot, msg):
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'format': 'bestvideo+bestaudio/best',
         'noplaylist': True,
         'quiet': True
     }
@@ -39,10 +39,11 @@ async def youtube_link_handler(bot, msg):
     available_resolutions = []
 
     for f in formats:
-        if f['ext'] == 'mp4' and f.get('filesize') and f['vcodec'] != 'none':
+        if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
             resolution = f"{f['height']}p"  # e.g., '720p'
-            filesize = humanbytes(f['filesize'])  # Convert size to human-readable format
-            available_resolutions.append((resolution, filesize, f['format_id']))
+            filesize = humanbytes(f.get('filesize', 0))  # Convert size to human-readable format
+            format_id = f['format_id']
+            available_resolutions.append((resolution, filesize, format_id))
 
     buttons = []
     row = []
@@ -87,7 +88,7 @@ async def yt_callback_handler(bot, query):
     await query.message.edit_text("⬇️ **Download started...**")
 
     ydl_opts = {
-        'format': format_id,
+        'format': f"{format_id}+bestaudio",  # Ensure audio is merged
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
         'postprocessors': [{
