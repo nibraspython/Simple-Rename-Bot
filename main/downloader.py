@@ -26,18 +26,15 @@ async def ytdl_process(bot, msg):
                 keyboard = []
 
                 for f in formats:
-                    if f.get('vcodec') != 'none' and f.get('acodec') != 'none':  # Ensure the format has both video and audio
+                    if f.get('vcodec') != 'none':  # Check if video codec exists
                         res = f.get('format_note', 'N/A')
-                        size = f.get('filesize', None)
-                        if size is None:
-                            size = f.get('filesize_approx', 0)  # Use approximate filesize if actual size is not available
-                        size = humanbytes(size)
+                        size = f.get('filesize') or f.get('filesize_approx', 0)
+                        size = humanbytes(size) if size else "Unknown size"
                         button_text = f"📽 {res} - {size}"
                         keyboard.append([InlineKeyboardButton(button_text, callback_data=f"{url}|{f['format_id']}")])
 
-                # Ensure at least one resolution button is shown
                 if not keyboard:
-                    await sts.edit("No suitable formats found with both video and audio.")
+                    await sts.edit("No suitable formats found with video.")
                     return
 
                 caption = (f"**{title}**\n"
@@ -62,7 +59,7 @@ async def ytdl_download(bot, query):
     c_time = time.time()
     try:
         ydl_opts = {
-            'format': format_id + '+bestaudio',  # Download video with best audio
+            'format': f'{format_id}+bestaudio',  # Download video with best audio
             'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
             'quiet': True,
             'no_warnings': True,
@@ -71,15 +68,13 @@ async def ytdl_download(bot, query):
             info = ydl.extract_info(url, download=True)
             file_path = ydl.prepare_filename(info)
             title = info.get('title', 'Unknown Title')
-            filesize = info.get('filesize_approx', 0) or 0  # Use filesize_approx for more reliable size
-            filesize = humanbytes(filesize)
+            filesize = info.get('filesize_approx', 0)
+            filesize = humanbytes(filesize) if filesize else "Unknown size"
             duration = info.get('duration', 0) or 0
 
-        # Download the thumbnail
         thumbnail = f"{DOWNLOAD_LOCATION}/{title}.jpg"
         await bot.download_media(info['thumbnail'], file_name=thumbnail)
 
-        # Prepare caption
         caption = f"{title}\n\n💽 size: {filesize}\n🕒 duration: {int(duration)} seconds"
         await sts.edit("🚀 Uploading started..... 📤 Thanks To All Who Supported ❤")
         c_time = time.time()
@@ -97,8 +92,10 @@ async def ytdl_download(bot, query):
         await sts.edit(f"Error: {e}")
     finally:
         try:
-            os.remove(file_path)
-            os.remove(thumbnail)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            if os.path.exists(thumbnail):
+                os.remove(thumbnail)
         except Exception as e:
             print(f"Error deleting files: {e}")
         await sts.delete()
