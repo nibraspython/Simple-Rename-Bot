@@ -8,7 +8,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import progress_message, humanbytes  # Importing from your existing utils.py
+from main.utils import progress_message, humanbytes
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -18,7 +18,6 @@ async def ytdl(bot, msg):
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
 
-    # Send processing message
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
@@ -40,10 +39,13 @@ async def youtube_link_handler(bot, msg):
     row = []
 
     for f in formats:
-        if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('filesize'):
-            resolution = f.get('format_note', 'Unknown')
-            video_size = f.get('filesize', 0)
-            size_text = humanbytes(video_size)
+        if 'vcodec' in f and f['vcodec'] != 'none':  # Filtering only video formats
+            resolution = f.get('format_note', f"{f['width']}x{f['height']}")
+            filesize = f.get('filesize', None)
+            if filesize:
+                size_text = humanbytes(filesize)
+            else:
+                size_text = "N/A"
             button_text = f"🎬 {resolution} - {size_text}"
             callback_data = f"yt_{f['format_id']}_{url}"
             row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
@@ -53,6 +55,10 @@ async def youtube_link_handler(bot, msg):
 
     if row:
         buttons.append(row)
+
+    if not buttons:
+        await processing_message.edit_text("❌ **No downloadable video formats available!**")
+        return
 
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
     markup = InlineKeyboardMarkup(buttons)
@@ -85,7 +91,7 @@ async def yt_callback_handler(bot, query):
     ydl_opts = {
         'format': format_id,
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-        'merge_output_format': 'mp4'  # Specify to merge to mp4 format
+        'merge_output_format': 'mp4'
     }
 
     try:
@@ -106,7 +112,6 @@ async def yt_callback_handler(bot, query):
         os.remove(downloaded_path)
         downloaded_path = mp4_path
 
-    # Recalculate file size after merging
     final_filesize = os.path.getsize(downloaded_path)
     video = VideoFileClip(downloaded_path)
     duration = int(video.duration)
@@ -142,7 +147,6 @@ async def yt_callback_handler(bot, query):
         f"✅ **Download completed!**"
     )
 
-    # Send uploading message and store it
     uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
 
     c_time = time.time()
@@ -160,7 +164,6 @@ async def yt_callback_handler(bot, query):
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
-    # Remove the progress message after the video is uploaded
     await uploading_message.delete()
 
     os.remove(downloaded_path)
