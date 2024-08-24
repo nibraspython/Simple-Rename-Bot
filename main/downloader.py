@@ -8,7 +8,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import progress_message, humanbytes
+from main.utils import progress_message, humanbytes  # Importing from your existing utils.py
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -18,10 +18,11 @@ async def ytdl(bot, msg):
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
 
+    # Send processing message
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
-        'format': 'best',
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'noplaylist': True,
         'quiet': True
     }
@@ -35,30 +36,26 @@ async def youtube_link_handler(bot, msg):
         description = info_dict.get('description', 'No description available.')
         formats = info_dict.get('formats', [])
 
-    buttons = []
-    row = []
+    unique_resolutions = {}
 
     for f in formats:
-        if 'vcodec' in f and f['vcodec'] != 'none':  # Filtering only video formats
-            resolution = f.get('format_note', f"{f['width']}x{f['height']}")
-            filesize = f.get('filesize', None)
-            if filesize:
-                size_text = humanbytes(filesize)
-            else:
-                size_text = "N/A"
-            button_text = f"🎬 {resolution} - {size_text}"
-            callback_data = f"yt_{f['format_id']}_{url}"
-            row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
-            if len(row) == 2:
-                buttons.append(row)
-                row = []
+        if f['ext'] == 'mp4' and f.get('filesize') and f['vcodec'] != 'none':
+            resolution = f['format_id']
+            filesize = f['filesize']
+            unique_resolutions[resolution] = humanbytes(filesize)
+
+    buttons = []
+    row = []
+    for resolution, size in unique_resolutions.items():
+        button_text = f"🎬 {resolution} - {size}"
+        callback_data = f"yt_{resolution}_{url}"
+        row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+        if len(row) == 2:
+            buttons.append(row)
+            row = []
 
     if row:
         buttons.append(row)
-
-    if not buttons:
-        await processing_message.edit_text("❌ **No downloadable video formats available!**")
-        return
 
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
     markup = InlineKeyboardMarkup(buttons)
@@ -89,9 +86,13 @@ async def yt_callback_handler(bot, query):
     await query.message.edit_text("⬇️ **Download started...**")
 
     ydl_opts = {
-        'format': format_id,
+        'format': f"{format_id}+bestaudio/best",
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-        'merge_output_format': 'mp4'
+        'merge_output_format': 'mp4',
+        'postprocessors': [{
+            'key': 'FFmpegVideoConvertor',
+            'preferedformat': 'mp4'
+        }]
     }
 
     try:
@@ -102,15 +103,6 @@ async def yt_callback_handler(bot, query):
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during download:** {e}")
         return
-
-    if not downloaded_path.endswith(".mp4"):
-        mp4_path = downloaded_path.rsplit('.', 1)[0] + ".mp4"
-        subprocess.run(
-            ['ffmpeg', '-i', downloaded_path, '-c:v', 'libx264', '-c:a', 'aac', mp4_path],
-            check=True
-        )
-        os.remove(downloaded_path)
-        downloaded_path = mp4_path
 
     final_filesize = os.path.getsize(downloaded_path)
     video = VideoFileClip(downloaded_path)
@@ -164,6 +156,7 @@ async def yt_callback_handler(bot, query):
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
+    # Remove the progress message after the video is uploaded
     await uploading_message.delete()
 
     os.remove(downloaded_path)
