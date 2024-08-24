@@ -1,11 +1,10 @@
 import time
-import os  # Import the os module
+import os
 from pyrogram import Client, filters, enums
 from main.utils import progress_message, humanbytes
 from config import DOWNLOAD_LOCATION, ADMIN
 from yt_dlp import YoutubeDL
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from moviepy.editor import VideoFileClip
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl_command(bot, msg):
@@ -25,13 +24,21 @@ async def ytdl_process(bot, msg):
                 likes = info.get('like_count', 0)
                 formats = info.get('formats', [])
                 keyboard = []
+
                 for f in formats:
                     if f.get('vcodec') != 'none' and f.get('acodec') != 'none':  # Ensure the format has both video and audio
                         res = f.get('format_note', 'N/A')
-                        size = f.get('filesize', 0) or 0
+                        size = f.get('filesize', None)
+                        if size is None:
+                            size = f.get('filesize_approx', 0)  # Use approximate filesize if actual size is not available
                         size = humanbytes(size)
                         button_text = f"📽 {res} - {size}"
                         keyboard.append([InlineKeyboardButton(button_text, callback_data=f"{url}|{f['format_id']}")])
+
+                # Ensure at least one resolution button is shown
+                if not keyboard:
+                    await sts.edit("No suitable formats found with both video and audio.")
+                    return
 
                 caption = (f"**{title}**\n"
                            f"👀 **Views**: {views}\n"
