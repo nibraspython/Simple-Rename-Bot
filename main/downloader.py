@@ -2,7 +2,6 @@ import os
 import time
 import requests
 import yt_dlp as youtube_dl
-import subprocess
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
@@ -40,7 +39,7 @@ async def youtube_link_handler(bot, msg):
 
     for f in formats:
         if f['ext'] == 'mp4' and f.get('filesize') and f['vcodec'] != 'none':
-            resolution = f['format_id']
+            resolution = f"{f['height']}p"  # Get resolution in '720p' format
             filesize = f['filesize']
             unique_resolutions[resolution] = humanbytes(filesize)
 
@@ -77,16 +76,16 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
-@Client.on_callback_query(filters.regex(r'^yt_\d+_https?://(www\.)?youtube\.com/watch\?v='))
+@Client.on_callback_query(filters.regex(r'^yt_\d+p_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
-    format_id = data[1]
+    resolution = data[1]
     url = '_'.join(data[2:])
 
     await query.message.edit_text("⬇️ **Download started...**")
 
     ydl_opts = {
-        'format': f"{format_id}+bestaudio/best",
+        'format': f"bestvideo[height={resolution[:-1]}]+bestaudio/best",
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
         'postprocessors': [{
@@ -135,7 +134,7 @@ async def yt_callback_handler(bot, query):
         f"**🎬 {info_dict['title']}**\n\n"
         f"💽 **Size:** {filesize}\n"
         f"🕒 **Duration:** {duration} seconds\n"
-        f"📹 **Resolution:** {format_id}\n\n"
+        f"📹 **Resolution:** {resolution}\n\n"
         f"✅ **Download completed!**"
     )
 
