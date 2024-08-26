@@ -6,11 +6,11 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import humanbytes
 
-@Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
+@bot.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 **Please send your YouTube links to download.**")
 
-@Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
+@bot.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
 
