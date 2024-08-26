@@ -103,6 +103,7 @@ async def yt_callback_handler(bot, query):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
+            title = info_dict.get('title', 'Unknown Title')  # Get the video title here
         await query.message.edit_text("✅ **Download completed!**")
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during download:** {e}")
@@ -154,7 +155,7 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=("Upload Started..... Thanks To All Who Supported ❤️", query.message, c_time)
+            progress_args=(f"Upload Started for **🎬 {title}**..... Thanks To All Who Supported ❤️", query.message, c_time)  # Pass the title here
         )
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
