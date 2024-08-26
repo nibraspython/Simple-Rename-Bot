@@ -3,12 +3,13 @@ import time
 import requests
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters
+from bot import bot
 from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION
 from main.utils import progress_message, humanbytes
 
-@Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p_https?://(www\.)?youtube\.com/watch\?v='))
+@bot.on_callback_query(filters.regex(r'^yt_\d+_\d+p_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
     format_id = data[1]
@@ -95,7 +96,7 @@ async def yt_callback_handler(bot, query):
     if thumb_path:
         os.remove(thumb_path)
 
-@Client.on_callback_query(filters.regex(r'^desc_https?://(www\.)?youtube\.com/watch\?v='))
+@bot.on_callback_query(filters.regex(r'^desc_https?://(www\.)?youtube\.com/watch\?v='))
 async def description_callback_handler(bot, query):
     url = ''.join(query.data.split('_')[1:])
     ydl_opts = {
