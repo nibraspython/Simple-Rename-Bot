@@ -4,6 +4,7 @@ import yt_dlp as youtube_dl
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import DOWNLOAD_LOCATION, ADMIN
+from bot import bot
 from main.utils import humanbytes
 
 @bot.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
