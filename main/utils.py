@@ -3,7 +3,7 @@ import math
 import os
 import time
 
-# Define the progress bar with more dynamic elements
+# Define a new, more attractive progress bar style
 PROGRESS_BAR = (
     "\n\n╭━━━━❰ ᴘʀᴏɢʀᴇss ʙᴀʀ ❱━➣\n"
     "┣⪼ [{bar}] {a}%\n"
@@ -14,10 +14,12 @@ PROGRESS_BAR = (
     "╰━━━━━━━━━━━━━━━➣"
 )
 
-# Function to generate the progress bar dynamically
-def generate_progress_bar(percentage, length=16):
+# Function to generate a gradient-style progress bar
+def generate_progress_bar(percentage, length=20):
     filled_length = int(length * percentage // 100)
-    bar = '⬢' * filled_length + '⬡' * (length - filled_length)
+    bar = ''.join(
+        ['▓' if i < filled_length else '░' for i in range(length)]
+    )
     return bar
 
 async def progress_message(current, total, ud_type, message, start):
