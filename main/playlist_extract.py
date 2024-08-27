@@ -46,10 +46,10 @@ async def process_playlist(bot, msg):
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(playlist_url, download=False)
-            video_entries = playlist_info.get('entries')
-            if not video_entries:
+            if 'entries' not in playlist_info:
                 return await sts.edit("🚫 No videos found in this playlist.")
             
+            video_entries = playlist_info['entries']
             playlist_title = playlist_info.get("title", "Unnamed Playlist")
             
             # Store playlist data
@@ -82,6 +82,10 @@ async def navigate_playlist(bot, query):
     max_buttons = 10
     total_pages = len(video_entries) // max_buttons + (1 if len(video_entries) % max_buttons else 0)
     pages = [video_entries[i:i + max_buttons] for i in range(0, len(video_entries), max_buttons)]
+    
+    # Ensure we are within valid page range
+    if current_page < 0 or current_page >= total_pages:
+        return await query.message.edit("🚫 Invalid page number.")
     
     # Update the inline keyboard with the new page
     await query.message.edit_reply_markup(create_keyboard(pages[current_page], current_page, total_pages))
