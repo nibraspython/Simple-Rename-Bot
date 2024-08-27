@@ -1,6 +1,6 @@
 import time
+import yt_dlp
 from pyrogram import Client, filters
-from pytube import Playlist
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import ADMIN  # Import ADMIN from your config
 
@@ -21,20 +21,26 @@ async def process_playlist(bot, msg):
     sts = await msg.reply_text("🔄 Processing your playlist... Please wait.")
     
     try:
-        playlist = Playlist(playlist_url)
-        video_urls = playlist.video_urls
-        playlist_title = playlist.title
+        ydl_opts = {
+            "extract_flat": True,
+            "skip_download": True,
+            "quiet": True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            playlist_info = ydl.extract_info(playlist_url, download=False)
+            video_entries = playlist_info['entries']
+            playlist_title = playlist_info.get("title", "Unnamed Playlist")
     except Exception as e:
         return await sts.edit(f"Error: {e}")
     
     # Pagination
     max_buttons = 10
-    pages = [video_urls[i:i + max_buttons] for i in range(0, len(video_urls), max_buttons)]
+    pages = [video_entries[i:i + max_buttons] for i in range(0, len(video_entries), max_buttons)]
     
     def create_keyboard(page, current_page):
         buttons = [
-            [InlineKeyboardButton(text=f"🎥 {video.title}", url=video_url)]
-            for video_url, video in zip(page, playlist.videos[current_page * max_buttons:(current_page + 1) * max_buttons])
+            [InlineKeyboardButton(text=f"🎥 {video['title']}", callback_data=video['url'])]
+            for video in page
         ]
         
         navigation_buttons = []
@@ -59,3 +65,7 @@ async def process_playlist(bot, msg):
         action, page_num = query.data.split("_")
         current_page = int(page_num)
         await query.message.edit_reply_markup(create_keyboard(pages[current_page], current_page))
+
+    @Client.on_callback_query(filters.regex(r"https://www\.youtube\.com/watch\?v=.*"))
+    async def send_video_link(bot, query):
+        await query.message.reply_text(f"🎥 Here's your video link: {query.data}")
