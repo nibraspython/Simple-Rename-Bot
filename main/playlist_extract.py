@@ -3,7 +3,6 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import ADMIN  # Import ADMIN from your config
 
-# Define the create_keyboard function at the module level
 def create_keyboard(page, current_page, total_pages):
     buttons = [
         [InlineKeyboardButton(text=f"🎥 {video['title']}", callback_data=video['url'])]
@@ -45,7 +44,12 @@ async def process_playlist(bot, msg):
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(playlist_url, download=False)
-            video_entries = playlist_info['entries']
+            
+            # Ensure that 'entries' exist in the extracted information
+            video_entries = playlist_info.get('entries')
+            if not video_entries:
+                return await sts.edit("🚫 No videos found in this playlist.")
+            
             playlist_title = playlist_info.get("title", "Unnamed Playlist")
     except Exception as e:
         return await sts.edit(f"Error: {e}")
@@ -76,7 +80,9 @@ async def navigate_playlist(bot, query):
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         playlist_info = ydl.extract_info(playlist_url, download=False)
-        video_entries = playlist_info['entries']
+        video_entries = playlist_info.get('entries')
+        if not video_entries:
+            return await query.message.edit("🚫 No videos found in this playlist.")
     
     max_buttons = 10
     total_pages = len(video_entries) // max_buttons + (1 if len(video_entries) % max_buttons else 0)
