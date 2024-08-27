@@ -3,6 +3,9 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import ADMIN  # Import ADMIN from your config
 
+# Store playlist data globally for this example
+playlist_data = {}
+
 def create_keyboard(page, current_page, total_pages):
     buttons = [
         [InlineKeyboardButton(text=f"🎥 {video['title']}", callback_data=video['url'])]
@@ -26,7 +29,6 @@ async def playlist_links(bot, msg):
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def process_playlist(bot, msg):
-    # Check if the previous message was the /playlist command
     if not msg.reply_to_message or "/playlist" not in msg.reply_to_message.text:
         return
     
@@ -44,26 +46,26 @@ async def process_playlist(bot, msg):
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(playlist_url, download=False)
-            
-            # Ensure that 'entries' exist in the extracted information
             video_entries = playlist_info.get('entries')
             if not video_entries:
                 return await sts.edit("🚫 No videos found in this playlist.")
             
             playlist_title = playlist_info.get("title", "Unnamed Playlist")
+            
+            # Store playlist data
+            playlist_data[playlist_url] = video_entries
+        
+        max_buttons = 10
+        total_pages = len(video_entries) // max_buttons + (1 if len(video_entries) % max_buttons else 0)
+        pages = [video_entries[i:i + max_buttons] for i in range(0, len(video_entries), max_buttons)]
+        
+        # Show the first page of videos
+        await sts.edit(
+            text=f"🎉 Playlist: {playlist_title}\n\n🎥 Select a video to get the link:",
+            reply_markup=create_keyboard(pages[0], 0, total_pages)
+        )
     except Exception as e:
-        return await sts.edit(f"Error: {e}")
-    
-    # Pagination
-    max_buttons = 10
-    total_pages = len(video_entries) // max_buttons + (1 if len(video_entries) % max_buttons else 0)
-    pages = [video_entries[i:i + max_buttons] for i in range(0, len(video_entries), max_buttons)]
-    
-    # Show the first page of videos
-    await sts.edit(
-        text=f"🎉 Playlist: {playlist_title}\n\n🎥 Select a video to get the link:",
-        reply_markup=create_keyboard(pages[0], 0, total_pages)
-    )
+        await sts.edit(f"Error: {e}")
 
 @Client.on_callback_query(filters.regex(r"previous_\d+|next_\d+"))
 async def navigate_playlist(bot, query):
@@ -72,17 +74,10 @@ async def navigate_playlist(bot, query):
     
     playlist_url = query.message.reply_markup.inline_keyboard[0][0].callback_data.split("&")[0]
     
-    # Re-extract the playlist info to get all video entries
-    ydl_opts = {
-        "extract_flat": True,
-        "skip_download": True,
-        "quiet": True,
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        playlist_info = ydl.extract_info(playlist_url, download=False)
-        video_entries = playlist_info.get('entries')
-        if not video_entries:
-            return await query.message.edit("🚫 No videos found in this playlist.")
+    # Retrieve video entries from stored playlist data
+    video_entries = playlist_data.get(playlist_url)
+    if not video_entries:
+        return await query.message.edit("🚫 No videos found in this playlist.")
     
     max_buttons = 10
     total_pages = len(video_entries) // max_buttons + (1 if len(video_entries) % max_buttons else 0)
