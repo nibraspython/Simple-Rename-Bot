@@ -4,9 +4,11 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import ADMIN  # Import ADMIN from your config
 import hashlib
 
-# Store playlist data globally
-playlist_data = {}
-awaiting_url = {}
+# Global dictionary to track states per user
+user_states = {}
+
+# Define a state for awaiting playlist URL
+AWAITING_PLAYLIST_URL = "awaiting_playlist_url"
 
 def create_keyboard(page, current_page, total_pages, playlist_id):
     buttons = [
@@ -31,14 +33,16 @@ def generate_playlist_id(playlist_url):
 
 @Client.on_message(filters.private & filters.command("playlist") & filters.user(ADMIN))
 async def playlist_links(bot, msg):
-    chat_id = msg.chat.id
-    awaiting_url[chat_id] = True  # Mark this chat as awaiting a playlist URL
+    user_id = msg.from_user.id
+    # Set the state to awaiting playlist URL
+    user_states[user_id] = AWAITING_PLAYLIST_URL
     await msg.reply_text("🎶 Please send your playlist URL to extract the video links.")
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def process_playlist(bot, msg):
-    chat_id = msg.chat.id
-    if not awaiting_url.get(chat_id):
+    user_id = msg.from_user.id
+    # Check if the user is in the correct state
+    if user_states.get(user_id) != AWAITING_PLAYLIST_URL:
         return  # Ignore messages unless we're awaiting a URL
     
     playlist_url = msg.text.strip()
@@ -46,7 +50,7 @@ async def process_playlist(bot, msg):
         return await msg.reply_text("🚫 Invalid Playlist URL. Please send a valid YouTube playlist URL.")
     
     sts = await msg.reply_text("🔄 Processing your playlist... Please wait.")
-    awaiting_url.pop(chat_id, None)  # Clear the awaiting URL flag for this chat
+    user_states.pop(user_id, None)  # Clear the awaiting URL state
     
     try:
         ydl_opts = {
@@ -67,7 +71,7 @@ async def process_playlist(bot, msg):
             playlist_id = generate_playlist_id(playlist_url)
             
             # Store playlist data using the unique ID
-            playlist_data[playlist_id] = video_entries
+            user_states[playlist_id] = video_entries
         
         max_buttons = 10
         total_pages = len(video_entries) // max_buttons + (1 if len(video_entries) % max_buttons else 0)
@@ -87,7 +91,7 @@ async def navigate_playlist(bot, query):
     current_page = int(page_num)
     
     # Retrieve video entries from stored playlist data using the unique ID
-    video_entries = playlist_data.get(playlist_id)
+    video_entries = user_states.get(playlist_id)
     if not video_entries:
         return await query.message.edit("🚫 No videos found in this playlist.")
     
