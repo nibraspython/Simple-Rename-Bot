@@ -6,7 +6,7 @@ from config import ADMIN  # Import ADMIN from your config
 # Store playlist data globally for this example
 playlist_data = {}
 
-def create_keyboard(page, current_page, total_pages):
+def create_keyboard(page, current_page, total_pages, playlist_url):
     buttons = [
         [InlineKeyboardButton(text=f"🎥 {video['title']}", callback_data=video['url'])]
         for video in page
@@ -14,9 +14,9 @@ def create_keyboard(page, current_page, total_pages):
     
     navigation_buttons = []
     if current_page > 0:
-        navigation_buttons.append(InlineKeyboardButton(text="⬅️ Previous", callback_data=f"previous_{current_page - 1}"))
+        navigation_buttons.append(InlineKeyboardButton(text="⬅️ Previous", callback_data=f"previous_{current_page - 1}_{playlist_url}"))
     if current_page < total_pages - 1:
-        navigation_buttons.append(InlineKeyboardButton(text="➡️ Next", callback_data=f"next_{current_page + 1}"))
+        navigation_buttons.append(InlineKeyboardButton(text="➡️ Next", callback_data=f"next_{current_page + 1}_{playlist_url}"))
     
     if navigation_buttons:
         buttons.append(navigation_buttons)
@@ -69,17 +69,15 @@ async def process_playlist(bot, msg):
         # Show the first page of videos
         await sts.edit(
             text=f"🎉 Playlist: {playlist_title}\n\n🎥 Select a video to get the link:",
-            reply_markup=create_keyboard(pages[0], 0, total_pages)
+            reply_markup=create_keyboard(pages[0], 0, total_pages, playlist_url)
         )
     except Exception as e:
         await sts.edit(f"Error: {e}")
 
 @Client.on_callback_query(filters.regex(r"previous_\d+|next_\d+"))
 async def navigate_playlist(bot, query):
-    action, page_num = query.data.split("_")
+    action, page_num, playlist_url = query.data.split("_")
     current_page = int(page_num)
-    
-    playlist_url = query.message.reply_markup.inline_keyboard[0][0].callback_data.split("&")[0]
     
     # Retrieve video entries from stored playlist data
     video_entries = playlist_data.get(playlist_url)
@@ -95,7 +93,7 @@ async def navigate_playlist(bot, query):
         return await query.message.edit("🚫 Invalid page number.")
     
     # Update the inline keyboard with the new page
-    await query.message.edit_reply_markup(create_keyboard(pages[current_page], current_page, total_pages))
+    await query.message.edit_reply_markup(create_keyboard(pages[current_page], current_page, total_pages, playlist_url))
 
 @Client.on_callback_query(filters.regex(r"https://www\.youtube\.com/watch\?v=.*"))
 async def send_video_link(bot, query):
