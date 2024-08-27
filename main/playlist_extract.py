@@ -2,6 +2,7 @@ import time
 from pyrogram import Client, filters
 from pytube import Playlist
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from config import ADMIN  # Import ADMIN from your config
 
 @Client.on_message(filters.private & filters.command("playlist") & filters.user(ADMIN))
 async def playlist_links(bot, msg):
