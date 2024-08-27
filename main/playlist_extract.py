@@ -6,10 +6,11 @@ import hashlib
 
 # Store playlist data globally
 playlist_data = {}
+awaiting_url = {}
 
 def create_keyboard(page, current_page, total_pages, playlist_id):
     buttons = [
-        [InlineKeyboardButton(text=f"🎥 {video['title']}", callback_data=video['url'])]
+        [InlineKeyboardButton(text=f"🎥 {video['title']}", callback_data=f"url_{video['url']}")]
         for video in page
     ]
     
@@ -30,18 +31,22 @@ def generate_playlist_id(playlist_url):
 
 @Client.on_message(filters.private & filters.command("playlist") & filters.user(ADMIN))
 async def playlist_links(bot, msg):
+    chat_id = msg.chat.id
+    awaiting_url[chat_id] = True  # Mark this chat as awaiting a playlist URL
     await msg.reply_text("🎶 Please send your playlist URL to extract the video links.")
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def process_playlist(bot, msg):
-    if not msg.reply_to_message or "/playlist" not in msg.reply_to_message.text:
-        return
+    chat_id = msg.chat.id
+    if not awaiting_url.get(chat_id):
+        return  # Ignore messages unless we're awaiting a URL
     
     playlist_url = msg.text.strip()
     if "youtube.com/playlist" not in playlist_url:
         return await msg.reply_text("🚫 Invalid Playlist URL. Please send a valid YouTube playlist URL.")
     
     sts = await msg.reply_text("🔄 Processing your playlist... Please wait.")
+    awaiting_url.pop(chat_id, None)  # Clear the awaiting URL flag for this chat
     
     try:
         ydl_opts = {
@@ -97,6 +102,8 @@ async def navigate_playlist(bot, query):
     # Update the inline keyboard with the new page
     await query.message.edit_reply_markup(create_keyboard(pages[current_page], current_page, total_pages, playlist_id))
 
-@Client.on_callback_query(filters.regex(r"https://www\.youtube\.com/watch\?v=.*"))
+@Client.on_callback_query(filters.regex(r"url_"))
 async def send_video_link(bot, query):
-    await query.message.reply_text(f"🎥 Here's your video link: {query.data}")
+    # Extract the URL from the callback data and send it as if the user sent it
+    url = query.data.split("url_")[1]
+    await bot.send_message(chat_id=query.message.chat.id, text=url)
