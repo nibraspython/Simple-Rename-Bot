@@ -1,7 +1,7 @@
 import yt_dlp
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import ADMIN  # Import ADMIN from your config
+from config import ADMIN
 import hashlib
 
 # Global dictionary to track states per user
@@ -34,56 +34,54 @@ def generate_playlist_id(playlist_url):
 @Client.on_message(filters.private & filters.command("playlist") & filters.user(ADMIN))
 async def playlist_links(bot, msg):
     user_id = msg.from_user.id
-    # Set the state to awaiting playlist URL
-    user_states[user_id] = AWAITING_PLAYLIST_URL
+    user_states[user_id] = AWAITING_PLAYLIST_URL  # Set the state to awaiting playlist URL
     await msg.reply_text("🎶 Please send your playlist URL to extract the video links.")
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def process_playlist(bot, msg):
     user_id = msg.from_user.id
-    # Check if the user is in the correct state
-    if user_states.get(user_id) != AWAITING_PLAYLIST_URL:
-        return  # Ignore messages unless we're awaiting a URL
-    
-    playlist_url = msg.text.strip()
-    if "youtube.com/playlist" not in playlist_url:
-        return await msg.reply_text("🚫 Invalid Playlist URL. Please send a valid YouTube playlist URL.")
-    
-    sts = await msg.reply_text("🔄 Processing your playlist... Please wait.")
-    user_states.pop(user_id, None)  # Clear the awaiting URL state
-    
-    try:
-        ydl_opts = {
-            "extract_flat": True,
-            "skip_download": True,
-            "quiet": True,
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            playlist_info = ydl.extract_info(playlist_url, download=False)
-            
-            if 'entries' not in playlist_info:
-                return await sts.edit("🚫 No videos found in this playlist.")
-            
-            video_entries = playlist_info['entries']
-            playlist_title = playlist_info.get("title", "Unnamed Playlist")
-            
-            # Generate a unique ID for the playlist
-            playlist_id = generate_playlist_id(playlist_url)
-            
-            # Store playlist data using the unique ID
-            user_states[playlist_id] = video_entries
+
+    # Only process if we're awaiting a playlist URL
+    if user_states.get(user_id) == AWAITING_PLAYLIST_URL:
+        playlist_url = msg.text.strip()
+        if "youtube.com/playlist" not in playlist_url:
+            return await msg.reply_text("🚫 Invalid Playlist URL. Please send a valid YouTube playlist URL.")
         
-        max_buttons = 10
-        total_pages = len(video_entries) // max_buttons + (1 if len(video_entries) % max_buttons else 0)
-        pages = [video_entries[i:i + max_buttons] for i in range(0, len(video_entries), max_buttons)]
-        
-        # Show the first page of videos
-        await sts.edit(
-            text=f"🎉 Playlist: {playlist_title}\n\n🎥 Select a video to get the link:",
-            reply_markup=create_keyboard(pages[0], 0, total_pages, playlist_id)
-        )
-    except Exception as e:
-        await sts.edit(f"Error: {e}")
+        sts = await msg.reply_text("🔄 Processing your playlist... Please wait.")
+        user_states.pop(user_id, None)  # Clear the awaiting URL state
+
+        try:
+            ydl_opts = {
+                "extract_flat": True,
+                "skip_download": True,
+                "quiet": True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                playlist_info = ydl.extract_info(playlist_url, download=False)
+                
+                if 'entries' not in playlist_info:
+                    return await sts.edit("🚫 No videos found in this playlist.")
+                
+                video_entries = playlist_info['entries']
+                playlist_title = playlist_info.get("title", "Unnamed Playlist")
+                
+                # Generate a unique ID for the playlist
+                playlist_id = generate_playlist_id(playlist_url)
+                
+                # Store playlist data using the unique ID
+                user_states[playlist_id] = video_entries
+            
+            max_buttons = 10
+            total_pages = len(video_entries) // max_buttons + (1 if len(video_entries) % max_buttons else 0)
+            pages = [video_entries[i:i + max_buttons] for i in range(0, len(video_entries), max_buttons)]
+            
+            # Show the first page of videos
+            await sts.edit(
+                text=f"🎉 Playlist: {playlist_title}\n\n🎥 Select a video to get the link:",
+                reply_markup=create_keyboard(pages[0], 0, total_pages, playlist_id)
+            )
+        except Exception as e:
+            await sts.edit(f"Error: {e}")
 
 @Client.on_callback_query(filters.regex(r"previous_\d+|next_\d+"))
 async def navigate_playlist(bot, query):
