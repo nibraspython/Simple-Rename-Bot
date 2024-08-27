@@ -46,11 +46,18 @@ async def process_playlist(bot, msg):
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(playlist_url, download=False)
+            
             if 'entries' not in playlist_info:
                 return await sts.edit("🚫 No videos found in this playlist.")
             
             video_entries = playlist_info['entries']
             playlist_title = playlist_info.get("title", "Unnamed Playlist")
+            
+            # Debugging: Print video entries and title
+            print(f"Playlist Title: {playlist_title}")
+            print(f"Number of Videos: {len(video_entries)}")
+            for video in video_entries:
+                print(f"Video Title: {video.get('title')}, URL: {video.get('url')}")
             
             # Store playlist data
             playlist_data[playlist_url] = video_entries
