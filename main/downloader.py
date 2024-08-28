@@ -94,11 +94,11 @@ async def yt_callback_handler(bot, query):
     # Define the progress hook for download
     def download_progress_hook(d):
         if d['status'] == 'downloading':
-            downloaded = d.get('downloaded_bytes', 0)
-            total_size = d.get('total_bytes', 1)
+            downloaded = d.get('downloaded_bytes', 0) or 0
+            total_size = d.get('total_bytes', 1) or 1
             percentage = int(downloaded * 100 / total_size)
-            speed = d.get('speed', 0)
-            eta = d.get('eta', 0)
+            speed = d.get('speed', 0) or 0
+            eta = d.get('eta', 0) or 0
             
             # Update the progress message
             bot.loop.create_task(progress_message(
