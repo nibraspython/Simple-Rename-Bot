@@ -9,10 +9,10 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
-def update_progress_message(progress_message, progress, message):
+def update_progress_message(download_message, progress):
     percentage = int(progress * 100)
     text = f"⬇️ **Download started...**\n\n{percentage}% downloaded"
-    message.edit_text(text)
+    download_message.edit_text(text)
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -95,11 +95,19 @@ async def yt_callback_handler(bot, query):
     # Send initial download started message
     download_message = await query.message.edit_text("⬇️ **Download started...**")
 
+    def progress_hook(d):
+        if d['status'] == 'downloading':
+            total_bytes = d.get('total_bytes', None)
+            downloaded_bytes = d.get('downloaded_bytes', 0)
+            if total_bytes:
+                progress = downloaded_bytes / total_bytes
+                update_progress_message(download_message, progress)
+
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
-        'progress_hooks': [lambda d: update_progress_message(download_message, d['downloaded_bytes'] / d['total_bytes'], download_message)],
+        'progress_hooks': [progress_hook],  # Attach the progress hook
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
