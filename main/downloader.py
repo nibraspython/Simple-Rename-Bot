@@ -14,6 +14,14 @@ def update_progress_message(download_message, progress):
     text = f"⬇️ **Download started...**\n\n{percentage}% downloaded"
     download_message.edit_text(text)
 
+def progress_hook(d):
+    if d['status'] == 'downloading':
+        total_bytes = d.get('total_bytes', None)
+        downloaded_bytes = d.get('downloaded_bytes', 0)
+        if total_bytes:
+            progress = downloaded_bytes / total_bytes
+            update_progress_message(download_message, progress)
+
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 **Please send your YouTube links to download.**")
