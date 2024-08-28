@@ -87,16 +87,36 @@ async def yt_callback_handler(bot, query):
     resolution = data[2]
     url = '_'.join(data[3:])
 
-    await query.message.edit_text("⬇️ **Download started...**")
+    processing_message = await query.message.edit_text("⬇️ **Download started...**")
+
+    start_time = time.time()
+
+    # Define the progress hook for download
+    def download_progress_hook(d):
+        if d['status'] == 'downloading':
+            downloaded = d.get('downloaded_bytes', 0)
+            total_size = d.get('total_bytes', 1)
+            percentage = int(downloaded * 100 / total_size)
+            speed = d.get('speed', 0)
+            eta = d.get('eta', 0)
+            
+            # Update the progress message
+            bot.loop.create_task(progress_message(
+                f"Downloading: {percentage}% - {humanbytes(downloaded)} of {humanbytes(total_size)}\n"
+                f"Speed: {humanbytes(speed)}/s\nETA: {time.strftime('%H:%M:%S', time.gmtime(eta))}",
+                processing_message,
+                start_time
+            ))
 
     ydl_opts = {
-        'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
+        'format': f"{format_id}+bestaudio[ext=m4a]",
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
-        }]
+        }],
+        'progress_hooks': [download_progress_hook]  # Add progress hook
     }
 
     try:
