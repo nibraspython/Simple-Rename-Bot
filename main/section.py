@@ -1,16 +1,17 @@
-import os
 from pyrogram import Client, filters
 from config import ADMIN
 
-# Initialize the Pyrogram Client
-app = Client(...)
+SECTION_NAME_FILE = "/content/section_name.txt"
 
 @Client.on_message(filters.private & filters.command("next") & filters.user(ADMIN))
-async def next_section(bot, msg):
-    await msg.reply_text("Stopping current execution and proceeding to the next section...")
-    os._exit(0)  # Exit the current cell and proceed to the next section
-
-# Include your existing functions, such as rename_file and other commands
-
-# Start the Pyrogram Client
-app.run()
+async def prompt_for_section(bot, msg):
+    await msg.reply_text("Send the name of the section to run (e.g., 'Section 1').")
+@Client.on_message(filters.private & filters.text & filters.user(ADMIN))
+async def handle_section_name(bot, msg):
+    section_name = msg.text.strip()
+    if section_name:
+        with open(SECTION_NAME_FILE, "w") as f:
+            f.write(section_name)
+        await msg.reply_text(f"Section '{section_name}' set to run.")
+    else:
+        await msg.reply_text("Please provide a valid section name.")
