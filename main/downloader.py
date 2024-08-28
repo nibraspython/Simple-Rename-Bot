@@ -21,7 +21,7 @@ async def youtube_link_handler(bot, msg):
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',  # Prefer AVC/AAC format
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
         'noplaylist': True,
         'quiet': True
     }
@@ -35,15 +35,14 @@ async def youtube_link_handler(bot, msg):
         description = info_dict.get('description', 'No description available.')
         formats = info_dict.get('formats', [])
 
-    # Extract all available resolutions with their sizes
     available_resolutions = []
 
     for f in formats:
-        if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
-            resolution = f"{f['height']}p"  # e.g., '720p'
-            filesize = f.get('filesize')  # Fetch the filesize
-            if filesize:  # Only process if filesize is not None
-                filesize_str = humanbytes(filesize)  # Convert size to human-readable format
+        if f['ext'] == 'mp4' and f.get('vcodec') != 'none':
+            resolution = f"{f['height']}p"
+            filesize = f.get('filesize')
+            if filesize:
+                filesize_str = humanbytes(filesize)
                 format_id = f['format_id']
                 available_resolutions.append((resolution, filesize_str, format_id))
 
@@ -53,7 +52,7 @@ async def youtube_link_handler(bot, msg):
         button_text = f"🎬 {resolution} - {size}"
         callback_data = f"yt_{format_id}_{resolution}_{url}"
         row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
-        if len(row) == 2:  # Adjust the number of buttons per row if needed
+        if len(row) == 2:
             buttons.append(row)
             row = []
 
@@ -176,7 +175,6 @@ async def yt_callback_handler(bot, query):
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
-    # Remove the progress message after the video is uploaded
     await uploading_message.delete()
 
     os.remove(downloaded_path)
