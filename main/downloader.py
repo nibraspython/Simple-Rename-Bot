@@ -9,6 +9,11 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
+def update_progress_message(progress_message, progress, message):
+    percentage = int(progress * 100)
+    text = f"⬇️ **Download started...**\n\n{percentage}% downloaded"
+    message.edit_text(text)
+
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 **Please send your YouTube links to download.**")
@@ -87,12 +92,14 @@ async def yt_callback_handler(bot, query):
     resolution = data[2]
     url = '_'.join(data[3:])
 
-    await query.message.edit_text("⬇️ **Download started...**")
+    # Send initial download started message
+    download_message = await query.message.edit_text("⬇️ **Download started...**")
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
+        'progress_hooks': [lambda d: update_progress_message(download_message, d['downloaded_bytes'] / d['total_bytes'], download_message)],
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
@@ -103,9 +110,9 @@ async def yt_callback_handler(bot, query):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
-        await query.message.edit_text("✅ **Download completed!**")
+        await download_message.edit_text("✅ **Download completed!**")
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error during download:** {e}")
+        await download_message.edit_text(f"❌ **Error during download:** {e}")
         return
 
     final_filesize = os.path.getsize(downloaded_path)
