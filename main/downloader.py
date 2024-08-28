@@ -99,7 +99,7 @@ async def yt_callback_handler(bot, query):
             percentage = int(downloaded * 100 / total_size)
             speed = d.get('speed', 0) or 0
             eta = d.get('eta', 0) or 0
-            
+
             # Update the progress message
             bot.loop.create_task(progress_message(
                 f"Downloading: {percentage}% - {humanbytes(downloaded)} of {humanbytes(total_size)}\n"
