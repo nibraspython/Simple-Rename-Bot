@@ -50,6 +50,7 @@ async def youtube_link_handler(bot, msg):
 
     # Extract all available resolutions with their sizes
     available_resolutions = []
+    available_audio = []
 
     for f in formats:
         if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
@@ -62,6 +63,13 @@ async def youtube_link_handler(bot, msg):
                 filesize_str = humanbytes(filesize)  # Convert size to human-readable format
                 format_id = f['format_id']
                 available_resolutions.append((resolution, filesize_str, format_id))
+        elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':  # Check for audio formats
+            audio_bitrate = f.get('abr', 'N/A')
+            filesize = f.get('filesize')
+            if filesize:
+                filesize_str = humanbytes(filesize)
+                format_id = f['format_id']
+                available_audio.append((audio_bitrate, filesize_str, format_id))
 
     buttons = []
     row = []
@@ -76,7 +84,10 @@ async def youtube_link_handler(bot, msg):
     if row:
         buttons.append(row)
 
-    # Add the "Thumbnail" button
+    # Add the "Audio" button if available
+    if available_audio:
+        buttons.append([InlineKeyboardButton("🎧 Audio", callback_data=f"audio_{url}")])
+
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
     
@@ -86,7 +97,7 @@ async def youtube_link_handler(bot, msg):
         f"**🎬 Title:** {title}\n"
         f"**👀 Views:** {views}\n"
         f"**👍 Likes:** {likes}\n\n"
-        f"📥 **Select your resolution:**"
+        f"📥 **Select your resolution or audio format:**"
     )
 
     thumb_response = requests.get(thumb_url)
@@ -196,6 +207,73 @@ async def yt_callback_handler(bot, query):
     os.remove(downloaded_path)
     if thumb_path:
         os.remove(thumb_path)
+
+@Client.on_callback_query(filters.regex(r'^audio_https?://(www\.)?youtube\.com/watch\?v='))
+async def audio_callback_handler(bot, query):
+    url = ''.join(query.data.split('_')[1:])
+
+    download_message = await query.message.edit_text("⬇️ **Download started...**")
+
+    def progress_hook(d):
+        if d['status'] == 'downloading':
+            total_bytes = d.get('total_bytes', None)
+            downloaded_bytes = d.get('downloaded_bytes', 0)
+            if total_bytes:
+                progress = downloaded_bytes / total_bytes
+                update_progress_message(download_message, progress)
+
+    ydl_opts = {
+        'format': 'bestaudio[ext=m4a]/best',
+        'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
+        'progress_hooks': [progress_hook],  # Attach the progress hook
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'm4a',
+            'preferredquality': '192'
+        }]
+    }
+
+    try:
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=True)
+            downloaded_path = ydl.prepare_filename(info_dict)
+        await download_message.edit_text("✅ **Download completed!**")
+    except Exception as e:
+        await download_message.edit_text(f"❌ **Error during download:** {e}")
+        return
+
+    final_filesize = os.path.getsize(downloaded_path)
+    duration = info_dict.get('duration', 0)
+    filesize = humanbytes(final_filesize)
+
+    caption = (
+        f"**🎧 {info_dict['title']}**\n\n"
+        f"💽 **Size:** {filesize}\n"
+        f"🕒 **Duration:** {duration} seconds\n"
+        f"**[🔗 URL]({url})**\n\n"
+        f"✅ **Download completed!**"
+    )
+
+    uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
+
+    c_time = time.time()
+    try:
+        await bot.send_audio(
+            chat_id=query.message.chat.id,
+            audio=downloaded_path,
+            caption=caption,
+            duration=duration,
+            progress=progress_message,
+            progress_args=(f"Upload Started..... Thanks To All Who Supported ❤️\n\n**🎧{info_dict['title']}**", query.message, c_time)
+        )
+    except Exception as e:
+        await query.message.edit_text(f"❌ **Error during upload:** {e}")
+        return
+
+    # Remove the progress message after the audio is uploaded
+    await uploading_message.delete()
+
+    os.remove(downloaded_path)
 
 @Client.on_callback_query(filters.regex(r'^desc_https?://(www\.)?youtube\.com/watch\?v='))
 async def description_callback_handler(bot, query):
