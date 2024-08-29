@@ -166,6 +166,7 @@ async def yt_callback_handler(bot, query):
         f"💽 **Size:** {filesize}\n"
         f"🕒 **Duration:** {duration} seconds\n"
         f"📹 **Resolution:** {resolution}\n\n"
+        f"**[Url 📹]({url})**\n\n"
         f"✅ **Download completed!**"
     )
 
