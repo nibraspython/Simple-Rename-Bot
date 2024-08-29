@@ -8,11 +8,6 @@ from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 
-    if d['status'] == 'downloading':
-        total_bytes = d.get('total_bytes', None)
-        downloaded_bytes = d.get('downloaded_bytes', 0)
-        if total_bytes:
-
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 **Please send your YouTube links to download.**")
@@ -98,12 +93,7 @@ async def yt_callback_handler(bot, query):
 
     # Send initial download started message
 print('⬇️ **Download started...**')
-
-        if d['status'] == 'downloading':
-            total_bytes = d.get('total_bytes', None)
-            downloaded_bytes = d.get('downloaded_bytes', 0)
-            if total_bytes:
-
+  
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
