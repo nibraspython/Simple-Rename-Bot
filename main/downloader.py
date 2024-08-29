@@ -55,12 +55,14 @@ async def youtube_link_handler(bot, msg):
         if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
             resolution = f"{f['height']}p"
             fps = f.get('fps', None)  # Get the fps (frames per second)
-            if fps:
-                resolution += f"{fps}fps"  # Append fps to the resolution, e.g., '720p60fps'
+            if fps and fps not in [50, 60]:  # Skip fps that are not 50 or 60
+                continue
             filesize = f.get('filesize')  # Fetch the filesize
             if filesize:  # Only process if filesize is not None
                 filesize_str = humanbytes(filesize)  # Convert size to human-readable format
                 format_id = f['format_id']
+                if fps:  # Append fps to the resolution if it's 50 or 60
+                    resolution += f"{fps}fps"
                 available_resolutions.append((resolution, filesize_str, format_id))
 
     buttons = []
