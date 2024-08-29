@@ -67,6 +67,10 @@ async def trim_confirm_callback(bot, query):
             progress=progress_message,
             progress_args=("📥 **Download Started...**", sts, c_time)
         )
+        
+        # Extracting thumbnail from the original video
+        thumbnail = f"{os.path.splitext(downloaded)[0]}_thumbnail.jpg"
+        await bot.download_media(media.thumbs[0].file_id, file_name=thumbnail) if media.thumbs else None
 
         output_video = f"{os.path.splitext(downloaded)[0]}_trimmed.mp4"
 
@@ -94,7 +98,7 @@ async def trim_confirm_callback(bot, query):
         try:
             await bot.send_video(
                 chat_id, video=output_video, caption=cap,
-                duration=duration, progress=progress_message,
+                duration=duration, thumb=thumbnail if os.path.exists(thumbnail) else None, progress=progress_message,
                 progress_args=("🚀 **Upload Started...📤**", sts, c_time)
             )
         except Exception as e:
@@ -104,6 +108,8 @@ async def trim_confirm_callback(bot, query):
         try:
             os.remove(downloaded)
             os.remove(output_video)
+            if os.path.exists(thumbnail):
+                os.remove(thumbnail)
         except:
             pass
 
