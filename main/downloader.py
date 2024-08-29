@@ -73,7 +73,10 @@ async def youtube_link_handler(bot, msg):
     if row:
         buttons.append(row)
 
+    # Add the "Thumbnail" button
+    buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
+    
     markup = InlineKeyboardMarkup(buttons)
 
     caption = (
@@ -204,3 +207,21 @@ async def description_callback_handler(bot, query):
         description = info_dict.get('description', 'No description available.')
 
     await query.message.reply_text(f"📝 Description:\n\n{description}")
+
+@Client.on_callback_query(filters.regex(r'^thumb_https?://(www\.)?youtube\.com/watch\?v='))
+async def thumbnail_callback_handler(bot, query):
+    url = ''.join(query.data.split('_')[1:])
+    ydl_opts = {
+        'format': 'bestvideo+bestaudio/best',
+        'noplaylist': True,
+        'quiet': True
+    }
+
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=False)
+        thumb_url = info_dict.get('thumbnail', None)
+
+    if thumb_url:
+        await query.message.reply_photo(photo=thumb_url)
+    else:
+        await query.message.reply_text("❌ **Thumbnail not available!**")
