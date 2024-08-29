@@ -55,14 +55,12 @@ async def youtube_link_handler(bot, msg):
         if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
             resolution = f"{f['height']}p"
             fps = f.get('fps', None)  # Get the fps (frames per second)
-            if fps and fps not in [50, 60]:  # Skip fps that are not 50 or 60
-                continue
+            if fps in [50, 60]:  # Append fps to the resolution if it's 50 or 60
+                resolution += f"{fps}fps"
             filesize = f.get('filesize')  # Fetch the filesize
             if filesize:  # Only process if filesize is not None
                 filesize_str = humanbytes(filesize)  # Convert size to human-readable format
                 format_id = f['format_id']
-                if fps:  # Append fps to the resolution if it's 50 or 60
-                    resolution += f"{fps}fps"
                 available_resolutions.append((resolution, filesize_str, format_id))
 
     buttons = []
@@ -101,7 +99,7 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
-@Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p\d+fps_https?://(www\.)?youtube\.com/watch\?v='))
+@Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
     format_id = data[1]
