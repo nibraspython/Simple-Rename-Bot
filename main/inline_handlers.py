@@ -2,7 +2,7 @@ import os
 import requests
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import DOWNLOAD_LOCATION
+from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import humanbytes
 import youtube_dl
 
