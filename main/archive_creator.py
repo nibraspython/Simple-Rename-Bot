@@ -12,7 +12,7 @@ user_files = {}
 @Client.on_message(filters.private & filters.command("archive") & filters.user(ADMIN))
 async def start_archive(bot, msg):
     chat_id = msg.chat.id
-    user_files[chat_id] = {"files": [], "is_collecting": True}
+    user_files[chat_id] = {"files": [], "is_collecting": True, "awaiting_name": False}
     
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("✅ Done", callback_data="done_collecting"),
@@ -81,20 +81,21 @@ async def done_collecting(bot, query: CallbackQuery):
 async def confirm_zip(bot, query: CallbackQuery):
     chat_id = query.message.chat.id
     
-    # Prompt the user for the ZIP file name
-    await query.message.edit_text("🔤 **Send the name you want for the ZIP file.**")
-    
-    # Mark this user as awaiting a ZIP name
+    # Set the awaiting_name flag to True
     user_files[chat_id]["awaiting_name"] = True
 
+    # Prompt the user for the ZIP file name
+    await query.message.edit_text("🔤 **Send the name you want for the ZIP file.**")
+
 @Client.on_message(filters.private & filters.user(ADMIN))
-async def get_zip_name(bot, msg):
+async def handle_message(bot, msg):
     chat_id = msg.chat.id
     
+    # Check if we are waiting for a ZIP name
     if chat_id in user_files and user_files[chat_id].get("awaiting_name"):
         zip_name = msg.text + ".zip"
         
-        # Reset awaiting name flag
+        # Reset awaiting_name flag
         user_files[chat_id]["awaiting_name"] = False
         
         await msg.reply_text("📥 **Downloading your files...**")
@@ -120,6 +121,11 @@ async def get_zip_name(bot, msg):
         
         os.remove(zip_path)
         del user_files[chat_id]
+    
+    # Continue to handle other commands or messages if not awaiting ZIP name
+    else:
+        # You can add more commands here or just pass
+        pass
 
 @Client.on_callback_query(filters.regex("cancel_collecting"))
 async def cancel_collecting(bot, query: CallbackQuery):
