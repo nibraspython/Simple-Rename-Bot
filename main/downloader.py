@@ -201,7 +201,7 @@ async def yt_callback_handler(bot, query):
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
-  await uploading_message.delete()
+  await uploading_message.delete
 
     # Clean up the downloaded video file and thumbnail after sending
     if os.path.exists(downloaded_path):
