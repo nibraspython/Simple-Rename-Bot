@@ -205,77 +205,64 @@ async def yt_callback_handler(bot, query):
 
 @Client.on_callback_query(filters.regex(r'^audio_https?://(www\.)?youtube\.com/watch\?v='))
 async def audio_callback_handler(bot, query):
-    url = '_'.join(query.data.split('_')[1:])
+    url = query.data.split('_')[1]
+
+    # Send initial download started message
+    download_message = await query.message.edit_text("⬇️ **Audio download started...**")
+
+    def progress_hook(d):
+        if d['status'] == 'downloading':
+            total_bytes = d.get('total_bytes', None)
+            downloaded_bytes = d.get('downloaded_bytes', 0)
+            if total_bytes:
+                progress = downloaded_bytes / total_bytes
+                update_progress_message(download_message, progress)
+
     ydl_opts = {
         'format': 'bestaudio[ext=m4a]',
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
+        'progress_hooks': [progress_hook],  # Attach the progress hook
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'm4a',
+            'preferredquality': '192',
+        }]
     }
 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
+        await download_message.edit_text("✅ **Audio download completed!**")
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error during download:** {e}")
+        await download_message.edit_text(f"❌ **Error during audio download:** {e}")
         return
+
+    final_filesize = os.path.getsize(downloaded_path)
+    filesize = humanbytes(final_filesize)
+    duration = int(info_dict['duration'])
 
     caption = (
         f"**🎧 {info_dict['title']}**\n\n"
-        f"💽 **Size:** {humanbytes(os.path.getsize(downloaded_path))}\n"
-        f"🕒 **Duration:** {int(info_dict['duration'])} seconds\n"
-        f"**[🔗 URL]({url})**\n\n"
-        f"✅ **Download completed!**"
+        f"💽 **Size:** {filesize}\n"
+        f"🕒 **Duration:** {duration} seconds\n"
+        f"✅ **Audio download completed!**"
     )
 
+    uploading_message = await query.message.edit_text("🚀 **Uploading audio...** 📤")
+
+    c_time = time.time()
     try:
         await bot.send_audio(
             chat_id=query.message.chat.id,
             audio=downloaded_path,
             caption=caption,
-            title=info_dict['title'],
-            performer=info_dict.get('uploader', 'Unknown Artist')
+            duration=duration,
+            progress=progress_message,
+            progress_args=(f"Upload Started..... Thanks To All Who Supported ❤️\n\n**🎧{info_dict['title']}**", query.message, c_time)
         )
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
-@Client.on_callback_query(filters.regex(r'^desc_https?://(www\.)?youtube\.com/watch\?v='))
-async def description_callback_handler(bot, query):
-    url = '_'.join(query.data.split('_')[1:])
-    ydl_opts = {
-        'quiet': True,
-    }
-
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=False)
-        description = info_dict.get('description', 'No description available.')
-
-    # Split description if it's longer than Telegram's message limit
-    if len(description) > 1024:
-        parts = [description[i:i+1024] for i in range(0, len(description), 1024)]
-        for part in parts:
-            await bot.send_message(chat_id=query.message.chat.id, text=f"📝 **Description:**\n\n{part}")
-    else:
-        await query.message.edit_text(f"📝 **Description:**\n\n{description}")
-
-@Client.on_callback_query(filters.regex(r'^thumb_https?://(www\.)?youtube\.com/watch\?v='))
-async def thumbnail_callback_handler(bot, query):
-    url = '_'.join(query.data.split('_')[1:])
-    ydl_opts = {
-        'quiet': True,
-    }
-
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=False)
-        thumb_url = info_dict.get('thumbnail', None)
-
-    if thumb_url:
-        thumb_response = requests.get(thumb_url)
-        thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
-        with open(thumb_path, 'wb') as thumb_file:
-            thumb_file.write(thumb_response.content)
-
-        await bot.send_photo(chat_id=query.message.chat.id, photo=thumb_path)
-        os.remove(thumb_path)
-    else:
-        await query.message.edit_text("❌ **No thumbnail available for this video.**")
+    await uploading_message.delete()
