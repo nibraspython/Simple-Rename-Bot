@@ -310,4 +310,8 @@ async def description_callback_handler(bot, query):
         info_dict = ydl.extract_info(url, download=False)
         description = info_dict.get('description', 'No description available.')
 
-    await query.message.edit_text(f"**📝 Description:**\n\n{description}")
+    # Truncate the description to 4096 characters, the max limit for a text message
+    if len(description) > 4096:
+        description = description[:4093] + "..."
+
+    await bot.send_message(chat_id=query.message.chat.id, text=f"**📝 Description:**\n\n{description}")
