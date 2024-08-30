@@ -245,10 +245,12 @@ async def audio_callback_handler(bot, query):
 
     final_filesize = os.path.getsize(downloaded_path)
     filesize = humanbytes(final_filesize)
+    duration = int(info_dict['duration'])
 
     caption = (
         f"**🎧 {info_dict['title']}**\n\n"
         f"💽 **Size:** {filesize}\n"
+        f"🕒 **Duration:** {duration} seconds\n" 
         f"**[🔗 URL]({url})**\n\n"
         f"✅ **Audio download completed!**"
     )
@@ -261,6 +263,7 @@ async def audio_callback_handler(bot, query):
             chat_id=query.message.chat.id,
             audio=downloaded_path,
             caption=caption,
+            duration=duration,
             title=info_dict['title'],
             performer=info_dict.get('uploader', 'Unknown Artist'),
             progress=progress_message,
