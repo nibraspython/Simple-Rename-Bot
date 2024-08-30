@@ -53,7 +53,6 @@ async def done_collecting(bot, query: CallbackQuery):
         await query.message.edit_text("⚠️ No files were sent to create a ZIP.")
         return
     
-    # Fetching file names safely by checking if the media exists
     file_names = []
     for f in files:
         if f.document:
@@ -88,7 +87,7 @@ async def confirm_zip(bot, query: CallbackQuery):
     await query.message.edit_text("🔤 **Send the name you want for the ZIP file.**")
 
 @Client.on_message(filters.private & filters.user(ADMIN))
-async def handle_message(bot, msg):
+async def get_zip_name(bot, msg):
     chat_id = msg.chat.id
     
     # Check if we are waiting for a ZIP name
@@ -121,10 +120,9 @@ async def handle_message(bot, msg):
         
         os.remove(zip_path)
         del user_files[chat_id]
-    
-    # Continue to handle other commands or messages if not awaiting ZIP name
     else:
-        # You can add more commands here or just pass
+        # This is where other commands can be processed normally
+        # If you have other commands, handle them here
         pass
 
 @Client.on_callback_query(filters.regex("cancel_collecting"))
