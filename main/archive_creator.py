@@ -53,7 +53,17 @@ async def done_collecting(bot, query: CallbackQuery):
         await query.message.edit_text("⚠️ No files were sent to create a ZIP.")
         return
     
-    file_names = "\n".join([f"`{f.document.file_name}`" for f in files])
+    # Fetching file names safely by checking if the media exists
+    file_names = []
+    for f in files:
+        if f.document:
+            file_names.append(f.document.file_name)
+        elif f.video:
+            file_names.append(f.video.file_name)
+        elif f.audio:
+            file_names.append(f.audio.file_name)
+    
+    file_list_text = "\n".join([f"`{name}`" for name in file_names])
     
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("✅ Confirm", callback_data="confirm_zip"),
@@ -62,7 +72,7 @@ async def done_collecting(bot, query: CallbackQuery):
     
     await query.message.edit_text(
         "📦 **The following files will be added to the ZIP:**\n\n" +
-        file_names +
+        file_list_text +
         "\n\nClick **Confirm** to proceed or **Cancel** to stop.",
         reply_markup=keyboard
     )
