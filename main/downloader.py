@@ -250,7 +250,13 @@ async def description_callback_handler(bot, query):
         info_dict = ydl.extract_info(url, download=False)
         description = info_dict.get('description', 'No description available.')
 
-    await query.message.edit_text(f"📝 **Description:**\n\n{description[:1024]}")
+    # Split description if it's longer than Telegram's message limit
+    if len(description) > 1024:
+        parts = [description[i:i+1024] for i in range(0, len(description), 1024)]
+        for part in parts:
+            await bot.send_message(chat_id=query.message.chat.id, text=f"📝 **Description:**\n\n{part}")
+    else:
+        await query.message.edit_text(f"📝 **Description:**\n\n{description}")
 
 @Client.on_callback_query(filters.regex(r'^thumb_https?://(www\.)?youtube\.com/watch\?v='))
 async def thumbnail_callback_handler(bot, query):
@@ -273,4 +279,3 @@ async def thumbnail_callback_handler(bot, query):
         os.remove(thumb_path)
     else:
         await query.message.edit_text("❌ **No thumbnail available for this video.**")
-
