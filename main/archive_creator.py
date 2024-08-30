@@ -38,7 +38,7 @@ async def start_archive(bot, msg):
         reply_markup=keyboard
     )
 
-@Client.on_message(filters.private & filters.user(ADMIN) & (filters.document | filters.video | filters.audio))
+@Client.on_message(filters.private & filters.user(ADMIN) & (filters.document | filters.video | filters.audio | filters.text))
 async def collect_files(bot, msg):
     chat_id = msg.chat.id
     
