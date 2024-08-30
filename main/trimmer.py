@@ -99,7 +99,7 @@ async def trim_confirm_callback(bot, query):
             await bot.send_video(
                 chat_id, video=output_video, caption=cap,
                 duration=duration, thumb=thumbnail if os.path.exists(thumbnail) else None, progress=progress_message,
-                progress_args=(f"🚀 **Upload Started...📤**/n/n**Thanks To K-MAC For His Trimming Code❤ 🧑‍💻 **", query.message, c_time)
+                progress_args=(f"🚀 **Upload Started...📤**\n**Thanks To K-MAC For His Trimming Code❤ 🧑‍💻**", sts, c_time)
             )
         except Exception as e:
             return await sts.edit(f"❌ **Error:** `{e}`")
