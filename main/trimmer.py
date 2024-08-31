@@ -1,10 +1,10 @@
 import time
 import os
-import subprocess
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
+from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from moviepy.editor import VideoFileClip
 
 # Temporary storage for media and trimming durations
@@ -72,58 +72,13 @@ async def trim_confirm_callback(bot, query):
         thumbnail = f"{os.path.splitext(downloaded)[0]}_thumbnail.jpg"
         await bot.download_media(media.thumbs[0].file_id, file_name=thumbnail) if media.thumbs else None
 
-        # Get the original frame rate using ffprobe
-        frame_rate_probe = subprocess.run(
-            ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'default=noprint_wrappers=1:nokey=1', downloaded],
-            capture_output=True, text=True
-        )
-        original_fps = frame_rate_probe.stdout.strip()
-        if '/' in original_fps:
-            num, denom = map(int, original_fps.split('/'))
-            frame_rate = num / denom
-        else:
-            frame_rate = float(original_fps)
-
         output_video = f"{os.path.splitext(downloaded)[0]}_trimmed.mp4"
 
         try:
-            # Improved trimming command with frame rate preservation
-            command = [
-                'ffmpeg', '-ss', str(start_time), '-i', downloaded,
-                '-to', str(end_time), '-c', 'copy',  # Copy video and audio streams without re-encoding
-                output_video
-            ]
-            subprocess.run(command, check=True)
-        except subprocess.CalledProcessError as e:
+            # Use moviepy's ffmpeg_extract_subclip for trimming
+            ffmpeg_extract_subclip(downloaded, start_time, end_time, targetname=output_video)
+        except Exception as e:
             return await sts.edit(f"❌ **Error during trimming:** `{e}`")
-
-        # Verify and adjust frame rate
-        # Ensure to handle re-encoding only if necessary
-        probe_command = [
-            'ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate',
-            '-of', 'default=noprint_wrappers=1:nokey=1', output_video
-        ]
-        probe_result = subprocess.run(probe_command, capture_output=True, text=True)
-        trimmed_fps = probe_result.stdout.strip()
-        if '/' in trimmed_fps:
-            num, denom = map(int, trimmed_fps.split('/'))
-            trimmed_frame_rate = num / denom
-        else:
-            trimmed_frame_rate = float(trimmed_fps)
-
-        # Ensure the trimmed video has the same frame rate as the original
-        if abs(trimmed_frame_rate - frame_rate) > 0.1:
-            # Re-encode if frame rates do not match
-            temp_output = f"{os.path.splitext(downloaded)[0]}_temp.mp4"
-            reencode_command = [
-                'ffmpeg', '-i', output_video,
-                '-r', str(int(round(frame_rate))),  # Set original frame rate
-                '-c:v', 'libx264', '-c:a', 'aac',
-                '-strict', 'experimental',
-                temp_output
-            ]
-            subprocess.run(reencode_command, check=True)
-            os.rename(temp_output, output_video)
 
         video_clip = VideoFileClip(output_video)
         duration = int(video_clip.duration)
