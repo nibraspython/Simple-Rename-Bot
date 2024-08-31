@@ -72,13 +72,27 @@ async def trim_confirm_callback(bot, query):
         thumbnail = f"{os.path.splitext(downloaded)[0]}_thumbnail.jpg"
         await bot.download_media(media.thumbs[0].file_id, file_name=thumbnail) if media.thumbs else None
 
+        # Get the original frame rate using ffprobe
+        frame_rate_probe = subprocess.run(
+            ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'default=noprint_wrappers=1:nokey=1', downloaded],
+            capture_output=True, text=True
+        )
+        original_fps = frame_rate_probe.stdout.strip()
+        if '/' in original_fps:
+            num, denom = map(int, original_fps.split('/'))
+            frame_rate = num / denom
+        else:
+            frame_rate = float(original_fps)
+
         output_video = f"{os.path.splitext(downloaded)[0]}_trimmed.mp4"
 
         try:
-            # Improved trimming command
+            # Improved trimming command with frame rate preservation
             command = [
                 'ffmpeg', '-ss', str(start_time), '-i', downloaded,
-                '-to', str(end_time), '-c', 'copy',  # Copy video and audio streams without re-encoding
+                '-to', str(end_time), '-r', str(int(round(frame_rate))),  # Set original frame rate
+                '-c:v', 'libx264', '-c:a', 'aac',  # Re-encode with H.264 and AAC
+                '-strict', 'experimental',
                 output_video
             ]
             subprocess.run(command, check=True)
