@@ -6,28 +6,11 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQ
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
-# Global variable to manage blocking state
-command_block_state = {"zip_mode": False}
-
 # Global variable to store files and user data
 user_files = {}
 
-@Client.on_message(filters.private & filters.command("block") & filters.user(ADMIN))
-async def block_other_commands(bot, msg):
-    command_block_state["zip_mode"] = True
-    await msg.reply_text("🔒 **All commands are now blocked except /zip.**")
-
-@Client.on_message(filters.private & filters.command("unblock") & filters.user(ADMIN))
-async def unblock_other_commands(bot, msg):
-    command_block_state["zip_mode"] = False
-    await msg.reply_text("🔓 **/zip is now blocked, and other commands are unblocked.**")
-
 @Client.on_message(filters.private & filters.command("zip") & filters.user(ADMIN))
 async def start_archive(bot, msg):
-    if not command_block_state["zip_mode"]:
-        await msg.reply_text("⚠️ **/zip command is currently blocked. Please use /unblock to enable it.**")
-        return
-
     chat_id = msg.chat.id
 
     # Initialize the user's session
@@ -38,10 +21,7 @@ async def start_archive(bot, msg):
 @Client.on_message(filters.private & filters.user(ADMIN) & filters.text)
 async def receive_zip_name(bot, msg):
     chat_id = msg.chat.id
-
-    if not command_block_state["zip_mode"]:
-        return
-
+    
     if chat_id in user_files and user_files[chat_id]["awaiting_zip_name"]:
         # Store the ZIP name and start file collection
         zip_name = msg.text + ".zip"
@@ -67,9 +47,6 @@ async def receive_zip_name(bot, msg):
 async def collect_files(bot, msg):
     chat_id = msg.chat.id
     
-    if not command_block_state["zip_mode"]:
-        return
-
     if chat_id in user_files and user_files[chat_id]["is_collecting"]:
         # Collect files
         user_files[chat_id]["files"].append(msg)
@@ -89,9 +66,6 @@ async def collect_files(bot, msg):
 
 @Client.on_callback_query(filters.regex("done_collecting"))
 async def done_collecting(bot, query: CallbackQuery):
-    if not command_block_state["zip_mode"]:
-        return
-
     chat_id = query.message.chat.id
     files = user_files.get(chat_id, {}).get("files", [])
     zip_name = user_files.get(chat_id, {}).get("zip_name", "output.zip")
@@ -126,9 +100,6 @@ async def done_collecting(bot, query: CallbackQuery):
 
 @Client.on_callback_query(filters.regex("confirm_zip"))
 async def confirm_zip(bot, query: CallbackQuery):
-    if not command_block_state["zip_mode"]:
-        return
-    
     chat_id = query.message.chat.id
     zip_name = user_files.get(chat_id, {}).get("zip_name", "output.zip")
     
@@ -158,9 +129,6 @@ async def confirm_zip(bot, query: CallbackQuery):
 
 @Client.on_callback_query(filters.regex("cancel_collecting"))
 async def cancel_collecting(bot, query: CallbackQuery):
-    if not command_block_state["zip_mode"]:
-        return
-    
     chat_id = query.message.chat.id
     del user_files[chat_id]
     await query.message.edit_text("❌ **File collection cancelled.**")
