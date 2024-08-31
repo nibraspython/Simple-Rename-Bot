@@ -90,14 +90,40 @@ async def trim_confirm_callback(bot, query):
             # Improved trimming command with frame rate preservation
             command = [
                 'ffmpeg', '-ss', str(start_time), '-i', downloaded,
-                '-to', str(end_time), '-r', str(int(round(frame_rate))),  # Set original frame rate
-                '-c:v', 'libx264', '-c:a', 'aac',  # Re-encode with H.264 and AAC
-                '-strict', 'experimental',
+                '-to', str(end_time), '-c', 'copy',  # Copy video and audio streams without re-encoding
                 output_video
             ]
             subprocess.run(command, check=True)
         except subprocess.CalledProcessError as e:
             return await sts.edit(f"❌ **Error during trimming:** `{e}`")
+
+        # Verify and adjust frame rate
+        # Ensure to handle re-encoding only if necessary
+        probe_command = [
+            'ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate',
+            '-of', 'default=noprint_wrappers=1:nokey=1', output_video
+        ]
+        probe_result = subprocess.run(probe_command, capture_output=True, text=True)
+        trimmed_fps = probe_result.stdout.strip()
+        if '/' in trimmed_fps:
+            num, denom = map(int, trimmed_fps.split('/'))
+            trimmed_frame_rate = num / denom
+        else:
+            trimmed_frame_rate = float(trimmed_fps)
+
+        # Ensure the trimmed video has the same frame rate as the original
+        if abs(trimmed_frame_rate - frame_rate) > 0.1:
+            # Re-encode if frame rates do not match
+            temp_output = f"{os.path.splitext(downloaded)[0]}_temp.mp4"
+            reencode_command = [
+                'ffmpeg', '-i', output_video,
+                '-r', str(int(round(frame_rate))),  # Set original frame rate
+                '-c:v', 'libx264', '-c:a', 'aac',
+                '-strict', 'experimental',
+                temp_output
+            ]
+            subprocess.run(reencode_command, check=True)
+            os.rename(temp_output, output_video)
 
         video_clip = VideoFileClip(output_video)
         duration = int(video_clip.duration)
