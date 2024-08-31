@@ -75,11 +75,10 @@ async def trim_confirm_callback(bot, query):
         output_video = f"{os.path.splitext(downloaded)[0]}_trimmed.mp4"
 
         try:
-            # Using subprocess to call ffmpeg directly
+            # Improved trimming command
             command = [
-                'ffmpeg', '-i', downloaded,
-                '-ss', str(start_time), '-to', str(end_time),
-                '-c', 'copy',  # Copy video and audio streams without re-encoding
+                'ffmpeg', '-ss', str(start_time), '-i', downloaded,
+                '-to', str(end_time), '-c', 'copy',  # Copy video and audio streams without re-encoding
                 output_video
             ]
             subprocess.run(command, check=True)
