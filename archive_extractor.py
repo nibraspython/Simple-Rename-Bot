@@ -14,6 +14,14 @@ user_files = {}
 ARCHIVE_EXTRACTOR_SRC = "/content/Simple-Rename-Bot/main/archive_extractor.py"
 ARCHIVE_EXTRACTOR_DEST = "/content/Simple-Rename-Bot/archive_extractor.py"
 
+@Client.on_message(filters.private & filters.command("moveback") & filters.user(ADMIN))
+async def move_back(bot, msg):
+    if os.path.exists(ARCHIVE_EXTRACTOR_SRC):
+        shutil.move(ARCHIVE_EXTRACTOR_SRC, ARCHIVE_EXTRACTOR_DEST)
+        await msg.reply_text(f"📁 `archive_extractor.py` has been moved back to {ARCHIVE_EXTRACTOR_DEST}.")
+    else:
+        await msg.reply_text("⚠️ The file is not found in the source directory.")
+
 @Client.on_message(filters.private & filters.command("zip") & filters.user(ADMIN))
 async def start_archive(bot, msg):
     chat_id = msg.chat.id
@@ -137,11 +145,3 @@ async def cancel_collecting(bot, query: CallbackQuery):
     chat_id = query.message.chat.id
     del user_files[chat_id]
     await query.message.edit_text("❌ **File collection cancelled.**")
-
-@Client.on_message(filters.private & filters.command("moveback") & filters.user(ADMIN))
-async def move_back(bot, msg):
-    if os.path.exists(ARCHIVE_EXTRACTOR_SRC):
-        shutil.move(ARCHIVE_EXTRACTOR_SRC, ARCHIVE_EXTRACTOR_DEST)
-        await msg.reply_text(f"📁 `archive_extractor.py` has been moved back to {ARCHIVE_EXTRACTOR_DEST}.")
-    else:
-        await msg.reply_text("⚠️ The file is not found in the source directory.")
