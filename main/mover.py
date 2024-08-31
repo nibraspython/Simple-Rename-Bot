@@ -3,30 +3,19 @@ import os
 from pyrogram import Client, filters
 from config import ADMIN
 from IPython.display import display, Javascript
-from IPython import get_ipython
 
 # Paths
-ARCHIVE_EXTRACTOR_PATH = "/content/Simple-Rename-Bot/main/archive_extractor.py"
-MOVE_TO_PATH = "/content/archive_extractor.py"
+ARCHIVE_EXTRACTOR_SRC = "/content/Simple-Rename-Bot/archive_extractor.py"
+ARCHIVE_EXTRACTOR_DEST = "/content/Simple-Rename-Bot/main/archive_extractor.py"
 
-@Client.on_message(filters.private & filters.command("remove") & filters.user(ADMIN))
-async def remove_archive_extractor(bot, msg):
-    # Move archive_extractor.py to a different location
-    if os.path.exists(ARCHIVE_EXTRACTOR_PATH):
-        shutil.move(ARCHIVE_EXTRACTOR_PATH, MOVE_TO_PATH)
-        await msg.reply_text("📁 `archive_extractor.py` has been moved to /content/.")
+@Client.on_message(filters.private & filters.command("move") & filters.user(ADMIN))
+async def move_archive_extractor(bot, msg):
+    # Move archive_extractor.py to the main directory
+    if os.path.exists(ARCHIVE_EXTRACTOR_SRC):
+        shutil.move(ARCHIVE_EXTRACTOR_SRC, ARCHIVE_EXTRACTOR_DEST)
+        await msg.reply_text(f"📁 `archive_extractor.py` has been moved to {ARCHIVE_EXTRACTOR_DEST}.")
 
-        # Stop the current running cell
-        await stop_and_rerun()
-
-@Client.on_message(filters.private & filters.command("enter") & filters.user(ADMIN))
-async def enter_archive_extractor(bot, msg):
-    # Move archive_extractor.py back to its original location
-    if os.path.exists(MOVE_TO_PATH):
-        shutil.move(MOVE_TO_PATH, ARCHIVE_EXTRACTOR_PATH)
-        await msg.reply_text("📁 `archive_extractor.py` has been moved back to /content/Simple-Rename-Bot/main/.")
-
-        # Stop the current running cell
+        # Stop the current running cell and restart
         await stop_and_rerun()
 
 async def stop_and_rerun():
