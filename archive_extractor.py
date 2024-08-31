@@ -122,20 +122,27 @@ async def confirm_zip(bot, query: CallbackQuery):
     with zipfile.ZipFile(zip_path, 'w') as archive:
         for media_msg in user_files[chat_id]["files"]:
             c_time = time.time()
-            file_path = await media_msg.download(progress=progress_message, progress_args=("**📥Downloading...**", query.message, c_time))
+            file_name = media_msg.document.file_name if media_msg.document else \
+                        media_msg.video.file_name if media_msg.video else \
+                        media_msg.audio.file_name if media_msg.audio else "Unknown file"
+            download_msg = f"**📥Downloading...**\n\n**{file_name}**"
+            file_path = await media_msg.download(progress=progress_message, progress_args=(download_msg, query.message, c_time))
             archive.write(file_path, os.path.basename(file_path))
             os.remove(file_path)
     
     await query.message.edit_text("✅ **Files downloaded. Creating your ZIP...**")
     
     c_time = time.time()
-    await bot.send_document(
+    sent_msg = await bot.send_document(
         chat_id,
         document=zip_path,
         caption=f"Here is your ZIP file: `{zip_name}`",
         progress=progress_message,
         progress_args=(f"Uploading ZIP...Thanks To All Who Supported ❤️\n\n**📦 {zip_name}**", query.message, c_time)
     )
+    
+    # Remove the progress message after uploading the ZIP
+    await sent_msg.delete()
     
     os.remove(zip_path)
     del user_files[chat_id]
