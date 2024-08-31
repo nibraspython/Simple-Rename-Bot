@@ -126,7 +126,7 @@ async def confirm_zip(bot, query: CallbackQuery):
         document=zip_path,
         caption=f"Here is your ZIP file: `{zip_name}`",
         progress=progress_message,
-        progress_args=(f"Uploading ZIP...Thanks To All Who Supported ❤️/n/n**📦 {zip_name}**", query.message, c_time)
+        progress_args=(f"Uploading ZIP...Thanks To All Who Supported ❤️\n\n**📦 {zip_name}**", query.message, c_time)
     )
     
     os.remove(zip_path)
