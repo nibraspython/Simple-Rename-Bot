@@ -131,6 +131,8 @@ async def confirm_zip(bot, query: CallbackQuery):
             os.remove(file_path)
     
     await query.message.edit_text("✅ **Files downloaded. Creating your ZIP...**")
+
+    uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
     
     c_time = time.time()
     sent_msg = await bot.send_document(
@@ -142,7 +144,7 @@ async def confirm_zip(bot, query: CallbackQuery):
     )
     
     # Remove the progress message after uploading the ZIP
-    await sent_msg.delete()
+    await uploading_message.delete()
     
     os.remove(zip_path)
     del user_files[chat_id]
