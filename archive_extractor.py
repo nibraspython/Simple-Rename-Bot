@@ -114,7 +114,7 @@ async def confirm_zip(bot, query: CallbackQuery):
     with zipfile.ZipFile(zip_path, 'w') as archive:
         for media_msg in user_files[chat_id]["files"]:
             c_time = time.time()
-            file_path = await media_msg.download(progress=progress_message, progress_args=("Downloading...", query.message, c_time))
+            file_path = await media_msg.download(progress=progress_message, progress_args=("**📥Downloading...**", query.message, c_time))
             archive.write(file_path, os.path.basename(file_path))
             os.remove(file_path)
     
