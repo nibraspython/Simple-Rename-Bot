@@ -7,7 +7,7 @@ from main.utils import progress_message, humanbytes
 # Define paths
 RCLONE_CONFIG_PATH = '/content//Simple-Rename-Bot/rclone.conf'  # Path to the rclone configuration file
 RCLONE_PATH = '/usr/bin/rclone'  # Path to the rclone executable
-RCLONE_REMOTE = 'gdrive:/'  # The remote name you configured in rclone
+RCLONE_REMOTE = 'gdrive:/Colab to Drive'  # The remote name you configured in rclone
 
 @Client.on_message(filters.private & filters.command("gupload") & filters.user(ADMIN))
 async def upload_file(bot, msg):
