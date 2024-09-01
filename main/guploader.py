@@ -1,52 +1,54 @@
 import os
 import time
 from pyrogram import Client, filters
-from google.colab import drive
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import progress_message
+from config import ADMIN
+from main.utils import progress_message, humanbytes
 
-# Load the saved credentials from mycreds.txt
-gauth = GoogleAuth()
-gauth.LoadCredentialsFile("mycreds.txt")
-
-# Create the Google Drive service
-drive_service = build('drive', 'v3', credentials=gauth.credentials)
+# Define paths
+RCLONE_CONFIG_PATH = '/content//Simple-Rename-Bot/rclone.conf'  # Path to the rclone configuration file
+RCLONE_PATH = '/usr/bin/rclone'  # Path to the rclone executable
+RCLONE_REMOTE = 'gdrive:/'  # The remote name you configured in rclone
 
 @Client.on_message(filters.private & filters.command("gupload") & filters.user(ADMIN))
-async def upload_to_drive(bot, msg):
-    await msg.reply_text("📁 Send the path of the file you want to upload to Google Drive.")
+async def upload_file(bot, msg):
+    await msg.reply_text("📂 Please send the path to your file to upload to Google Drive.")
 
-@Client.on_message(filters.private & ~filters.command & filters.user(ADMIN))
-async def handle_upload_path(bot, msg):
+    # Wait for the user to respond with the file path
+    response = await bot.listen(msg.chat.id)
+    file_path = response.text
+
+    if not os.path.isfile(file_path):
+        return await msg.reply_text("❌ The provided path does not exist or is not a file. Please send a valid file path.")
+
+    file_name = os.path.basename(file_path)
+    file_size = os.path.getsize(file_path)
+    filesize_human = humanbytes(file_size)
+    sts = await msg.reply_text(f"🔄 Uploading **{file_name}**..... 📤")
+
+    c_time = time.time()
+
+    def rclone_upload_progress(line):
+        """Parse rclone progress line for transferred and percentage information."""
+        parts = line.split()
+        transferred = parts[1]  # e.g., "10.5M"
+        progress_percentage = parts[4]  # e.g., "50%"
+        return transferred, progress_percentage
+
     try:
-        file_path = msg.text.strip()
-        if not os.path.exists(file_path):
-            await msg.reply_text("❌ The specified file path does not exist.")
-            return
+        upload_command = f"{RCLONE_PATH} copy '{file_path}' {RCLONE_REMOTE} --config={RCLONE_CONFIG_PATH} --progress"
+        with os.popen(upload_command) as process:
+            while True:
+                line = process.readline()
+                if not line:
+                    break
 
-        sts = await msg.reply_text("🚀 File uploading started..... 📤")
-        c_time = time.time()
-
-        # Get file name from the path
-        file_name = os.path.basename(file_path)
-
-        # Upload the file to Google Drive using saved credentials
-        file_metadata = {'name': file_name}
-        media = MediaFileUpload(file_path, resumable=True)
-        
-        file = drive_service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id'
-        ).execute()
-
-        # Send progress and completion message
-        await msg.reply_text(f"✅ Uploaded '{file_name}' to Google Drive (File ID: {file.get('id')}).")
-
-        os.remove(file_path)  # Remove the local file after upload
-        await sts.delete()  # Delete the progress message
+                transfer_info = rclone_upload_progress(line)
+                if transfer_info:
+                    transferred, progress_percentage = transfer_info
+                    await sts.edit(f"🚀 Uploading **{file_name}**...\n🔄 Transferred: {transferred}\n📈 Progress: {progress_percentage}")
 
     except Exception as e:
-        await sts.edit(f"❌ Failed to upload file: {e}")
+        return await sts.edit(f"❌ Error during upload: {e}")
+
+    await sts.edit(f"✅ Upload Complete!\n📁 **{file_name}**\n📦 Size: {filesize_human}")
+
