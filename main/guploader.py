@@ -38,13 +38,10 @@ async def upload_to_drive_command_handler(bot, msg):
     # Ask user for the folder path in Colab
     await msg.reply_text("📁 Send the path of the folder containing the files you want to upload.")
     
-    # Define a filter to capture the next message from the same user
-    def check_response(_, __, incoming_msg):
-        return incoming_msg.chat.id == msg.chat.id and incoming_msg.from_user.id == msg.from_user.id
-
-    # Wait for the next message from the same user
-    response = await bot.listen(msg.chat.id, filters=check_response)
-
-    folder_path = response.text.strip()
+    folder_path = None
+    # Ask user for the folder path in Colab
+    while folder_path is None:
+        response = await bot.ask(msg.chat.id, "Please send the path of the folder containing the files you want to upload.")
+        folder_path = response.text.strip()
 
     await upload_files_to_drive(msg.chat.id, bot, folder_path)
