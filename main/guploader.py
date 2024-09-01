@@ -11,6 +11,9 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 drive_service = build('drive', 'v3', credentials=creds)
 
+# Define a dictionary to track user responses
+user_responses = {}
+
 # Define an async function for uploading to Google Drive
 async def upload_files_to_drive(chat_id, bot, folder_path):
     if not os.path.exists(folder_path):
@@ -36,12 +39,15 @@ async def upload_files_to_drive(chat_id, bot, folder_path):
 @Client.on_message(filters.private & filters.command("gupload") & filters.user(ADMIN))
 async def upload_to_drive_command_handler(bot, msg):
     # Ask user for the folder path in Colab
-    await msg.reply_text("📁 Send the path of the folder containing the files you want to upload.")
-    
-    folder_path = None
-    # Ask user for the folder path in Colab
-    while folder_path is None:
-        response = await bot.ask(msg.chat.id, "Please send the path of the folder containing the files you want to upload.")
-        folder_path = response.text.strip()
+    await bot.send_message(msg.chat.id, "📁 Send the path of the folder containing the files you want to upload.")
+    user_responses[msg.chat.id] = {"question": "Please send the path of the folder containing the files you want to upload."}
 
-    await upload_files_to_drive(msg.chat.id, bot, folder_path)
+# Define a handler for receiving user responses
+@Client.on_message(filters.private & filters.text & filters.user(ADMIN))
+async def handle_user_response(bot, msg):
+    chat_id = msg.chat.id
+    if chat_id in user_responses:
+        folder_path = msg.text.strip()
+        del user_responses[chat_id]  # Remove user response entry
+
+        await upload_files_to_drive(chat_id, bot, folder_path)
