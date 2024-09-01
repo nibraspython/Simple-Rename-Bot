@@ -2,11 +2,12 @@ import os
 import time
 from pyrogram import Client, filters
 from google.colab import drive
-from google.colab.drive import GoogleDrive
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 from config import DOWNLOAD_LOCATION, ADMIN
+from pydrive.files import MediaFileUpload
 from main.utils import progress_message
 from moviepy.editor import VideoFileClip
-from pydrive.auth import GoogleAuth
 
 # Load the saved credentials from mycreds.txt
 gauth = GoogleAuth()
