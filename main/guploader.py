@@ -2,17 +2,17 @@ import os
 import time
 from pyrogram import Client, filters
 from google.colab import drive
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message
-from moviepy.editor import VideoFileClip
-from pydrive.drive import MediaFileUpload  # Correct import statement
 
 # Load the saved credentials from mycreds.txt
 gauth = GoogleAuth()
 gauth.LoadCredentialsFile("mycreds.txt")
-drive_auth = GoogleDrive(gauth)
+
+# Create the Google Drive service
+drive_service = build('drive', 'v3', credentials=gauth.credentials)
 
 @Client.on_message(filters.private & filters.command("gupload") & filters.user(ADMIN))
 async def upload_to_drive(bot, msg):
@@ -33,10 +33,10 @@ async def handle_upload_path(bot, msg):
         file_name = os.path.basename(file_path)
 
         # Upload the file to Google Drive using saved credentials
-        file_metadata = {'title': file_name}
+        file_metadata = {'name': file_name}
         media = MediaFileUpload(file_path, resumable=True)
         
-        file = drive_auth.files().create(
+        file = drive_service.files().create(
             body=file_metadata,
             media_body=media,
             fields='id'
