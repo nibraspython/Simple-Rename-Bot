@@ -1,6 +1,7 @@
 from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
 from pyrogram import Client, filters
+from config import DOWNLOAD_LOCATION, ADMIN
 import os
 
 # Load the service account JSON file
