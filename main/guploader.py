@@ -51,6 +51,3 @@ async def upload_to_drive(bot, msg):
             await msg.reply_text(f"✅ Uploaded '{file_name}' to Google Drive (File ID: {file.get('id')}).")
 
     await msg.reply_text("🎉 All files have been uploaded successfully!")
-
-# Start the bot
-app.run()
