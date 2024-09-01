@@ -10,7 +10,7 @@ from pydrive2.drive import GoogleDrive
 gauth = GoogleAuth()
 gauth.LoadCredentialsFile("mycreds.txt")  # Load saved credentials
 if not gauth.credentials:
-    gauth.LocalWebserverAuth()  # Authenticate if no credentials found
+    gauth.CommandLineAuth()  # Authenticate if no credentials found
 gauth.SaveCredentialsFile("mycreds.txt")  # Save credentials
 drive = GoogleDrive(gauth)
 
