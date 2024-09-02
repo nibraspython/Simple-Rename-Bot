@@ -1,25 +1,55 @@
+import yt_dlp
 from pyrogram import Client, filters
-from pytube import YouTube
+from config import CAPTION, ADMIN, API_ID, API_HASH, BOT_TOKEN
 
-# Function to handle inline queries for YouTube video search
+# Initialize the YouTube API client
+def search_youtube(query):
+    ydl_opts = {
+        'quiet': True,
+        'default_search': 'ytsearch5',  # Limit to 5 search results
+        'format': 'best',
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        try:
+            search_results = ydl.extract_info(query, download=False)['entries']
+        except Exception as e:
+            return []
+
+    return search_results
+
 @Client.on_inline_query()
-async def search_videos(bot, update):
-    query = update.query
+async def youtube_search(bot, inline_query):
+    query = inline_query.query.strip()
+    if not query:
+        await inline_query.answer([], switch_pm_text="Type a keyword to search on YouTube", switch_pm_parameter="start", cache_time=0)
+        return
 
-    # Perform YouTube video search using the query
-    videos = YouTube(query).streams.filter(progressive=True).all()
-
-    # Prepare inline results with video details
+    search_results = search_youtube(query)
     results = []
-    for video in videos:
-        result = {
-            "type": "video",
-            "id": video.video_id,
-            "title": video.title,
-            "description": f"Duration: {video.length}nViews: {video.views}nLikes: {video.likes}",
-            "thumb": video.thumbnail_url
-        }
-        results.append(result)
 
-    # Answer the inline query with the video results
-    await bot.answer_inline_query(update.id, results)
+    for video in search_results:
+        title = video.get('title')
+        video_id = video.get('id')
+        url = video.get('url')
+        duration = video.get('duration')
+        views = video.get('view_count', 'N/A')
+        thumbnail = video.get('thumbnail')
+
+        results.append(
+            {
+                "type": "article",
+                "id": video_id,
+                "title": title,
+                "input_message_content": {
+                    "message_text": f"**{title}**\n"
+                                    f"🕒 Duration: {duration} seconds\n"
+                                    f"👁 Views: {views}\n"
+                                    f"🔗 [Watch on YouTube]({url})"
+                },
+                "thumb_url": thumbnail,
+                "description": f"Views: {views} | Duration: {duration} seconds",
+            }
+        )
+
+    await inline_query.answer(results, cache_time=0)
