@@ -5,7 +5,7 @@ from config import ADMIN
 from main.utils import progress_message, humanbytes
 
 # Define paths and rclone remote
-RCLONE_CONFIG_PATH = '/content/rclone.conf'  # Path to the rclone configuration file
+RCLONE_CONFIG_PATH = '/content/Simple-Rename-Bot/rclone.conf'  # Path to the rclone configuration file
 RCLONE_PATH = '/usr/bin/rclone'  # Path to the rclone executable
 RCLONE_REMOTE = 'Colab to Drive:/'  # Use your correct remote name here
 
@@ -15,7 +15,7 @@ async def upload_file(bot, msg):
     await msg.reply_text("📂 Please send the path to your file to upload to Google Drive.")
 
     # Step 2: Set up a listener for the next message containing the file path
-    @Client.on_message(filters.private & filters.user(msg.from_user.id) & ~filters.command)
+    @Client.on_message(filters.private & filters.user(msg.from_user.id) & filters.text)
     async def get_file_path(bot, path_msg):
         file_path = path_msg.text.strip()
 
@@ -56,4 +56,3 @@ async def upload_file(bot, msg):
 
         # Remove the handler after the file path is received and processed
         bot.remove_handler(get_file_path)
-
