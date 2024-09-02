@@ -8,7 +8,7 @@ from main.utils import progress_message, humanbytes
 async def upload_file(bot, msg):
     await msg.reply_text("📁 Send the path of the file you want to upload to Telegram as DC4.")
 
-@Client.on_message(filters.private & ~filters.command & filters.user(ADMIN))
+@Client.on_message(filters.private & filters.command & filters.user(ADMIN))
 async def handle_upload(bot, msg):
     try:
         file_path = msg.text.strip()
