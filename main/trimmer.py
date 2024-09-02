@@ -23,7 +23,8 @@ async def receive_media(bot, msg):
         media = msg.video or msg.document
         if media:
             trim_data[chat_id]['media'] = media
-            await msg.reply_text("🕒 **Media received. Please send the trimming durations in the format:** `HH:MM:SS HH:MM:SS` (start_time end_time)")
+            file_name = media.file_name
+            await msg.reply_text(f"🕒 **Media received:** `{file_name}`\n**Please send the trimming durations in the format:** `HH:MM:SS HH:MM:SS` (start_time end_time)")
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def receive_durations(bot, msg):
@@ -57,6 +58,7 @@ async def trim_confirm_callback(bot, query):
     chat_id = query.message.chat.id
     if chat_id in trim_data and 'media' in trim_data[chat_id]:
         media = trim_data[chat_id]['media']
+        file_name = media.file_name
         start_time = trim_data[chat_id]['start_time']
         end_time = trim_data[chat_id]['end_time']
 
@@ -85,15 +87,17 @@ async def trim_confirm_callback(bot, query):
         video_clip.close()
 
         filesize = humanbytes(os.path.getsize(output_video))
-        cap = f"🎬 **Trimmed Video**\n\n💽 **Size:** `{filesize}`\n🕒 **Duration:** `{duration} seconds`"
+        cap = (f"🎬 **Trimmed Video**\n\n💽 **Size:** `{filesize}`\n"
+               f"🕒 **Duration:** `{duration} seconds`\n"
+               f"⏰ **Trimmed From:** `{start_time_str}` **to** `{end_time_str}`")
 
-        await sts.edit("🚀 **Uploading started...📤**")
+        await sts.edit(f"🚀 **Uploading started...📤**")
         c_time = time.time()
         try:
             await bot.send_video(
                 chat_id, video=output_video, caption=cap,
                 duration=duration, thumb=thumbnail if os.path.exists(thumbnail) else None, progress=progress_message,
-                progress_args=(f"🚀 **Upload Started...📤**\n**Thanks To K-MAC For His Trimming Code❤ 🧑‍💻**", sts, c_time)
+                progress_args=(f"🚀 **Upload Started...📤**\n**Thanks To K-MAC For His Trimming Code❤ 🧑‍💻**\n\n**{os.path.basename(output_video)}**", sts, c_time)
             )
         except Exception as e:
             return await sts.edit(f"❌ **Error:** `{e}`")
