@@ -118,7 +118,7 @@ async def yt_callback_handler(bot, query):
     url = query.data.split('_', 3)[3]
 
     # Send initial download started message
-    download_message = await query.message.edit_text("⬇️ **Download started...**\n\n🎬 **{info_dict['title']}**")
+    download_message = await query.message.edit_text("⬇️ **Download started...**")
 
     def progress_hook(d):
         if d['status'] == 'downloading':
