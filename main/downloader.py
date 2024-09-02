@@ -11,11 +11,16 @@ RCLONE_REMOTE = 'Colab to Drive:/'  # Use your correct remote name here
 
 @Client.on_message(filters.private & filters.command("gupload") & filters.user(ADMIN))
 async def upload_file(bot, msg):
+    # Ask the user for the file path
     await msg.reply_text("📂 Please send the path to your file to upload to Google Drive.")
 
-    # Wait for the user to respond with the file path
-    response = await bot.listen(msg.chat.id)
-    file_path = response.text
+    # Define a filter to capture the next message from the user
+    def path_filter(_, __, incoming_message):
+        return incoming_message.from_user.id == msg.from_user.id
+
+    # Listen for the next message from the user
+    response = await bot.listen(msg.chat.id, filters=filters.text & path_filter)
+    file_path = response.text.strip()
 
     if not os.path.isfile(file_path):
         return await msg.reply_text("❌ The provided path does not exist or is not a file. Please send a valid file path.")
