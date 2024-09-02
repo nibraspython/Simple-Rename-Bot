@@ -24,7 +24,7 @@ async def receive_media(bot, msg):
         if media:
             trim_data[chat_id]['media'] = media
             file_name = media.file_name
-            await msg.reply_text(f"📂 **Media received:** `{file_name}`\n**⏳ Please send the trimming durations in the format:** `HH:MM:SS HH:MM:SS` (start_time end_time)")
+            await msg.reply_text(f"📂 **Media received:** `{file_name}`\n\n**⏳ Please send the trimming durations in the format:** `HH:MM:SS HH:MM:SS` (start_time end_time)")
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def receive_durations(bot, msg):
