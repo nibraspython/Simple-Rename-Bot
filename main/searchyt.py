@@ -10,13 +10,15 @@ def search_youtube(query):
         'format': 'best',
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        try:
-            search_results = ydl.extract_info(query, download=False)['entries']
-        except Exception as e:
-            return []
-
-    return search_results
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(query, download=False)
+            if 'entries' in info:
+                return info['entries']
+    except Exception as e:
+        print(f"Error in search_youtube: {e}")
+    
+    return []
 
 @Client.on_inline_query()
 async def youtube_search(bot, inline_query):
@@ -26,8 +28,12 @@ async def youtube_search(bot, inline_query):
         return
 
     search_results = search_youtube(query)
-    results = []
+    if not search_results:
+        print("No search results found.")
+        await inline_query.answer([], switch_pm_text="No results found. Try a different query.", cache_time=0)
+        return
 
+    results = []
     for video in search_results:
         title = video.get('title')
         video_id = video.get('id')
