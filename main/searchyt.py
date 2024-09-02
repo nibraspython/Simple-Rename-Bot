@@ -1,8 +1,8 @@
 import yt_dlp
 from pyrogram import Client, filters
-from config import CAPTION, ADMIN, API_ID, API_HASH, BOT_TOKEN
+from pyrogram.types import InlineQueryResultArticle, InputTextMessageContent
+from config import API_ID, API_HASH, BOT_TOKEN
 
-# Initialize the YouTube API client
 def search_youtube(query):
     ydl_opts = {
         'quiet': True,
@@ -37,19 +37,18 @@ async def youtube_search(bot, inline_query):
         thumbnail = video.get('thumbnail')
 
         results.append(
-            {
-                "type": "article",
-                "id": video_id,
-                "title": title,
-                "input_message_content": {
-                    "message_text": f"**{title}**\n"
-                                    f"🕒 Duration: {duration} seconds\n"
-                                    f"👁 Views: {views}\n"
-                                    f"🔗 [Watch on YouTube]({url})"
-                },
-                "thumb_url": thumbnail,
-                "description": f"Views: {views} | Duration: {duration} seconds",
-            }
+            InlineQueryResultArticle(
+                id=video_id,
+                title=title,
+                input_message_content=InputTextMessageContent(
+                    message_text=f"**{title}**\n"
+                                 f"🕒 Duration: {duration} seconds\n"
+                                 f"👁 Views: {views}\n"
+                                 f"🔗 [Watch on YouTube]({url})"
+                ),
+                thumb_url=thumbnail,
+                description=f"Views: {views} | Duration: {duration} seconds"
+            )
         )
 
     await inline_query.answer(results, cache_time=0)
