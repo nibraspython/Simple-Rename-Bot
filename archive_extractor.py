@@ -27,7 +27,7 @@ async def start_archive(bot, msg):
     chat_id = msg.chat.id
 
     # Initialize the user's session
-    user_files[chat_id] = {"files": [], "is_collecting": False, "awaiting_zip_name": True}
+    user_files[chat_id] = {"files": [], "is_collecting": False, "awaiting_zip_name": True, "number_zip": False}
 
     await msg.reply_text("🔤 **Please send the name you want for the ZIP file.**")
 
@@ -36,25 +36,21 @@ async def receive_zip_name(bot, msg):
     chat_id = msg.chat.id
     
     if chat_id in user_files and user_files[chat_id]["awaiting_zip_name"]:
-        # Store the ZIP name and start file collection
+        # Store the ZIP name and prompt for zipping method
         zip_name = msg.text + ".zip"
         user_files[chat_id]["zip_name"] = zip_name
-        user_files[chat_id]["is_collecting"] = True
         user_files[chat_id]["awaiting_zip_name"] = False
 
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("✅ Done", callback_data="done_collecting"),
-             InlineKeyboardButton("❌ Cancel", callback_data="cancel_collecting")]
+            [InlineKeyboardButton("🔢 Number Zipping", callback_data="number_zipping"),
+             InlineKeyboardButton("🗂️ Normal Zipping", callback_data="normal_zipping")]
         ])
 
         await msg.reply_text(
-            "📥 **ZIP name set! Now, send the files you want to include in the ZIP.**\n"
-            "When you're done, click the **Done** button.",
+            f"📦 **ZIP Name:** `{zip_name}`\n"
+            "Select your preferred zipping method:",
             reply_markup=keyboard
         )
-    elif chat_id in user_files and user_files[chat_id]["is_collecting"]:
-        # If the user is in the file collection phase, ignore text messages that aren't the command
-        await msg.reply_text("⚠️ Please send files, or click **Done** when you're finished.")
 
 @Client.on_message(filters.private & filters.user(ADMIN) & (filters.document | filters.video | filters.audio))
 async def collect_files(bot, msg):
@@ -77,26 +73,65 @@ async def collect_files(bot, msg):
             reply_markup=keyboard
         )
 
+@Client.on_callback_query(filters.regex("number_zipping"))
+async def number_zipping(bot, query: CallbackQuery):
+    chat_id = query.message.chat.id
+    user_files[chat_id]["number_zip"] = True
+    user_files[chat_id]["is_collecting"] = True
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Done", callback_data="done_collecting"),
+         InlineKeyboardButton("❌ Cancel", callback_data="cancel_collecting")]
+    ])
+
+    await query.message.edit_text(
+        "🔢 **Number zipping selected!**\n"
+        "Now, send the files you want to include in the ZIP.\n"
+        "When you're done, click the **Done** button.",
+        reply_markup=keyboard
+    )
+
+@Client.on_callback_query(filters.regex("normal_zipping"))
+async def normal_zipping(bot, query: CallbackQuery):
+    chat_id = query.message.chat.id
+    user_files[chat_id]["is_collecting"] = True
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Done", callback_data="done_collecting"),
+         InlineKeyboardButton("❌ Cancel", callback_data="cancel_collecting")]
+    ])
+
+    await query.message.edit_text(
+        "🗂️ **Normal zipping selected!**\n"
+        "Now, send the files you want to include in the ZIP.\n"
+        "When you're done, click the **Done** button.",
+        reply_markup=keyboard
+    )
+
 @Client.on_callback_query(filters.regex("done_collecting"))
 async def done_collecting(bot, query: CallbackQuery):
     chat_id = query.message.chat.id
     files = user_files.get(chat_id, {}).get("files", [])
     zip_name = user_files.get(chat_id, {}).get("zip_name", "output.zip")
+    number_zip = user_files.get(chat_id, {}).get("number_zip", False)
     
     if not files:
         await query.message.edit_text("⚠️ No files were sent to create a ZIP.")
         return
     
-    # Fetching file names safely by checking if the media exists
+    # Handling file names with numbering if number_zip is selected
     file_names = []
-    for f in files:
+    for idx, f in enumerate(files, start=1):
         if f.document:
-            file_names.append(f.document.file_name)
+            file_name = f"{idx}.{f.document.file_name}" if number_zip else f.document.file_name
+            file_names.append(file_name)
         elif f.video:
-            file_names.append(f.video.file_name)
+            file_name = f"{idx}.{f.video.file_name}" if number_zip else f.video.file_name
+            file_names.append(file_name)
         elif f.audio:
-            file_names.append(f.audio.file_name)
-    
+            file_name = f"{idx}.{f.audio.file_name}" if number_zip else f.audio.file_name
+            file_names.append(file_name)
+
     file_list_text = "\n".join([f"`{name}`" for name in file_names])
     
     keyboard = InlineKeyboardMarkup([
@@ -115,14 +150,18 @@ async def done_collecting(bot, query: CallbackQuery):
 async def confirm_zip(bot, query: CallbackQuery):
     chat_id = query.message.chat.id
     zip_name = user_files.get(chat_id, {}).get("zip_name", "output.zip")
+    number_zip = user_files.get(chat_id, {}).get("number_zip", False)
     
     await query.message.edit_text("📥 **Downloading your files...**")
     
     zip_path = os.path.join(DOWNLOAD_LOCATION, zip_name)
     with zipfile.ZipFile(zip_path, 'w') as archive:
-        for media_msg in user_files[chat_id]["files"]:
+        for idx, media_msg in enumerate(user_files[chat_id]["files"], start=1):
             c_time = time.time()
-            file_name = media_msg.document.file_name if media_msg.document else \
+            file_name = f"{idx}.{media_msg.document.file_name}" if media_msg.document and number_zip else \
+                        f"{idx}.{media_msg.video.file_name}" if media_msg.video and number_zip else \
+                        f"{idx}.{media_msg.audio.file_name}" if media_msg.audio and number_zip else \
+                        media_msg.document.file_name if media_msg.document else \
                         media_msg.video.file_name if media_msg.video else \
                         media_msg.audio.file_name if media_msg.audio else "Unknown file"
             download_msg = f"**📥Downloading...**\n\n**{file_name}**"
