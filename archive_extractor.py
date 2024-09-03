@@ -166,7 +166,7 @@ async def confirm_zip(bot, query: CallbackQuery):
                         media_msg.audio.file_name if media_msg.audio else "Unknown file"
             download_msg = f"**📥Downloading...**\n\n**{file_name}**"
             file_path = await media_msg.download(progress=progress_message, progress_args=(download_msg, query.message, c_time))
-            archive.write(file_path, os.path.basename(file_path))
+            archive.write(file_path, file_name)
             os.remove(file_path)
     
     await query.message.edit_text("✅ **Files downloaded. Creating your ZIP...**")
