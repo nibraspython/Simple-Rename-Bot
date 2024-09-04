@@ -221,11 +221,13 @@ async def audio_callback_handler(bot, query):
 
     final_filesize = os.path.getsize(downloaded_path)
     filesize = humanbytes(final_filesize)
+    duration = int(info_dict['duration'])
 
     caption = (
         f"**🎧 {info_dict['title']}**\n\n"
         f"💽 **Size:** {filesize}\n"
         f"🔉 **Format:** Audio\n"
+        f"🕒 **Duration:** {duration} seconds\n"
         f"**[🔗 URL]({url})**\n\n"
         f"✅ **Download completed!**"
     )
