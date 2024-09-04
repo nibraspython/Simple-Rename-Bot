@@ -21,7 +21,11 @@ async def rename_file(bot, msg):
     new_name = msg.text.split(" ", 1)[1]
     sts = await msg.reply_text("🔄 Trying to Download.....📥")
     c_time = time.time()
-    downloaded = await reply.download(file_name=new_name, progress=progress_message, progress_args=("Download Started..... **Thanks To All Who Supported ❤**", sts, c_time))
+    downloaded = await reply.download(
+        file_name=new_name, 
+        progress=progress_message, 
+        progress_args=("Download Started..... **Thanks To All Who Supported ❤**", sts, c_time, None)  # Adjusted progress_args
+    )
     filesize = humanbytes(og_media.file_size)
 
     # Get video duration
@@ -83,7 +87,7 @@ async def upload_progress_message(current, total, msg, start_time, progress_key)
     if progress_key in upload_progress:
         upload_progress[progress_key]["uploaded_size"] = current
         upload_progress[progress_key]["completed"] = (current / total) * 100
-    await progress_message(current, total, msg, start_time)
+    await progress_message(current, total, msg, start_time, "Upload Started..... **Thanks To All Who Supported ❤**")
 
 @Client.on_callback_query(filters.regex(r"^progress_"))
 async def progress_callback(bot, query: CallbackQuery):
