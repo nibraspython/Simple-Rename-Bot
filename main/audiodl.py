@@ -1,3 +1,14 @@
+import os
+import time
+import requests
+import yt_dlp as youtube_dl
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from moviepy.editor import VideoFileClip
+from PIL import Image
+from config import DOWNLOAD_LOCATION, ADMIN
+from main.utils import progress_message, humanbytes
+
 @Client.on_callback_query(filters.regex(r'^audio_https?://(www\.)?youtube\.com/watch\?v='))
 async def audio_callback_handler(bot, query):
     url = '_'.join(query.data.split('_')[1:])
