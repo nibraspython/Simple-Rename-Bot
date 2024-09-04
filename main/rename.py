@@ -49,7 +49,7 @@ async def rename_file(bot, msg):
             og_thumbnail = None
 
     # Create inline keyboard with a progress button
-    progress_key = f"progress_{msg.message_id}"
+    progress_key = f"progress_{msg.id}"
     upload_progress[progress_key] = {
         "total_size": og_media.file_size,
         "uploaded_size": 0,
@@ -95,9 +95,13 @@ async def progress_callback(bot, query: CallbackQuery):
         completed = progress_data["completed"]
         tasks = progress_data["tasks"]
         
-        await query.answer(
-            f"Total: {total_size}\nUploaded: {uploaded_size}\nCompleted: {completed:.2f}%\nTasks: {tasks}",
-            show_alert=True
+        progress_text = (
+            f"**Total:** `{total_size}`\n"
+            f"**Uploaded:** `{uploaded_size}`\n"
+            f"**Completed:** `{completed:.2f}%`\n"
+            f"**Tasks:** `{tasks}`"
         )
+        
+        await query.answer(progress_text, show_alert=True)
     else:
         await query.answer("No progress data available", show_alert=True)
