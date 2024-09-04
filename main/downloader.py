@@ -208,18 +208,23 @@ async def thumb_callback_handler(bot, query):
         thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
         with open(thumb_path, 'wb') as thumb_file:
             thumb_file.write(thumb_response.content)
-        await bot.send_photo(chat_id=query.message.chat.id, photo=thumb_path, caption="🖼️ **Here is the thumbnail.**")
+        await bot.send_photo(chat_id=query.message.chat.id, photo=thumb_path)
         os.remove(thumb_path)
     else:
         await query.message.edit_text("❌ **Failed to download thumbnail.**")
 
 @Client.on_callback_query(filters.regex(r'^desc_https?://(www\.)?youtube\.com/watch\?v='))
-async def desc_callback_handler(bot, query):
+async def description_callback_handler(bot, query):
     url = '_'.join(query.data.split('_')[1:])
-    ydl_opts = {'quiet': True}
 
+    # Extract video information to get the description
+    ydl_opts = {'quiet': True}
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=False)
         description = info_dict.get('description', 'No description available.')
 
-    await query.message.edit_text(f"📝 **Description:**\n\n{description}")
+    # Truncate the description to 4096 characters, the max limit for a text message
+    if len(description) > 4096:
+        description = description[:4093] + "..."
+
+    await bot.send_message(chat_id=query.message.chat.id, text=f"**📝 Description:**\n\n{description}")
