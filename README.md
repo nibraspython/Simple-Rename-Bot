@@ -7,12 +7,6 @@
 
 <a href="https://youtu.be/oc847WvOUaI"><img src="https://img.shields.io/badge/Watch%20Tutorial%20On%20YouTube-red.svg?logo=Youtube"></a>                     
 
-### Open in Colab
-
-<a href="https://colab.research.google.com/drive/1pCC8HW22J3ISZmHtwikEEgzF2Qr-Ke_U#scrollTo=zEZslKb44K5X">
-<img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab">
-</a>
-
 ## Deployment Support
 
 
