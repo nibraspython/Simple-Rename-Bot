@@ -108,7 +108,7 @@ async def yt_callback_handler(bot, query):
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
     # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n**📹 {resolution}**")
+    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
@@ -198,7 +198,7 @@ async def audio_callback_handler(bot, query):
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
     # Send initial download started message with title and "Audio"
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n**🎧 Audio**")
+    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**🎧 Audio**")
 
     ydl_opts = {
         'format': 'bestaudio[ext=m4a]',  # Only audio format
@@ -225,6 +225,7 @@ async def audio_callback_handler(bot, query):
     caption = (
         f"**🎧 {info_dict['title']}**\n\n"
         f"💽 **Size:** {filesize}\n"
+        f"🕒 **Duration:** {duration} seconds\n"
         f"🔉 **Format:** Audio\n"
         f"**[🔗 URL]({url})**\n\n"
         f"✅ **Download completed!**"
@@ -238,8 +239,9 @@ async def audio_callback_handler(bot, query):
             chat_id=query.message.chat.id,
             audio=downloaded_path,
             caption=caption,
+            duration=duration,
             progress=progress_message,
-            progress_args=(f"Upload Started..... Thanks To All Who Supported ❤️\n\n**🎧 {info_dict['title']}**", query.message, c_time)
+            progress_args=(f"Uploading audio..... Thanks To All Who Supported ❤️\n\n**🎧 {info_dict['title']}**", query.message, c_time)
         )
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
