@@ -6,3 +6,4 @@ pytube
 pillow
 youtube-dl
 ffmpeg
+openai
