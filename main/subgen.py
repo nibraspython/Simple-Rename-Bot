@@ -41,11 +41,15 @@ async def on_language_selected(bot, query):
     await query.message.edit_text("✅ Download completed! Now generating subtitles...")
 
     try:
+        # Use Whisper correctly to transcribe the video
         model = whisper.load_model("base")
         result = model.transcribe(video_path, language="hi" if lang == "hindi" else "en")
         srt_path = f"{video_path.rsplit('.', 1)[0]}.srt"
         with open(srt_path, "w") as srt_file:
-            srt_file.write(result['subtitles'])
+            for segment in result['segments']:
+                srt_file.write(f"{segment['id']}\n")
+                srt_file.write(f"{segment['start']} --> {segment['end']}\n")
+                srt_file.write(f"{segment['text']}\n\n")
 
         await query.message.edit_text("🚀 Uploading subtitles...📤")
         c_time = time.time()
