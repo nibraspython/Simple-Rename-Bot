@@ -1,5 +1,5 @@
 import time, os
-from pyrogram import Client, filters, enums
+from pyrogram import Client, filters, types
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message
 from moviepy.editor import VideoFileClip
@@ -13,9 +13,9 @@ async def generate_subtitles(bot, msg):
 async def receive_video(bot, video_msg):
     await video_msg.reply_text(
         "🎬 Video received! Now, please select the language for subtitle generation.",
-        reply_markup=enums.InlineKeyboardMarkup([
-            [enums.InlineKeyboardButton("🇮🇳 Hindi", callback_data="hindi")],
-            [enums.InlineKeyboardButton("🇬🇧 English", callback_data="english")]
+        reply_markup=types.InlineKeyboardMarkup([
+            [types.InlineKeyboardButton("🇮🇳 Hindi", callback_data="hindi")],
+            [types.InlineKeyboardButton("🇬🇧 English", callback_data="english")]
         ])
     )
 
