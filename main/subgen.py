@@ -41,9 +41,14 @@ async def on_language_selected(bot, query):
     await query.message.edit_text("✅ Download completed! Now generating subtitles...")
 
     try:
-        # Use Whisper correctly to transcribe the video
+        # Log to check model loading
+        print("Loading Whisper model...")
         model = whisper.load_model("base")
+        
+        # Log to check transcription start
+        print(f"Transcribing video {video_path} with language {'Hindi' if lang == 'hindi' else 'English'}")
         result = model.transcribe(video_path, language="hi" if lang == "hindi" else "en")
+
         srt_path = f"{video_path.rsplit('.', 1)[0]}.srt"
         with open(srt_path, "w") as srt_file:
             for segment in result['segments']:
@@ -56,6 +61,8 @@ async def on_language_selected(bot, query):
         await bot.send_document(query.message.chat.id, document=srt_path, caption="🎉 Subtitles generated!", progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time))
 
     except Exception as e:
+        # Log the error
+        print(f"Error during subtitle generation: {e}")
         await query.message.edit_text(f"❌ Error during subtitle generation: {e}")
 
     finally:
@@ -65,3 +72,7 @@ async def on_language_selected(bot, query):
             os.remove(srt_path)
         # Remove the video message from the dictionary after processing
         user_video_messages.pop(query.from_user.id, None)
+
+        # Log completion of the process
+        print("Subtitle generation process completed.")
+
