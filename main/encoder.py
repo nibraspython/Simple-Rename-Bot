@@ -2,6 +2,7 @@ import time, os
 from pyrogram import Client, filters, enums
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 
 @Client.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
