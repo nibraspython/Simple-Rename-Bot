@@ -17,8 +17,8 @@ async def receive_video(bot, video_msg):
 
     # Inline keyboard for resolution selection
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("720p", callback_data=f"encode_720p|{video_msg.message_id}")],
-        [InlineKeyboardButton("480p", callback_data=f"encode_480p|{video_msg.message_id}")]
+        [InlineKeyboardButton("720p", callback_data=f"encode_720p|{video_msg.id}")],
+        [InlineKeyboardButton("480p", callback_data=f"encode_480p|{video_msg.id}")]
     ])
     
     await video_msg.reply_text(
