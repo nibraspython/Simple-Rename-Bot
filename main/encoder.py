@@ -47,13 +47,11 @@ async def start_encoding(bot, callback_query):
     duration = int(video_clip.duration)
 
     # Determine the codec based on the file extension
-    ext = os.path.splitext(video.file_name)[1].lower()
-    if ext == ".mp4":
-        codec = "libx264"  # H.264 codec for MP4
-    elif ext == ".mkv":
-        codec = "libx264"  # H.264 codec for MKV; can also use libvpx for VP8/VP9 if needed
+    ext = os.path.splitext(video.file_name)[1].lower().strip()
+    if ext in [".mp4", ".mkv"]:
+        codec = "libx264"  # H.264 codec for both MP4 and MKV
     else:
-        await sts.edit(f"❌ Unsupported file format: {ext}")
+        await sts.edit(f"❌ Unsupported file format: `{ext}`")
         return
 
     # Encode the video to the selected resolution
