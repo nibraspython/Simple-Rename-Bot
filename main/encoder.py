@@ -1,9 +1,8 @@
 import time, os
-from pyrogram import Client, filters, enums
+import ffmpeg
+from pyrogram import Client, filters
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import progress_message, humanbytes
-from moviepy.editor import VideoFileClip
-import moviepy.video.fx.all as vfx
+from main.utils import progress_message
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 @Client.on_message(filters.private & filters.command("encode") & filters.user(ADMIN))
@@ -25,7 +24,7 @@ async def receive_video(bot, video_msg):
         f"🎥 Video received: `{filename}`\n\nSelect the resolution you want to encode to:",
         reply_markup=keyboard
     )
-    
+
 @Client.on_callback_query(filters.regex(r"^encode_"))
 async def start_encoding(bot, callback_query):
     resolution, message_id = callback_query.data.split("|")
@@ -43,40 +42,41 @@ async def start_encoding(bot, callback_query):
     await sts.edit(f"✅ Download completed: `{video.file_name}`")
 
     # Get video duration before encoding
-    video_clip = VideoFileClip(downloaded)
-    duration = int(video_clip.duration)
+    try:
+        probe = ffmpeg.probe(downloaded)
+        duration = float(probe['streams'][0]['duration'])
+        duration_str = f"{int(duration // 60)}m {int(duration % 60)}s"
+    except Exception as e:
+        duration_str = "Unknown duration"
+        print(f"Error getting video duration: {e}")
 
-    # Determine the codec based on the file extension
-    ext = os.path.splitext(video.file_name)[1].lower().strip()
-    if ext in [".mp4", ".mkv"]:
-        codec = "libx264"  # H.264 codec for both MP4 and MKV
-    else:
-        await sts.edit(f"❌ Unsupported file format: `{ext}`")
-        return
-
-    # Encode the video to the selected resolution
-    await sts.edit(f"🎞️ Encoding `{video.file_name}` to {resolution}.....")
-    if resolution == "720p":
-        video_clip = video_clip.resize(height=720)
-    elif resolution == "480p":
-        video_clip = video_clip.resize(height=480)
-
+    # Determine the output file name and resolution parameters
     encoded_file = os.path.join(DOWNLOAD_LOCATION, f"encoded_{resolution}_{os.path.basename(downloaded)}")
-    video_clip.write_videofile(encoded_file, codec=codec, logger=None)  # Specify codec and disable progress bar
-    video_clip.close()
+    resolution_params = {
+        "720p": "1280x720",
+        "480p": "854x480"
+    }.get(resolution, "1280x720")  # Default to 720p if resolution is not found
+
+    # Use ffmpeg to encode the video
+    await sts.edit(f"🎞️ Encoding `{video.file_name}` to {resolution}.....")
+    try:
+        ffmpeg.input(downloaded).output(encoded_file, vf=f"scale={resolution_params}", vcodec='libx264', preset='fast').run(overwrite_output=True)
+    except ffmpeg.Error as e:
+        await sts.edit(f"❌ Encoding error: {e}")
+        return
 
     await sts.edit(f"✅ Encoding completed: `{video.file_name}` to {resolution}")
 
     # Start uploading the encoded video with duration
-    await sts.edit("🚀 Uploading encoded video..... 📤")
+    await sts.edit(f"🚀 Uploading encoded video..... 📤")
     c_time = time.time()
-    await bot.send_video(callback_query.message.chat.id, video=encoded_file, caption=f"Encoded to {resolution}\n🕒 Duration: {duration} seconds", duration=duration, progress=progress_message, progress_args=(f"Uploading `{video.file_name}`", sts, c_time))
+    await bot.send_video(callback_query.message.chat.id, video=encoded_file, caption=f"Encoded to {resolution}\n🕒 Duration: {duration_str}", duration=duration, progress=progress_message, progress_args=(f"Uploading `{video.file_name}`", sts, c_time))
 
     # Clean up
     try:
         os.remove(downloaded)
         os.remove(encoded_file)
-    except:
-        pass
+    except Exception as e:
+        print(f"Cleanup error: {e}")
 
     await sts.delete()
