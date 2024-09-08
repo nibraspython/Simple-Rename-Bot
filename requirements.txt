@@ -6,7 +6,5 @@ pytube
 pillow
 youtube-dl
 ffmpeg
-openai
-whisper
-torch
-googletrans
+vosk
+wave
