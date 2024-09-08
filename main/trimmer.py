@@ -59,7 +59,7 @@ async def convert_confirm_callback(bot, query):
             progress_args=("📥 **Download Started...**", sts, c_time)
         )
 
-        output_video = f"{os.path.splitext(downloaded)[0]}_{resolution}.mp4"
+        output_video = f"/content/Simple-Rename-Bot/{os.path.splitext(os.path.basename(downloaded))[0]}_{resolution}.mp4"
 
         try:
             # Determine the resolution parameters
@@ -67,7 +67,7 @@ async def convert_confirm_callback(bot, query):
             resolution_str = resolution_map[resolution]
 
             # Use ffmpeg for conversion
-            ffmpeg_command = f"ffmpeg -i {downloaded} -vf scale={resolution_str} {output_video}"
+            ffmpeg_command = f"ffmpeg -i '{downloaded}' -vf scale={resolution_str} '{output_video}'"
             os.system(ffmpeg_command)
         except Exception as e:
             return await sts.edit(f"❌ **Error during conversion:** `{e}`")
