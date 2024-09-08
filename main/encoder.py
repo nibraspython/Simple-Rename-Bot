@@ -2,8 +2,8 @@ import time, os
 from pyrogram import Client, filters, enums
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 @Client.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
 async def convert_video(bot, msg):
@@ -13,11 +13,12 @@ async def convert_video(bot, msg):
 async def receive_video(bot, msg):
     video = msg.video
     video_name = video.file_name
-    buttons = [
-        [("720p", "720p"), ("480p", "480p")]
-    ]
+    buttons = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("720p", callback_data="720p"),
+          InlineKeyboardButton("480p", callback_data="480p")]]
+    )
     await msg.reply_text(f"🎞 Video received: **{video_name}**\nSelect the resolution you want to convert to:", 
-                         reply_markup=InlineKeyboardMarkup(buttons))
+                         reply_markup=buttons)
 
 @Client.on_callback_query(filters.regex("720p|480p"))
 async def convert_resolution(bot, query):
@@ -34,7 +35,7 @@ async def convert_resolution(bot, query):
     width, height = video_clip.size
     video_clip.close()
 
-    await sts.edit("✅ Download completed.\n⚙️ Converting to {resolution}... Please wait.")
+    await sts.edit(f"✅ Download completed.\n⚙️ Converting to {resolution}... Please wait.")
 
     # Convert video to the selected resolution
     output_file = f"{DOWNLOAD_LOCATION}/{os.path.splitext(os.path.basename(downloaded))[0]}_{resolution}.mp4"
