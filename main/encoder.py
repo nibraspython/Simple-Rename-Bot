@@ -1,5 +1,6 @@
-import time, os
-from pyrogram import Client, filters, enums
+import os
+import time
+from pyrogram import Client, filters
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -34,7 +35,10 @@ async def convert_resolution(bot, query):
 
     sts = await query.message.reply_text(f"📥 Downloading video... Please wait.")
     c_time = time.time()
-    downloaded = await msg.download(progress=progress_message, progress_args=("Download Started..... Thanks To All Who Supported ❤", sts, c_time))
+    try:
+        downloaded = await msg.download(DOWNLOAD_LOCATION, progress=progress_message, progress_args=("Downloading...", sts, c_time))
+    except Exception as e:
+        return await sts.edit(f"⚠️ Error: Download failed. {str(e)}")
     
     if not downloaded:
         return await sts.edit("⚠️ Error: Download failed. Please try again.")
@@ -43,10 +47,7 @@ async def convert_resolution(bot, query):
     
     output_file = f"{DOWNLOAD_LOCATION}/{os.path.splitext(os.path.basename(downloaded))[0]}_{resolution}.mp4"
     
-    if resolution == "720p":
-        ffmpeg_cmd = f"ffmpeg -i {downloaded} -vf scale=-1:720 {output_file}"
-    else:  # 480p
-        ffmpeg_cmd = f"ffmpeg -i {downloaded} -vf scale=-1:480 {output_file}"
+    ffmpeg_cmd = f"ffmpeg -i '{downloaded}' -vf 'scale=-1:{resolution}' '{output_file}'"
     
     result = subprocess.run(ffmpeg_cmd, shell=True, capture_output=True, text=True)
     
@@ -56,7 +57,7 @@ async def convert_resolution(bot, query):
     filesize = humanbytes(os.path.getsize(output_file))
     
     # Get video duration
-    ffprobe_cmd = f"ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {output_file}"
+    ffprobe_cmd = f"ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 '{output_file}'"
     duration = int(float(subprocess.check_output(ffprobe_cmd, shell=True).decode().strip()))
 
     cap = f"🎥 **Converted Video**\n📁 **File Name**: `{os.path.basename(output_file)}`\n💽 **Size**: {filesize}\n🕒 **Duration**: {duration} seconds\n📏 **Resolution**: {resolution}"
@@ -64,7 +65,7 @@ async def convert_resolution(bot, query):
     await sts.edit("🚀 Uploading converted video... Please wait.")
     c_time = time.time()
     try:
-        await bot.send_video(msg.chat.id, video=output_file, caption=cap, progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", sts, c_time))
+        await bot.send_video(msg.chat.id, video=output_file, caption=cap, progress=progress_message, progress_args=("Uploading...", sts, c_time))
     except Exception as e:
         return await sts.edit(f"Error: {e}")
 
