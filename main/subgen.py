@@ -2,11 +2,12 @@ import time, os
 from pyrogram import Client, filters, types
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message
-from moviepy.editor import VideoFileClip
 import whisper
+from googletrans import Translator
 
-# Dictionary to store the original video message per user
+# Dictionary to store the original video and subtitle messages per user
 user_video_messages = {}
+user_subtitle_messages = {}
 
 @Client.on_message(filters.private & filters.command("subgen") & filters.user(ADMIN))
 async def generate_subtitles(bot, msg):
@@ -41,11 +42,11 @@ async def on_language_selected(bot, query):
     await query.message.edit_text("✅ Download completed! Now generating subtitles...")
 
     try:
-        # Log to check model loading
+        # Load Whisper model
         print("Loading Whisper model...")
         model = whisper.load_model("base")
         
-        # Log to check transcription start
+        # Transcribe video
         print(f"Transcribing video {video_path} with language {'Hindi' if lang == 'hindi' else 'English'}")
         result = model.transcribe(video_path, language="hi" if lang == "hindi" else "en")
 
@@ -58,21 +59,69 @@ async def on_language_selected(bot, query):
 
         await query.message.edit_text("🚀 Uploading subtitles...📤")
         c_time = time.time()
-        await bot.send_document(query.message.chat.id, document=srt_path, caption="🎉 Subtitles generated!", progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time))
+        await bot.send_document(query.message.chat.id, document=srt_path, caption="🎉 Subtitles generated!", progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time), reply_markup=types.InlineKeyboardMarkup([
+            [types.InlineKeyboardButton("🌐 Translate", callback_data="translate_subtitles")]
+        ]))
+
+        # Store the subtitle file path and user ID for future translation
+        user_subtitle_messages[query.from_user.id] = srt_path
 
     except Exception as e:
-        # Log the error
         print(f"Error during subtitle generation: {e}")
         await query.message.edit_text(f"❌ Error during subtitle generation: {e}")
 
     finally:
         if os.path.exists(video_path):
             os.remove(video_path)
-        if os.path.exists(srt_path):
-            os.remove(srt_path)
-        # Remove the video message from the dictionary after processing
         user_video_messages.pop(query.from_user.id, None)
 
-        # Log completion of the process
-        print("Subtitle generation process completed.")
+@Client.on_callback_query(filters.regex("translate_subtitles") & filters.user(ADMIN))
+async def ask_translation_language(bot, query):
+    await query.message.edit_text(
+        "🌍 Select the language to translate the subtitles:",
+        reply_markup=types.InlineKeyboardMarkup([
+            [types.InlineKeyboardButton("🇱🇰 Sinhala", callback_data="sinhala_translate")],
+            [types.InlineKeyboardButton("🇬🇧 English", callback_data="english_translate")]
+        ])
+    )
 
+@Client.on_callback_query(filters.regex(r"sinhala_translate|english_translate") & filters.user(ADMIN))
+async def translate_subtitles(bot, query):
+    lang = "si" if "sinhala" in query.data else "en"
+    subtitle_path = user_subtitle_messages.get(query.from_user.id)
+
+    if not subtitle_path:
+        return await query.message.edit_text("❌ Error: Could not find the subtitles file. Please try again.")
+
+    await query.message.edit_text(f"🔄 Translating subtitles to {'Sinhala' if lang == 'si' else 'English'}...")
+
+    try:
+        # Load the translator
+        translator = Translator()
+
+        # Read the original subtitles
+        with open(subtitle_path, "r") as srt_file:
+            original_text = srt_file.read()
+
+        # Translate the text
+        translated_text = translator.translate(original_text, dest=lang).text
+
+        translated_srt_path = f"{subtitle_path.rsplit('.', 1)[0]}_{lang}.srt"
+        with open(translated_srt_path, "w") as srt_file:
+            srt_file.write(translated_text)
+
+        await query.message.edit_text("🚀 Uploading translated subtitles...📤")
+        c_time = time.time()
+        await bot.send_document(query.message.chat.id, document=translated_srt_path, caption=f"🎉 Subtitles translated to {'Sinhala' if lang == 'si' else 'English'}!", progress=progress_message, progress_args=("Upload Started..... Thanks To All Who Supported ❤", query.message, c_time))
+
+    except Exception as e:
+        print(f"Error during subtitle translation: {e}")
+        await query.message.edit_text(f"❌ Error during subtitle translation: {e}")
+
+    finally:
+        if os.path.exists(translated_srt_path):
+            os.remove(translated_srt_path)
+        user_subtitle_messages.pop(query.from_user.id, None)
+
+        # Log completion of the process
+        print("Subtitle translation process completed.")
