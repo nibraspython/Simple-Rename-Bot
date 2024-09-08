@@ -5,7 +5,6 @@ from main.utils import progress_message, humanbytes
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import subprocess
 
-# Dictionary to store the message_id of the original video
 video_message_store = {}
 
 @Client.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
@@ -20,7 +19,6 @@ async def receive_video(bot, msg):
         [[InlineKeyboardButton("720p", callback_data=f"720p_{msg.id}"),
           InlineKeyboardButton("480p", callback_data=f"480p_{msg.id}")]]
     )
-    # Store the message_id in a dictionary
     video_message_store[msg.id] = msg
     await msg.reply_text(f"🎞 Video received: **{video_name}**\nSelect the resolution you want to convert to:", 
                          reply_markup=buttons)
@@ -30,7 +28,6 @@ async def convert_resolution(bot, query):
     resolution, msg_id = query.data.split("_")
     msg_id = int(msg_id)
     
-    # Retrieve the original video message using the stored message_id
     msg = video_message_store.get(msg_id)
     if not msg or not msg.video:
         return await query.message.edit_text("⚠️ Error: The video message could not be found. Please try again.")
@@ -39,9 +36,11 @@ async def convert_resolution(bot, query):
     c_time = time.time()
     downloaded = await msg.download(progress=progress_message, progress_args=("Download Started..... Thanks To All Who Supported ❤", sts, c_time))
     
+    if not downloaded:
+        return await sts.edit("⚠️ Error: Download failed. Please try again.")
+    
     await sts.edit(f"✅ Download completed.\n⚙️ Converting to {resolution}... Please wait.")
-
-    # Convert video using ffmpeg
+    
     output_file = f"{DOWNLOAD_LOCATION}/{os.path.splitext(os.path.basename(downloaded))[0]}_{resolution}.mp4"
     
     if resolution == "720p":
@@ -49,11 +48,14 @@ async def convert_resolution(bot, query):
     else:  # 480p
         ffmpeg_cmd = f"ffmpeg -i {downloaded} -vf scale=-1:480 {output_file}"
     
-    subprocess.run(ffmpeg_cmd, shell=True)
-
+    result = subprocess.run(ffmpeg_cmd, shell=True, capture_output=True, text=True)
+    
+    if result.returncode != 0:
+        return await sts.edit(f"⚠️ ffmpeg Error: {result.stderr}")
+    
     filesize = humanbytes(os.path.getsize(output_file))
-
-    # Get video duration using ffmpeg
+    
+    # Get video duration
     ffprobe_cmd = f"ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {output_file}"
     duration = int(float(subprocess.check_output(ffprobe_cmd, shell=True).decode().strip()))
 
@@ -71,7 +73,6 @@ async def convert_resolution(bot, query):
         os.remove(output_file)
     except:
         pass
-    await sts.delete()
 
-    # Clean up the message store
+    await sts.delete()
     video_message_store.pop(msg_id, None)
