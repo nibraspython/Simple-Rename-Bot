@@ -17,11 +17,11 @@ async def receive_video(bot, msg):
     video = msg.video
     video_name = video.file_name
     buttons = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("720p", callback_data=f"720p_{msg.message_id}"),
-          InlineKeyboardButton("480p", callback_data=f"480p_{msg.message_id}")]]
+        [[InlineKeyboardButton("720p", callback_data=f"720p_{msg.id}"),
+          InlineKeyboardButton("480p", callback_data=f"480p_{msg.id}")]]
     )
     # Store the message_id in a dictionary
-    video_message_store[msg.message_id] = msg
+    video_message_store[msg.id] = msg
     await msg.reply_text(f"🎞 Video received: **{video_name}**\nSelect the resolution you want to convert to:", 
                          reply_markup=buttons)
 
