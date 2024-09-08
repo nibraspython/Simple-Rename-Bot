@@ -6,5 +6,3 @@ pytube
 pillow
 youtube-dl
 ffmpeg
-vosk
-wave
