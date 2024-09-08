@@ -1,89 +1,111 @@
-import os
 import time
+import os
 from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-import subprocess
+from moviepy.editor import VideoFileClip
 
-video_message_store = {}
+# Temporary storage for media and conversion details
+convert_data = {}
 
 @Client.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
-async def convert_video(bot, msg):
-    await msg.reply_text("🎥 Please send the video you want to convert to a specific resolution.")
+async def start_conversion_process(bot, msg):
+    chat_id = msg.chat.id
+    convert_data[chat_id] = {}
+    await msg.reply_text("🔄 **Please send the video or document you want to convert.**")
 
-@Client.on_message(filters.private & filters.video & filters.user(ADMIN))
-async def receive_video(bot, msg):
-    video = msg.video
-    video_name = video.file_name
-    buttons = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("720p", callback_data=f"720p_{msg.id}"),
-          InlineKeyboardButton("480p", callback_data=f"480p_{msg.id}")]]
-    )
-    video_message_store[msg.id] = msg
-    await msg.reply_text(f"🎞 Video received: **{video_name}**\nSelect the resolution you want to convert to:", 
-                         reply_markup=buttons)
+@Client.on_message(filters.private & filters.media & filters.user(ADMIN))
+async def receive_media(bot, msg):
+    chat_id = msg.chat.id
+    if chat_id in convert_data and 'media' not in convert_data[chat_id]:
+        media = msg.video or msg.document
+        if media:
+            convert_data[chat_id]['media'] = media
+            file_name = media.file_name
+            await msg.reply_text(f"📂 **Media received:** `{file_name}`\n\n**🔧 Please choose the resolution you want to convert to:**\n\n720p / 480p")
 
-@Client.on_callback_query(filters.regex(r"^(720p|480p)_(\d+)$"))
-async def convert_resolution(bot, query):
-    resolution, msg_id = query.data.split("_")
-    msg_id = int(msg_id)
-    
-    msg = video_message_store.get(msg_id)
-    if not msg or not msg.video:
-        return await query.message.edit_text("⚠️ Error: The video message could not be found. Please try again.")
+@Client.on_message(filters.private & filters.text & filters.user(ADMIN))
+async def receive_resolution(bot, msg):
+    chat_id = msg.chat.id
+    if chat_id in convert_data and 'media' in convert_data[chat_id] and 'resolution' not in convert_data[chat_id]:
+        resolution = msg.text.strip().lower()
+        if resolution in ['720p', '480p']:
+            convert_data[chat_id]['resolution'] = resolution
 
-    sts = await query.message.reply_text(f"📥 Downloading video... Please wait.")
-    c_time = time.time()
-    try:
-        downloaded = await msg.download(DOWNLOAD_LOCATION, progress=progress_message, progress_args=("Downloading...", sts, c_time))
-    except Exception as e:
-        return await sts.edit(f"⚠️ Error: Download failed. {str(e)}")
-    
-    if not downloaded:
-        return await sts.edit("⚠️ Error: Download failed. Please try again.")
-    
-    await sts.edit(f"✅ Download completed.\n⚙️ Converting to {resolution}... Please wait.")
-    
-    # Ensure the output file has a valid path
-    base_name = os.path.splitext(os.path.basename(downloaded))[0]
-    output_file = os.path.join(DOWNLOAD_LOCATION, f"{base_name}_{resolution}.mp4")
-    
-    if os.path.isdir(DOWNLOAD_LOCATION):
-        print("DEBUG: DOWNLOAD_LOCATION is a directory")
-    else:
-        print("DEBUG: DOWNLOAD_LOCATION is not a directory")
+            await msg.reply_text(
+                f"🆙 **Resolution selected:** `{resolution}`",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Confirm ✔️", callback_data="convert_confirm")],
+                    [InlineKeyboardButton("Cancel 🚫", callback_data="convert_cancel")]
+                ])
+            )
+        else:
+            await msg.reply_text("❌ **Invalid resolution. Please select either:** `720p` or `480p`")
 
-    print(f"DEBUG: Input file path: {downloaded}")
-    print(f"DEBUG: Output file path: {output_file}")
+@Client.on_callback_query(filters.regex("convert_confirm") & filters.user(ADMIN))
+async def convert_confirm_callback(bot, query):
+    chat_id = query.message.chat.id
+    if chat_id in convert_data and 'media' in convert_data[chat_id]:
+        media = convert_data[chat_id]['media']
+        resolution = convert_data[chat_id]['resolution']
+        file_name = media.file_name
 
-    ffmpeg_cmd = f"ffmpeg -i '{downloaded}' -vf 'scale=-1:{resolution}' '{output_file}'"
-    
-    result = subprocess.run(ffmpeg_cmd, shell=True, capture_output=True, text=True)
-    
-    if result.returncode != 0:
-        return await sts.edit(f"⚠️ ffmpeg Error: {result.stderr}")
-    
-    filesize = humanbytes(os.path.getsize(output_file))
-    
-    # Get video duration
-    ffprobe_cmd = f"ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 '{output_file}'"
-    duration = int(float(subprocess.check_output(ffprobe_cmd, shell=True).decode().strip()))
+        sts = await query.message.reply_text("🔄 **Downloading...** 📥")
+        c_time = time.time()
+        downloaded = await bot.download_media(
+            media,
+            progress=progress_message,
+            progress_args=("📥 **Download Started...**", sts, c_time)
+        )
 
-    cap = f"🎥 **Converted Video**\n📁 **File Name**: `{os.path.basename(output_file)}`\n💽 **Size**: {filesize}\n🕒 **Duration**: {duration} seconds\n📏 **Resolution**: {resolution}"
+        output_video = f"/content/Simple-Rename-Bot/{os.path.splitext(os.path.basename(downloaded))[0]}_{resolution}.mp4"
 
-    await sts.edit("🚀 Uploading converted video... Please wait.")
-    c_time = time.time()
-    try:
-        await bot.send_video(msg.chat.id, video=output_file, caption=cap, progress=progress_message, progress_args=("Uploading...", sts, c_time))
-    except Exception as e:
-        return await sts.edit(f"Error: {e}")
+        try:
+            # Determine the resolution parameters
+            resolution_map = {'720p': '1280x720', '480p': '854x480'}
+            resolution_str = resolution_map[resolution]
 
-    try:
-        os.remove(downloaded)
-        os.remove(output_file)
-    except:
-        pass
+            # Use ffmpeg for conversion
+            ffmpeg_command = f"ffmpeg -i '{downloaded}' -vf scale={resolution_str} '{output_video}'"
+            os.system(ffmpeg_command)
+        except Exception as e:
+            return await sts.edit(f"❌ **Error during conversion:** `{e}`")
 
-    await sts.delete()
-    video_message_store.pop(msg_id, None)
+        video_clip = VideoFileClip(output_video)
+        duration = int(video_clip.duration)
+        video_clip.close()
+
+        filesize = humanbytes(os.path.getsize(output_video))
+        cap = (f"🎬 **Converted Video**\n\n💽 **Size:** `{filesize}`\n"
+               f"🕒 **Duration:** `{duration} seconds`\n"
+               f"🔧 **Resolution:** `{resolution}`")
+
+        await sts.edit(f"🚀 **Uploading started...📤**")
+        c_time = time.time()
+        try:
+            await bot.send_video(
+                chat_id, video=output_video, caption=cap,
+                duration=duration, progress=progress_message,
+                progress_args=(f"🚀 **Upload Started...📤**\n**Thanks For Using The Converter Bot!**\n\n**{os.path.basename(output_video)}**", sts, c_time)
+            )
+        except Exception as e:
+            return await sts.edit(f"❌ **Error:** `{e}`")
+
+        # Cleanup
+        try:
+            os.remove(downloaded)
+            os.remove(output_video)
+        except:
+            pass
+
+        await sts.delete()
+        del convert_data[chat_id]
+
+@Client.on_callback_query(filters.regex("convert_cancel") & filters.user(ADMIN))
+async def convert_cancel_callback(bot, query):
+    chat_id = query.message.chat.id
+    if chat_id in convert_data:
+        del convert_data[chat_id]
+    await query.message.reply_text("❌ **Conversion canceled.**")
+    await query.message.delete()
