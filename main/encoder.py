@@ -17,8 +17,8 @@ async def receive_video(bot, video_msg):
 
     # Inline keyboard for resolution selection
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("720p", callback_data=f"encode|{video.file_id}|720p")],
-        [InlineKeyboardButton("480p", callback_data=f"encode|{video.file_id}|480p")]
+        [InlineKeyboardButton("720p", callback_data=f"encode_720p|{video_msg.message_id}")],
+        [InlineKeyboardButton("480p", callback_data=f"encode_480p|{video_msg.message_id}")]
     ])
     
     await video_msg.reply_text(
@@ -26,10 +26,12 @@ async def receive_video(bot, video_msg):
         reply_markup=keyboard
     )
     
-@Client.on_callback_query(filters.regex(r"^encode\|"))
+@Client.on_callback_query(filters.regex(r"^encode_"))
 async def start_encoding(bot, callback_query):
-    _, file_id, resolution = callback_query.data.split("|")
-    video_msg = await bot.get_messages(callback_query.message.chat.id, callback_query.message.reply_to_message.message_id)
+    resolution, message_id = callback_query.data.split("|")
+    resolution = resolution.split("_")[1]
+
+    video_msg = await bot.get_messages(callback_query.message.chat.id, int(message_id))
     video = video_msg.video
 
     # Start downloading the video
