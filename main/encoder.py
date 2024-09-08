@@ -45,10 +45,18 @@ async def convert_resolution(bot, query):
     
     await sts.edit(f"✅ Download completed.\n⚙️ Converting to {resolution}... Please wait.")
     
-    # Extract file name without extension
+    # Ensure the output file has a valid path
     base_name = os.path.splitext(os.path.basename(downloaded))[0]
     output_file = os.path.join(DOWNLOAD_LOCATION, f"{base_name}_{resolution}.mp4")
     
+    if os.path.isdir(DOWNLOAD_LOCATION):
+        print("DEBUG: DOWNLOAD_LOCATION is a directory")
+    else:
+        print("DEBUG: DOWNLOAD_LOCATION is not a directory")
+
+    print(f"DEBUG: Input file path: {downloaded}")
+    print(f"DEBUG: Output file path: {output_file}")
+
     ffmpeg_cmd = f"ffmpeg -i '{downloaded}' -vf 'scale=-1:{resolution}' '{output_file}'"
     
     result = subprocess.run(ffmpeg_cmd, shell=True, capture_output=True, text=True)
