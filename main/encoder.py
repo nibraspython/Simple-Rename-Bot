@@ -46,6 +46,16 @@ async def start_encoding(bot, callback_query):
     video_clip = VideoFileClip(downloaded)
     duration = int(video_clip.duration)
 
+    # Determine the codec based on the file extension
+    ext = os.path.splitext(video.file_name)[1].lower()
+    if ext == ".mp4":
+        codec = "libx264"  # H.264 codec for MP4
+    elif ext == ".mkv":
+        codec = "libx264"  # H.264 codec for MKV; can also use libvpx for VP8/VP9 if needed
+    else:
+        await sts.edit(f"❌ Unsupported file format: {ext}")
+        return
+
     # Encode the video to the selected resolution
     await sts.edit(f"🎞️ Encoding `{video.file_name}` to {resolution}.....")
     if resolution == "720p":
@@ -53,8 +63,8 @@ async def start_encoding(bot, callback_query):
     elif resolution == "480p":
         video_clip = video_clip.resize(height=480)
 
-    encoded_file = os.path.join(DOWNLOAD_LOCATION, f"encoded_{resolution}_{video.file_name}")
-    video_clip.write_videofile(encoded_file, logger=None)  # Disable progress bar
+    encoded_file = os.path.join(DOWNLOAD_LOCATION, f"encoded_{resolution}_{os.path.basename(downloaded)}")
+    video_clip.write_videofile(encoded_file, codec=codec, logger=None)  # Specify codec and disable progress bar
     video_clip.close()
 
     await sts.edit(f"✅ Encoding completed: `{video.file_name}` to {resolution}")
