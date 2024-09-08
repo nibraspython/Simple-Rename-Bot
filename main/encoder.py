@@ -45,7 +45,9 @@ async def convert_resolution(bot, query):
     
     await sts.edit(f"✅ Download completed.\n⚙️ Converting to {resolution}... Please wait.")
     
-    output_file = f"{DOWNLOAD_LOCATION}/{os.path.splitext(os.path.basename(downloaded))[0]}_{resolution}.mp4"
+    # Extract file name without extension
+    base_name = os.path.splitext(os.path.basename(downloaded))[0]
+    output_file = os.path.join(DOWNLOAD_LOCATION, f"{base_name}_{resolution}.mp4")
     
     ffmpeg_cmd = f"ffmpeg -i '{downloaded}' -vf 'scale=-1:{resolution}' '{output_file}'"
     
