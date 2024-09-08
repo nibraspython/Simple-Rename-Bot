@@ -54,7 +54,7 @@ async def start_encoding(bot, callback_query):
         video_clip = video_clip.resize(height=480)
 
     encoded_file = os.path.join(DOWNLOAD_LOCATION, f"encoded_{resolution}_{video.file_name}")
-    video_clip.write_videofile(encoded_file, progress_bar=False)
+    video_clip.write_videofile(encoded_file, logger=None)  # Disable progress bar
     video_clip.close()
 
     await sts.edit(f"✅ Encoding completed: `{video.file_name}` to {resolution}")
