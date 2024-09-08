@@ -5,6 +5,9 @@ from main.utils import progress_message, humanbytes
 from moviepy.editor import VideoFileClip
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+# Dictionary to store the message_id of the original video
+video_message_store = {}
+
 @Client.on_message(filters.private & filters.command("convert") & filters.user(ADMIN))
 async def convert_video(bot, msg):
     await msg.reply_text("🎥 Please send the video you want to convert to a specific resolution.")
@@ -14,23 +17,25 @@ async def receive_video(bot, msg):
     video = msg.video
     video_name = video.file_name
     buttons = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("720p", callback_data="720p"),
-          InlineKeyboardButton("480p", callback_data="480p")]]
+        [[InlineKeyboardButton("720p", callback_data=f"720p_{msg.message_id}"),
+          InlineKeyboardButton("480p", callback_data=f"480p_{msg.message_id}")]]
     )
+    # Store the message_id in a dictionary
+    video_message_store[msg.message_id] = msg
     await msg.reply_text(f"🎞 Video received: **{video_name}**\nSelect the resolution you want to convert to:", 
                          reply_markup=buttons)
 
-@Client.on_callback_query(filters.regex("720p|480p"))
+@Client.on_callback_query(filters.regex(r"^(720p|480p)_(\d+)$"))
 async def convert_resolution(bot, query):
-    resolution = query.data
-    reply = query.message
-
-    # Get the original message that contains the video
-    msg = reply.reply_to_message
+    resolution, msg_id = query.data.split("_")
+    msg_id = int(msg_id)
+    
+    # Retrieve the original video message using the stored message_id
+    msg = video_message_store.get(msg_id)
     if not msg or not msg.video:
-        return await reply.edit_text("⚠️ Error: The video message could not be found. Please try again.")
+        return await query.message.edit_text("⚠️ Error: The video message could not be found. Please try again.")
 
-    sts = await reply.reply_text(f"📥 Downloading video... Please wait.")
+    sts = await query.message.reply_text(f"📥 Downloading video... Please wait.")
     c_time = time.time()
     downloaded = await msg.download(progress=progress_message, progress_args=("Download Started..... Thanks To All Who Supported ❤", sts, c_time))
     
@@ -72,3 +77,6 @@ async def convert_resolution(bot, query):
     except:
         pass
     await sts.delete()
+
+    # Clean up the message store
+    video_message_store.pop(msg_id, None)
