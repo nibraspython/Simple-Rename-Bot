@@ -23,8 +23,13 @@ async def receive_video(bot, msg):
 @Client.on_callback_query(filters.regex("720p|480p"))
 async def convert_resolution(bot, query):
     resolution = query.data
-    msg = query.message.reply_to_message
     reply = query.message
+
+    # Get the original message that contains the video
+    msg = reply.reply_to_message
+    if not msg or not msg.video:
+        return await reply.edit_text("⚠️ Error: The video message could not be found. Please try again.")
+
     sts = await reply.reply_text(f"📥 Downloading video... Please wait.")
     c_time = time.time()
     downloaded = await msg.download(progress=progress_message, progress_args=("Download Started..... Thanks To All Who Supported ❤", sts, c_time))
