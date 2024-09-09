@@ -105,7 +105,7 @@ async def generate_mediainfo(bot, msg):
         "✅ **Generated successfully!**"
     )
 
-    await sts.edit(final_text, disable_web_page_preview=True)
+    await sts.edit(final_text, disable_web_page_preview=False)
     
     # Clean up the downloaded file
     try:
