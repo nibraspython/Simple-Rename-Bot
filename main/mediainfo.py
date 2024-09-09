@@ -42,43 +42,46 @@ async def generate_mediainfo(bot, msg):
         return await sts.edit(f"❌ Error generating media info: {e}")
 
     # Format the media info for Telegraph with "box-like" separation for sections
-    general_info = "<b><u>General Information</u></b><br><br>"
-    video_info = "<b><u>Video Information</u></b><br><br>"
-    audio_info = "<b><u>Audio Information</u></b><br><br>"
+    general_info = ""
+    video_info = ""
+    audio_info = ""
 
     for track in media_info.tracks:
         if track.track_type == "General":
-            general_info += f"<b>File Name:</b> {file_name}<br>"
-            general_info += f"<b>File Size:</b> {humanbytes(media.file_size)}<br>"
+            general_info += f"<b>File Name</b>          : {file_name}<br>"
+            general_info += f"<b>File Size</b>          : {humanbytes(media.file_size)}<br>"
             for key, value in track.to_data().items():
-                general_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
+                general_info += f"<b>{key.replace('_', ' ').capitalize()}</b>          : {value}<br>"
         elif track.track_type == "Video":
-            video_info += f"<b>Track:</b> Video<br>"
+            video_info += f"<b>Track</b>          : Video<br>"
             for key, value in track.to_data().items():
-                video_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
+                video_info += f"<b>{key.replace('_', ' ').capitalize()}</b>          : {value}<br>"
         elif track.track_type == "Audio":
-            audio_info += f"<b>Track:</b> Audio<br>"
+            audio_info += f"<b>Track</b>          : Audio<br>"
             for key, value in track.to_data().items():
-                audio_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
+                audio_info += f"<b>{key.replace('_', ' ').capitalize()}</b>          : {value}<br>"
 
-    # To simulate boxes, we can use 'pre' tags and add line spacing to imitate sectioned boxes
+    # Using pre tags to preserve spacing between key and value, and using <b> tags outside boxes
     content = f"""
+    <b><big>📁 General Information</big></b><br>
     <pre>
-    <b>📁 General Information</b>
     ---------------------------------
     {general_info}
+    ---------------------------------
     </pre>
     
+    <b><big>🎥 Video Information</big></b><br>
     <pre>
-    <b>🎥 Video Information</b>
     ---------------------------------
     {video_info}
+    ---------------------------------
     </pre>
     
+    <b><big>🔊 Audio Information</big></b><br>
     <pre>
-    <b>🔊 Audio Information</b>
     ---------------------------------
     {audio_info}
+    ---------------------------------
     </pre>
     """
 
