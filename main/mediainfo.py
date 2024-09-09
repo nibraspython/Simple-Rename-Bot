@@ -42,9 +42,9 @@ async def generate_mediainfo(bot, msg):
         return await sts.edit(f"❌ Error generating media info: {e}")
 
     # Format the media info for Telegraph
-    general_info = "<b>General Information:</b><br>"
-    video_info = "<b>Video Information:</b><br>"
-    audio_info = "<b>Audio Information:</b><br>"
+    general_info = "<b>General Information:</b><br><br>"
+    video_info = "<b>Video Information:</b><br><br>"
+    audio_info = "<b>Audio Information:</b><br><br>"
 
     for track in media_info.tracks:
         if track.track_type == "General":
@@ -61,13 +61,13 @@ async def generate_mediainfo(bot, msg):
             for key, value in track.to_data().items():
                 audio_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
 
-    # Combine all sections
-    content = f"<b>{file_name}</b><br><br>"
-    content += general_info + "<br>"
-    if video_info.strip():
-        content += video_info + "<br>"
-    if audio_info.strip():
-        content += audio_info + "<br>"
+    # Combine all sections with separation
+    content = (
+        f"<b>{file_name}</b><br><br>"
+        f"<hr><b>General</b><hr>{general_info}<br>"
+        f"<hr><b>Video</b><hr>{video_info}<br>"
+        f"<hr><b>Audio</b><hr>{audio_info}<br>"
+    )
 
     # Post the gathered info to Telegraph
     try:
