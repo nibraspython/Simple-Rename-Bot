@@ -41,7 +41,7 @@ async def generate_mediainfo(bot, msg):
     except Exception as e:
         return await sts.edit(f"❌ Error generating media info: {e}")
 
-    # Format the media info for Telegraph with proper structure
+    # Format the media info for Telegraph with "box-like" separation for sections
     general_info = "<b><u>General Information</u></b><br><br>"
     video_info = "<b><u>Video Information</u></b><br><br>"
     audio_info = "<b><u>Audio Information</u></b><br><br>"
@@ -61,16 +61,28 @@ async def generate_mediainfo(bot, msg):
             for key, value in track.to_data().items():
                 audio_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
 
-    # Combine all sections with a clear layout
-    content = f"<b>{file_name}</b><br><br>"
-    content += "<hr>"  # Adding a horizontal rule for clearer separation
-    content += general_info + "<br><hr>"  # Separator between sections
-    if video_info.strip():
-        content += video_info + "<br><hr>"
-    if audio_info.strip():
-        content += audio_info + "<br><hr>"
+    # To simulate boxes, we can use 'pre' tags and add line spacing to imitate sectioned boxes
+    content = f"""
+    <pre>
+    <b>📁 General Information</b>
+    ---------------------------------
+    {general_info}
+    </pre>
+    
+    <pre>
+    <b>🎥 Video Information</b>
+    ---------------------------------
+    {video_info}
+    </pre>
+    
+    <pre>
+    <b>🔊 Audio Information</b>
+    ---------------------------------
+    {audio_info}
+    </pre>
+    """
 
-    # Post the gathered info to Telegraph
+    # Post the formatted content to Telegraph
     try:
         response = telegraph_client.create_page(
             title=file_name,
