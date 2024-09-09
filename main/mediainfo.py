@@ -63,21 +63,21 @@ async def generate_mediainfo(bot, msg):
 
     # Using pre tags to preserve spacing between key and value, and using <b> tags outside boxes
     content = f"""
-    <b><big>📁 General Information</big></b><br>
+    <h3>📁 General Information</h3><br>
     <pre>
     ---------------------------------
     {general_info}
     ---------------------------------
     </pre>
     
-    <b><big>🎥 Video Information</big></b><br>
+    <h3>🎥 Video Information</h3><br>
     <pre>
     ---------------------------------
     {video_info}
     ---------------------------------
     </pre>
     
-    <b><big>🔊 Audio Information</big></b><br>
+    <h3>🔊 Audio Information</h3><br>
     <pre>
     ---------------------------------
     {audio_info}
