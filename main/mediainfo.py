@@ -1,4 +1,3 @@
-python
 import os
 import time
 from pyrogram import Client, filters
