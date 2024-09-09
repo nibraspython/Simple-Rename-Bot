@@ -22,7 +22,7 @@ async def generate_mediainfo(bot, msg):
     file_name = media.file_name
     
     # Initial processing message
-    sts = await msg.reply_text(f"🔄 Processing your file: <b>{file_name}</b>...")
+    sts = await msg.reply_text(f"🔄 Processing your file...\n\n📂 <b>{file_name}</b>")
     
     # Start downloading the file
     c_time = time.time()
@@ -99,8 +99,8 @@ async def generate_mediainfo(bot, msg):
 
     # Update message with the final info and Telegraph link
     final_text = (
-        f"📄 <b>File Name:</b> {file_name}<br>"
-        f"💾 <b>File Size:</b> {humanbytes(media.file_size)}<br>"
+        f"📄 <b>File Name:</b> [file_name]({telegraph_url})<br>"\n
+        f"💾 <b>File Size:</b> {humanbytes(media.file_size)}<br>"\n
         f"🔗 <b>Media Info:</b> [Open Telegraph]({telegraph_url})\n\n"
         "✅ <b>Generated successfully!</b>"
     )
