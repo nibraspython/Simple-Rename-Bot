@@ -41,17 +41,18 @@ async def generate_mediainfo(bot, msg):
     except Exception as e:
         return await sts.edit(f"❌ Error generating media info: {e}")
 
-    # Format the media info for Telegraph with "clean alignment"
+    # Format the media info for Telegraph with larger space between key and value
     general_info = ""
     video_info = ""
     audio_info = ""
 
-    max_key_length = 20  # Maximum length of the key field for alignment
+    # Customize the space between key and value
+    spacing = 40  # Adjust this to control the space between key and value
 
-    # Function to format key-value pairs with alignment
+    # Function to format key-value pairs with large space
     def format_info(key, value):
-        space = ' ' * (max_key_length - len(key))  # Calculate space for alignment
-        return f"<b>{key}</b>{space}: {value}<br>"
+        key_space = ' ' * (spacing - len(key))  # Calculate space based on desired spacing
+        return f"<b>{key}</b>{key_space}: {value}<br>"
 
     for track in media_info.tracks:
         if track.track_type == "General":
