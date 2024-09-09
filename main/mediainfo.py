@@ -1,3 +1,4 @@
+python
 import os
 import time
 from pyrogram import Client, filters
@@ -79,14 +80,15 @@ async def generate_mediainfo(bot, msg):
     except Exception as e:
         return await sts.edit(f"❌ Error generating Telegraph page: {e}")
 
-    # Update message with the info and Telegraph link
-    await sts.edit(
+    # Update message with the final info and Telegraph link
+    final_text = (
         f"📄 <b>File Name:</b> {file_name}<br>"
         f"💾 <b>File Size:</b> {humanbytes(media.file_size)}<br>"
         f"🔗 <b>Media Info:</b> <a href='{telegraph_url}'>Open Telegraph</a><br><br>"
-        "✅ <b>Generated successfully!</b>",
-        disable_web_page_preview=True
+        "✅ <b>Generated successfully!</b>"
     )
+
+    await sts.edit(final_text, disable_web_page_preview=True)
     
     # Clean up the downloaded file
     try:
