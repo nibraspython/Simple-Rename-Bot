@@ -99,10 +99,10 @@ async def generate_mediainfo(bot, msg):
 
     # Update message with the final info and Telegraph link
     final_text = (
-        f"📄 <b>File Name:</b> [file_name]({telegraph_url})<br>"\n
-        f"💾 <b>File Size:</b> {humanbytes(media.file_size)}<br>"\n
-        f"🔗 <b>Media Info:</b> [Open Telegraph]({telegraph_url})\n\n"
-        "✅ <b>Generated successfully!</b>"
+        f"📄 **File Name:** [file_name]({telegraph_url})"\n
+        f"💾 **File Size:** {humanbytes(media.file_size)}"\n
+        f"🔗 **Media Info:** [Open Telegraph]({telegraph_url})\n\n"
+        "✅ **Generated successfully!**"
     )
 
     await sts.edit(final_text, disable_web_page_preview=True)
