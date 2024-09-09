@@ -41,10 +41,10 @@ async def generate_mediainfo(bot, msg):
     except Exception as e:
         return await sts.edit(f"❌ Error generating media info: {e}")
 
-    # Format the media info for Telegraph
-    general_info = "<b>General Information:</b><br><br>"
-    video_info = "<b>Video Information:</b><br><br>"
-    audio_info = "<b>Audio Information:</b><br><br>"
+    # Format the media info for Telegraph with proper structure
+    general_info = "<b><u>General Information</u></b><br><br>"
+    video_info = "<b><u>Video Information</u></b><br><br>"
+    audio_info = "<b><u>Audio Information</u></b><br><br>"
 
     for track in media_info.tracks:
         if track.track_type == "General":
@@ -53,21 +53,22 @@ async def generate_mediainfo(bot, msg):
             for key, value in track.to_data().items():
                 general_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
         elif track.track_type == "Video":
-            video_info += "<b>Video Track:</b><br>"
+            video_info += f"<b>Track:</b> Video<br>"
             for key, value in track.to_data().items():
                 video_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
         elif track.track_type == "Audio":
-            audio_info += "<b>Audio Track:</b><br>"
+            audio_info += f"<b>Track:</b> Audio<br>"
             for key, value in track.to_data().items():
                 audio_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
 
-    # Combine all sections with separation
-    content = (
-        f"<b>{file_name}</b><br><br>"
-        f"<hr><b>General</b><hr>{general_info}<br>"
-        f"<hr><b>Video</b><hr>{video_info}<br>"
-        f"<hr><b>Audio</b><hr>{audio_info}<br>"
-    )
+    # Combine all sections with a clear layout
+    content = f"<b>{file_name}</b><br><br>"
+    content += "<hr>"  # Adding a horizontal rule for clearer separation
+    content += general_info + "<br><hr>"  # Separator between sections
+    if video_info.strip():
+        content += video_info + "<br><hr>"
+    if audio_info.strip():
+        content += audio_info + "<br><hr>"
 
     # Post the gathered info to Telegraph
     try:
@@ -83,7 +84,7 @@ async def generate_mediainfo(bot, msg):
     final_text = (
         f"📄 <b>File Name:</b> {file_name}<br>"
         f"💾 <b>File Size:</b> {humanbytes(media.file_size)}<br>"
-        f"🔗 <b>Media Info:<b> [Open Telegraph]({telegraph_url})\n\n"
+        f"🔗 <b>Media Info:</b> [Open Telegraph]({telegraph_url})\n\n"
         "✅ <b>Generated successfully!</b>"
     )
 
