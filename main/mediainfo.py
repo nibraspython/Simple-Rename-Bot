@@ -85,7 +85,7 @@ async def generate_mediainfo(bot, msg):
         f"💾 <b>File Size:</b> {humanbytes(media.file_size)}<br>"
         f"🔗 <b>Media Info:</b> <a href='{telegraph_url}'>Open Telegraph</a><br><br>"
         "✅ <b>Generated successfully!</b>",
-        disable_web_page_preview=True
+        disable_web_page_preview=False
     )
     
     # Clean up the downloaded file
