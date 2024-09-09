@@ -22,7 +22,7 @@ async def generate_mediainfo(bot, msg):
     file_name = media.file_name
     
     # Initial processing message
-    sts = await msg.reply_text(f"🔄 Processing your file...\n\n📂 **{file_name}**")
+    sts = await msg.reply_text(f"🔄 Processing your file: **{file_name}**...")
     
     # Start downloading the file
     c_time = time.time()
@@ -42,39 +42,38 @@ async def generate_mediainfo(bot, msg):
         return await sts.edit(f"❌ Error generating media info: {e}")
 
     # Format the media info for Telegraph
-    general_info = ""
-    video_info = ""
-    audio_info = ""
+    general_info = "<b>General Information:</b><br>"
+    video_info = "<b>Video Information:</b><br>"
+    audio_info = "<b>Audio Information:</b><br>"
 
     for track in media_info.tracks:
         if track.track_type == "General":
-            general_info += "<b>General Information</b><br>"
             general_info += f"<b>File Name:</b> {file_name}<br>"
             general_info += f"<b>File Size:</b> {humanbytes(media.file_size)}<br>"
             for key, value in track.to_data().items():
                 general_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
         elif track.track_type == "Video":
-            video_info += "<b>Video Information</b><br>"
+            video_info += "<b>Video Track:</b><br>"
             for key, value in track.to_data().items():
                 video_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
         elif track.track_type == "Audio":
-            audio_info += "<b>Audio Information</b><br>"
+            audio_info += "<b>Audio Track:</b><br>"
             for key, value in track.to_data().items():
                 audio_info += f"<b>{key.replace('_', ' ').capitalize()}:</b> {value}<br>"
 
     # Combine all sections
     content = f"<b>{file_name}</b><br><br>"
-    content += f"<div>{general_info}</div><br><hr><br>"
-    if video_info:
-        content += f"<div>{video_info}</div><br><hr><br>"
-    if audio_info:
-        content += f"<div>{audio_info}</div><br><hr><br>"
+    content += general_info + "<br>"
+    if video_info.strip():
+        content += video_info + "<br>"
+    if audio_info.strip():
+        content += audio_info + "<br>"
 
     # Post the gathered info to Telegraph
     try:
         response = telegraph_client.create_page(
             title=file_name,
-            html_content=content.replace("\n", "<br>")
+            html_content=content
         )
         telegraph_url = f"https://telegra.ph/{response['path']}"
     except Exception as e:
@@ -82,9 +81,9 @@ async def generate_mediainfo(bot, msg):
 
     # Update message with the info and Telegraph link
     await sts.edit(
-        f"📄 **File Name:** {file_name}\n"
-        f"💾 **File Size:** {humanbytes(media.file_size)}\n"
-        f"🔗 **Media Info:** [Open Telegraph]({telegraph_url})\n\n"
+        f"📄 <b>File Name:</b> {file_name}<br>"
+        f"💾 <b>File Size:</b> {humanbytes(media.file_size)}<br>"
+        f"🔗 <b>Media Info:</b> <a href='{telegraph_url}'>Open Telegraph</a><br><br>"
         "✅ *Generated successfully!*",
         disable_web_page_preview=True
     )
