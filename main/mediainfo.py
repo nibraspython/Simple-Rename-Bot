@@ -83,7 +83,7 @@ async def generate_mediainfo(bot, msg):
     final_text = (
         f"📄 <b>File Name:</b> {file_name}<br>"
         f"💾 <b>File Size:</b> {humanbytes(media.file_size)}<br>"
-        f"🔗 <b>Media Info:</b> <a href='{telegraph_url}'>Open Telegraph</a><br><br>"
+        f"🔗 <b>Media Info:[Open Telegraph]({telegraph_url})\n\n"
         "✅ <b>Generated successfully!</b>"
     )
 
