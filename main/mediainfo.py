@@ -41,47 +41,48 @@ async def generate_mediainfo(bot, msg):
     except Exception as e:
         return await sts.edit(f"❌ Error generating media info: {e}")
 
-    # Format the media info for Telegraph with "box-like" separation for sections
+    # Format the media info for Telegraph with "clean alignment"
     general_info = ""
     video_info = ""
     audio_info = ""
 
+    max_key_length = 20  # Maximum length of the key field for alignment
+
+    # Function to format key-value pairs with alignment
+    def format_info(key, value):
+        space = ' ' * (max_key_length - len(key))  # Calculate space for alignment
+        return f"<b>{key}</b>{space}: {value}<br>"
+
     for track in media_info.tracks:
         if track.track_type == "General":
-            general_info += f"<b>File Name</b>          : {file_name}<br>"
-            general_info += f"<b>File Size</b>          : {humanbytes(media.file_size)}<br>"
+            general_info += format_info("File Name", file_name)
+            general_info += format_info("File Size", humanbytes(media.file_size))
             for key, value in track.to_data().items():
-                general_info += f"<b>{key.replace('_', ' ').capitalize()}</b>          : {value}<br>"
+                general_info += format_info(key.replace('_', ' ').capitalize(), value)
         elif track.track_type == "Video":
-            video_info += f"<b>Track</b>          : Video<br>"
+            video_info += format_info("Track Type", "Video")
             for key, value in track.to_data().items():
-                video_info += f"<b>{key.replace('_', ' ').capitalize()}</b>          : {value}<br>"
+                video_info += format_info(key.replace('_', ' ').capitalize(), value)
         elif track.track_type == "Audio":
-            audio_info += f"<b>Track</b>          : Audio<br>"
+            audio_info += format_info("Track Type", "Audio")
             for key, value in track.to_data().items():
-                audio_info += f"<b>{key.replace('_', ' ').capitalize()}</b>          : {value}<br>"
+                audio_info += format_info(key.replace('_', ' ').capitalize(), value)
 
     # Using pre tags to preserve spacing between key and value, and using <b> tags outside boxes
     content = f"""
     <h3>📁 General Information</h3><br>
     <pre>
-    ---------------------------------
     {general_info}
-    ---------------------------------
     </pre>
     
     <h3>🎥 Video Information</h3><br>
     <pre>
-    ---------------------------------
     {video_info}
-    ---------------------------------
     </pre>
     
     <h3>🔊 Audio Information</h3><br>
     <pre>
-    ---------------------------------
     {audio_info}
-    ---------------------------------
     </pre>
     """
 
