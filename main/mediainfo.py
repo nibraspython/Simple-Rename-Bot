@@ -22,7 +22,7 @@ async def generate_mediainfo(bot, msg):
     file_name = media.file_name
     
     # Initial processing message
-    sts = await msg.reply_text(f"🔄 Processing your file: **{file_name}**...")
+    sts = await msg.reply_text(f"🔄 Processing your file: <b>{file_name}</b>...")
     
     # Start downloading the file
     c_time = time.time()
@@ -77,14 +77,14 @@ async def generate_mediainfo(bot, msg):
         )
         telegraph_url = f"https://telegra.ph/{response['path']}"
     except Exception as e:
-        return await sts.edit(f"Error generating Telegraph page: {e}")
+        return await sts.edit(f"❌ Error generating Telegraph page: {e}")
 
     # Update message with the info and Telegraph link
     await sts.edit(
         f"📄 <b>File Name:</b> {file_name}<br>"
         f"💾 <b>File Size:</b> {humanbytes(media.file_size)}<br>"
         f"🔗 <b>Media Info:</b> <a href='{telegraph_url}'>Open Telegraph</a><br><br>"
-        "✅ *Generated successfully!*",
+        "✅ <b>Generated successfully!</b>",
         disable_web_page_preview=True
     )
     
