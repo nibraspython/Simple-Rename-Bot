@@ -164,7 +164,7 @@ async def confirm_zip(bot, query: CallbackQuery):
                         media_msg.document.file_name if media_msg.document else \
                         media_msg.video.file_name if media_msg.video else \
                         media_msg.audio.file_name if media_msg.audio else "Unknown file"
-            download_msg = f"**📥Downloading...**\n\n**{file_name}**"
+            download_msg = f"**📥Downloading...**\n\n**📂{file_name}**"
             file_path = await media_msg.download(progress=progress_message, progress_args=(download_msg, query.message, c_time))
             archive.write(file_path, file_name)
             os.remove(file_path)
@@ -179,7 +179,7 @@ async def confirm_zip(bot, query: CallbackQuery):
         document=zip_path,
         caption=f"Here is your ZIP file: `{zip_name}`",
         progress=progress_message,
-        progress_args=(f"Uploading ZIP...Thanks To All Who Supported ❤️\n\n**📦 {zip_name}**", query.message, c_time)
+        progress_args=(f"📤Uploading ZIP...Thanks To All Who Supported ❤️\n\n**📦 {zip_name}**", query.message, c_time)
     )
     
     # Remove the progress message after uploading the ZIP
