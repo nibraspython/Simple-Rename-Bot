@@ -114,6 +114,11 @@ async def yt_callback_handler(bot, query):
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
+        'progress_hooks': [lambda d: progress_message(
+            f"Download Started..... 📥\n\n**🎬 {title}**",
+            query.message,
+            d['downloaded_bytes'], d['total_bytes'], time.time()
+        )],
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
@@ -199,32 +204,12 @@ async def thumb_callback_handler(bot, query):
         info_dict = ydl.extract_info(url, download=False)
         thumb_url = info_dict.get('thumbnail', None)
 
-    if not thumb_url:
-        await query.message.edit_text("❌ **No thumbnail found for this video.**")
-        return
-
-    thumb_response = requests.get(thumb_url)
-    if thumb_response.status_code == 200:
+    response = requests.get(thumb_url)
+    if response.status_code == 200:
         thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
         with open(thumb_path, 'wb') as thumb_file:
-            thumb_file.write(thumb_response.content)
+            thumb_file.write(response.content)
         await bot.send_photo(chat_id=query.message.chat.id, photo=thumb_path)
         os.remove(thumb_path)
     else:
-        await query.message.edit_text("❌ **Failed to download thumbnail.**")
-
-@Client.on_callback_query(filters.regex(r'^desc_https?://(www\.)?youtube\.com/watch\?v='))
-async def description_callback_handler(bot, query):
-    url = '_'.join(query.data.split('_')[1:])
-
-    # Extract video information to get the description
-    ydl_opts = {'quiet': True}
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=False)
-        description = info_dict.get('description', 'No description available.')
-
-    # Truncate the description to 4096 characters, the max limit for a text message
-    if len(description) > 4096:
-        description = description[:4093] + "..."
-
-    await bot.send_message(chat_id=query.message.chat.id, text=f"**📝 Description:**\n\n{description}")
+        await query.message.edit_text(f"❌ **Unable to fetch thumbnail.**")
