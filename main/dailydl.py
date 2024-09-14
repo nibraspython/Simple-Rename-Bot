@@ -1,110 +1,89 @@
-import time, os, yt_dlp
+import os
+import time
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import DOWNLOAD_LOCATION, ADMIN
+from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
 from main.utils import progress_message, humanbytes
+from yt_dlp import YoutubeDL
 from moviepy.editor import VideoFileClip
 
-# yt-dlp options specifically for Dailymotion
-ydl_opts = {
-    'format': 'best',
-    'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
-    'noplaylist': True,
-}
-
-# Supported domain (Dailymotion)
-SUPPORTED_DOMAIN = "dailymotion.com"
-
 @Client.on_message(filters.private & filters.command("daily") & filters.user(ADMIN))
-async def download_dailymotion(bot, msg):
-    if len(msg.command) < 2:
-        return await msg.reply_text("🔗 **Please provide a Dailymotion URL.**")
+async def dailymotion_download(bot, msg):
+    await msg.reply_text("Send your Dailymotion video URL to download.")
 
-    # Extract URL
-    url = msg.text.split(" ", 1)[1]
+@Client.on_message(filters.private & filters.text & filters.user(ADMIN))
+async def process_dailymotion_url(bot, msg):
+    url = msg.text
+    sts = await msg.reply_text(f"🔄 Processing your URL: {url}")
     
-    # Check if the URL is for Dailymotion
-    if SUPPORTED_DOMAIN not in url:
-        return await msg.reply_text("❌ **Only Dailymotion URLs are supported.**")
+    # Setting up yt-dlp options for highest resolution
+    ydl_opts = {
+        'format': 'best',
+        'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
+        'progress_hooks': [lambda d: download_progress_hook(d, sts, msg)]
+    }
 
-    await msg.reply_text(f"✅ **URL received:** {url}\n\n🔄 Starting Dailymotion download...")  # Confirmation message
-
-    # Start message with inline keyboard for interaction
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🚀 Status", callback_data="show_status")],
-        [InlineKeyboardButton("🗑️ Cancel", callback_data="cancel")]
-    ])
-    sts = await msg.reply_text(f"🔄 **Processing:** `{url}`\n\n🌐 *Checking the link and starting download...*", reply_markup=keyboard)
-
-    # Downloading with yt-dlp
     try:
-        await sts.edit("🔄 **Downloading... Please wait...**")
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=False)
-            title = info_dict.get('title', None)
-            ext = info_dict.get('ext', None)
-            ydl.download([url])  # Download the video
-            file_path = f"{DOWNLOAD_LOCATION}/{title}.{ext}"
-            file_size = os.path.getsize(file_path)
+        # Downloading the video using yt-dlp
+        with YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=True)
+            video_title = info_dict.get('title', 'video')
+            video_filename = ydl.prepare_filename(info_dict)
+        
+        await sts.edit(f"✅ Download completed: {video_title}\n🔄 Now starting to upload...")
 
-        # Inform about download completion
-        await sts.edit(f"✅ **Downloaded successfully!**\n\n📤 **Uploading to Telegram...**", reply_markup=None)
-
-    except Exception as e:
-        print(f"Error during download: {str(e)}")  # Debug print for logging
-        return await sts.edit(f"❌ **Download failed:** `{str(e)}`")
-
-    # Get video duration and thumbnail (if available)
-    try:
-        video_clip = VideoFileClip(file_path)
+        # Get video info (size, duration, thumbnail)
+        video_clip = VideoFileClip(video_filename)
         duration = int(video_clip.duration)
+        filesize = humanbytes(os.path.getsize(video_filename))
         video_clip.close()
+
+        # Get video thumbnail
+        og_thumbnail = f"{DOWNLOAD_LOCATION}/thumbnail.jpg"
+        ydl.download([f'{url}#thumb'])
+
+        # Customize caption
+        if CAPTION:
+            cap = CAPTION.format(file_name=video_title, file_size=filesize, duration=duration)
+        else:
+            cap = f"{video_title}\n\n💽 size: {filesize}\n🕒 duration: {duration} seconds"
+
+        # Uploading the video
+        await upload_video(bot, msg, video_filename, og_thumbnail, cap, duration, sts)
+
     except Exception as e:
-        print(f"Error during video processing: {str(e)}")
-        return await sts.edit(f"❌ **Error processing video:** `{str(e)}`")
+        await sts.edit(f"❌ Error: {e}")
 
-    # Custom Caption
-    filesize = humanbytes(file_size)
-    cap = f"**{title}**\n\n💽 **Size:** `{filesize}`\n🕒 **Duration:** `{duration} seconds`"
+def download_progress_hook(d, sts, msg):
+    if d['status'] == 'downloading':
+        percent = d['_percent_str']
+        total_size = humanbytes(d['total_bytes'])
+        speed = d['_speed_str']
+        filename = d['filename']
+        c_time = time.time()
+        download_text = f"Downloading {filename}\n\nProgress: {percent}\nTotal Size: {total_size}\nSpeed: {speed}"
+        asyncio.create_task(sts.edit(download_text))
 
-    # Fetch thumbnail if available
-    thumbnail = None
-    if info_dict.get('thumbnail'):
-        thumbnail = f"{DOWNLOAD_LOCATION}/thumbnail.jpg"
-        os.system(f"wget {info_dict['thumbnail']} -O {thumbnail}")
-
+async def upload_video(bot, msg, video_path, thumbnail, caption, duration, sts):
     c_time = time.time()
-
-    # Upload to Telegram
     try:
         await bot.send_video(
             msg.chat.id,
-            video=file_path,
+            video=video_path,
             thumb=thumbnail,
-            caption=cap,
+            caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=("Upload Started... 📤", sts, c_time)
+            progress_args=(f"Uploading {os.path.basename(video_path)}... Thanks To All Who Supported ❤", sts, c_time)
         )
     except Exception as e:
-        print(f"Error during upload: {str(e)}")
-        return await sts.edit(f"❌ **Upload failed:** `{str(e)}`")
+        await sts.edit(f"❌ Error during upload: {e}")
+    finally:
+        # Clean up the downloaded files
+        try:
+            os.remove(video_path)
+            if thumbnail:
+                os.remove(thumbnail)
+        except:
+            pass
+        await sts.delete()
 
-    # Cleanup after upload
-    try:
-        if thumbnail:
-            os.remove(thumbnail)
-        os.remove(file_path)
-    except Exception as e:
-        print(f"Error during cleanup: {e}")
-
-    await sts.delete()
-
-# Inline keyboard button handler
-@Client.on_callback_query(filters.regex("show_status"))
-async def show_status_callback(bot, callback_query):
-    await callback_query.answer("📊 Current Status: Download/Upload in progress...")
-
-@Client.on_callback_query(filters.regex("cancel"))
-async def cancel_callback(bot, callback_query):
-    await callback_query.message.edit("🛑 **Download/Upload canceled.**")
