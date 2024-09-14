@@ -146,10 +146,19 @@ async def yt_callback_handler(bot, query):
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
-        }],
-        'progress_hooks': [download_progress_hook]  # Add this line for progress tracking  
-    }
+        }]
 
+       def download_progress_hook(d):
+        if d['status'] == 'downloading':
+            percent = d['_percent_str']
+            speed = d['_speed_str']
+            eta = d['_eta_str']
+            progress_text = f"⬇️ **Downloading:** {percent}\n🚀 **Speed:** {speed}\n⏳ **ETA:** {eta}"
+            bot.loop.create_task(download_message.edit_text(progress_text))
+
+    ydl_opts['progress_hooks'] = [download_progress_hook]
+
+ 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
