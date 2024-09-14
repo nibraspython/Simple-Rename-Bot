@@ -130,7 +130,7 @@ async def yt_callback_handler(bot, query):
         'merge_output_format': 'mp4',
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
-            'preferedformat': 'mp4'
+            'preferedformat': 'mp4',
             'progress_hooks': [download_hook]
         }]
 
