@@ -10,34 +10,6 @@ from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 import math
 
-def download_progress_hook(d):
-    if d['status'] == 'downloading':
-        total_bytes = d.get('total_bytes', d.get('total_bytes_estimate', 0)) or 0
-        downloaded_bytes = d.get('downloaded_bytes', 0)
-        speed = d.get('speed', 0)
-        elapsed_time = d.get('elapsed', 0)
-        eta = d.get('eta', 0)
-
-        # Calculate percentage safely
-        percentage = (downloaded_bytes / total_bytes * 100) if total_bytes > 0 else 0
-
-        # Convert to human-readable formats if available
-        human_downloaded_bytes = humanbytes(downloaded_bytes)
-        human_total_bytes = humanbytes(total_bytes)
-        human_speed = humanbytes(speed)
-
-        # Build the progress message
-        msg_text = (f"⬇️ **Downloading...**\n"
-                    f"📦 **Downloaded:** {human_downloaded_bytes} of {human_total_bytes}\n"
-                    f"⚡ **Speed:** {human_speed}/s\n"
-                    f"⏱ **Elapsed Time:** {math.floor(elapsed_time)} seconds\n"
-                    f"⏳ **ETA:** {math.floor(eta)} seconds\n"
-                    f"📊 **Progress:** {percentage:.2f}%")
-
-        # Update your Telegram message here
-        # For example: await download_message.edit_text(msg_text)
-
-
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 **Please send your YouTube links to download.**")
@@ -148,7 +120,11 @@ async def yt_callback_handler(bot, query):
             'preferedformat': 'mp4'
         }]
 
-       def download_progress_hook(d):
+       }
+
+    c_time = time.time()
+    
+    def download_progress_hook(d):
         if d['status'] == 'downloading':
             percent = d['_percent_str']
             speed = d['_speed_str']
@@ -158,7 +134,6 @@ async def yt_callback_handler(bot, query):
 
     ydl_opts['progress_hooks'] = [download_progress_hook]
 
- 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
