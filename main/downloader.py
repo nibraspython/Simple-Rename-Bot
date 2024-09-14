@@ -124,15 +124,14 @@ async def yt_callback_handler(bot, query):
 
   
   ydl_opts = {
-    'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
-    'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-    'merge_output_format': 'mp4',
-    'postprocessors': [{
-        'key': 'FFmpegVideoConvertor',
-        'preferredformat': 'mp4',
-    }],
-    'progress_hooks': [lambda d: download_progress_hook(d, sts, msg)]
-}
+        'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
+        'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
+        'merge_output_format': 'mp4',
+        'postprocessors': [{
+            'key': 'FFmpegVideoConvertor',
+            'preferedformat': 'mp4'
+        }]
+    }
  
     
     try:
