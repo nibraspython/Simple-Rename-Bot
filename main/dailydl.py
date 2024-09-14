@@ -5,32 +5,31 @@ from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from moviepy.editor import VideoFileClip
 
-# yt-dlp options
+# yt-dlp options specifically for Dailymotion
 ydl_opts = {
     'format': 'best',
     'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
     'noplaylist': True,
 }
 
-# Block YouTube URLs
-BLOCKED_DOMAINS = ["youtube.com", "youtu.be"]
+# Supported domain (Dailymotion)
+SUPPORTED_DOMAIN = "dailymotion.com"
 
 @Client.on_message(filters.private & filters.command("daily") & filters.user(ADMIN))
-async def download_yt_dlp(bot, msg):
+async def download_dailymotion(bot, msg):
     if len(msg.command) < 2:
-        return await msg.reply_text("🔗 **Please provide a valid URL.**")
-    
+        return await msg.reply_text("🔗 **Please provide a Dailymotion URL.**")
+
     # Extract URL
     url = msg.text.split(" ", 1)[1]
-    print(f"Extracted URL: {url}")  # Debugging
+    
+    # Check if the URL is for Dailymotion
+    if SUPPORTED_DOMAIN not in url:
+        return await msg.reply_text("❌ **Only Dailymotion URLs are supported.**")
 
-    # Check for blocked domains (YouTube)
-    if any(domain in url for domain in BLOCKED_DOMAINS):
-        return await msg.reply_text("❌ **YouTube URLs are not supported in this command.**")
+    await msg.reply_text(f"✅ **URL received:** {url}\n\n🔄 Starting Dailymotion download...")  # Confirmation message
 
-    await msg.reply_text(f"✅ **URL received:** {url}\n\n🔄 Starting download...")  # Check if bot responds to URL
-
-    # Starting message with inline keyboard for interaction
+    # Start message with inline keyboard for interaction
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🚀 Status", callback_data="show_status")],
         [InlineKeyboardButton("🗑️ Cancel", callback_data="cancel")]
@@ -44,7 +43,7 @@ async def download_yt_dlp(bot, msg):
             info_dict = ydl.extract_info(url, download=False)
             title = info_dict.get('title', None)
             ext = info_dict.get('ext', None)
-            downloaded = ydl.download([url])
+            ydl.download([url])  # Download the video
             file_path = f"{DOWNLOAD_LOCATION}/{title}.{ext}"
             file_size = os.path.getsize(file_path)
 
@@ -55,7 +54,7 @@ async def download_yt_dlp(bot, msg):
         print(f"Error during download: {str(e)}")  # Debug print for logging
         return await sts.edit(f"❌ **Download failed:** `{str(e)}`")
 
-    # Get video duration and thumbnail
+    # Get video duration and thumbnail (if available)
     try:
         video_clip = VideoFileClip(file_path)
         duration = int(video_clip.duration)
