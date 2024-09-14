@@ -9,6 +9,17 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
+def download_progress_hook(d, sts, msg):
+    if d['status'] == 'downloading':
+        percent = d['_percent_str']
+        total_size = humanbytes(d['total_bytes'])
+        speed = d['_speed_str']
+        filename = d['filename']
+        c_time = time.time()
+        download_text = f"Downloading {filename}\n\nProgress: {percent}\nTotal Size: {total_size}\nSpeed: {speed}"
+        asyncio.create_task(sts.edit(download_text))
+
+
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 **Please send your YouTube links to download.**")
@@ -119,6 +130,9 @@ async def yt_callback_handler(bot, query):
             'preferedformat': 'mp4'
         }]
     }
+
+    # Add progress_hooks option separately
+    ydl_opts['progress_hooks'] = [lambda d: download_progress_hook(d, download_message, query.message)]
 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
