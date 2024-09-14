@@ -15,18 +15,22 @@ ydl_opts = {
 # Block YouTube URLs
 BLOCKED_DOMAINS = ["youtube.com", "youtu.be"]
 
-@Client.on_message(filters.private & filters.command("daily") & filters.user(ADMIN))
+@Client.on_message(filters.private & filters.command("download") & filters.user(ADMIN))
 async def download_yt_dlp(bot, msg):
     if len(msg.command) < 2:
         return await msg.reply_text("🔗 **Please provide a valid URL.**")
     
+    # Extract URL
     url = msg.text.split(" ", 1)[1]
+    print(f"Extracted URL: {url}")  # Debugging
 
     # Check for blocked domains (YouTube)
     if any(domain in url for domain in BLOCKED_DOMAINS):
         return await msg.reply_text("❌ **YouTube URLs are not supported in this command.**")
 
-    # Start message with inline keyboard for interaction
+    await msg.reply_text(f"✅ **URL received:** {url}\n\n🔄 Starting download...")  # Check if bot responds to URL
+
+    # Starting message with inline keyboard for interaction
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🚀 Status", callback_data="show_status")],
         [InlineKeyboardButton("🗑️ Cancel", callback_data="cancel")]
