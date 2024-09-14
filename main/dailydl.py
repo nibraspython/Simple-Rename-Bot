@@ -8,53 +8,61 @@ from main.utils import progress_message, humanbytes
 from yt_dlp import YoutubeDL
 from moviepy.editor import VideoFileClip
 
+# Dictionary to track state of chat
+chat_state = {}
 
 @Client.on_message(filters.private & filters.command("daily") & filters.user(ADMIN))
 async def dailymotion_download(bot, msg):
+    chat_state[msg.chat.id] = 'awaiting_url'
     await msg.reply_text("Send your Dailymotion video URL to download.")
-
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def process_dailymotion_url(bot, msg):
-    url = msg.text
-    sts = await msg.reply_text(f"🔄 Processing your URL: {url}")
-    
-    # Setting up yt-dlp options for highest resolution
-    ydl_opts = {
-        'format': 'best',
-        'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
-        'progress_hooks': [lambda d: download_progress_hook(d, sts, msg)]
-    }
+    chat_id = msg.chat.id
+    if chat_state.get(chat_id) == 'awaiting_url':
+        url = msg.text
+        sts = await msg.reply_text(f"🔄 Processing your URL: {url}")
 
-    try:
-        # Downloading the video using yt-dlp
-        with YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            video_title = info_dict.get('title', 'video')
-            video_filename = ydl.prepare_filename(info_dict)
+        # Setting up yt-dlp options for highest resolution
+        ydl_opts = {
+            'format': 'best',
+            'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
+            'progress_hooks': [lambda d: download_progress_hook(d, sts, msg)]
+        }
 
-        await sts.edit(f"✅ Download completed: {video_title}\n🔄 Now starting to upload...")
+        try:
+            # Downloading the video using yt-dlp
+            with YoutubeDL(ydl_opts) as ydl:
+                info_dict = ydl.extract_info(url, download=True)
+                video_title = info_dict.get('title', 'video')
+                video_filename = ydl.prepare_filename(info_dict)
 
-        # Get video info (size, duration)
-        video_clip = VideoFileClip(video_filename)
-        duration = int(video_clip.duration)
-        filesize = humanbytes(os.path.getsize(video_filename))
+            await sts.edit(f"✅ Download completed: {video_title}\n🔄 Now starting to upload...")
 
-        # Capture a random thumbnail from the video
-        random_time = random.uniform(1, duration)  # Pick a random time within video duration
-        thumbnail_path = f"{DOWNLOAD_LOCATION}/{video_title}_thumb.jpg"
-        video_clip.save_frame(thumbnail_path, t=random_time)  # Save the frame at random timestamp
-        video_clip.close()
+            # Get video info (size, duration)
+            video_clip = VideoFileClip(video_filename)
+            duration = int(video_clip.duration)
+            filesize = humanbytes(os.path.getsize(video_filename))
 
-        # Customize caption with emojis
-        cap = f"📁 **Video Name:** {video_title}\n🕒 **Duration:** {duration} seconds"
+            # Capture a random thumbnail from the video
+            random_time = random.uniform(1, duration)  # Pick a random time within video duration
+            thumbnail_path = f"{DOWNLOAD_LOCATION}/{video_title}_thumb.jpg"
+            video_clip.save_frame(thumbnail_path, t=random_time)  # Save the frame at random timestamp
+            video_clip.close()
 
-        # Uploading the video
-        await upload_video(bot, msg, video_filename, thumbnail_path, cap, duration, sts)
+            # Customize caption with emojis
+            cap = f"📁 **Video Name:** {video_title}\n🕒 **Duration:** {duration} seconds"
 
-    except Exception as e:
-        await sts.edit(f"❌ Error: {e}")
+            # Uploading the video
+            await upload_video(bot, msg, video_filename, thumbnail_path, cap, duration, sts)
 
+        except Exception as e:
+            await sts.edit(f"❌ Error: {e}")
+
+        # Reset chat state after processing
+        chat_state[chat_id] = 'idle'
+    else:
+        await msg.reply_text("Please send the `/daily` command first to start the download process.")
 
 def download_progress_hook(d, sts, msg):
     if d['status'] == 'downloading':
@@ -65,7 +73,6 @@ def download_progress_hook(d, sts, msg):
         c_time = time.time()
         download_text = f"Downloading {filename}\n\nProgress: {percent}\nTotal Size: {total_size}\nSpeed: {speed}"
         asyncio.create_task(sts.edit(download_text))
-
 
 async def upload_video(bot, msg, video_path, thumbnail, caption, duration, sts):
     c_time = time.time()
