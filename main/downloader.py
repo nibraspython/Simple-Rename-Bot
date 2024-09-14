@@ -122,17 +122,14 @@ async def yt_callback_handler(bot, query):
     # Send initial download started message with title and resolution
     download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
-    def progress_hook(d):
-        if d['status'] == 'downloading':
-            progress_message(d, download_message)
-
+  
   ydl_opts = {
     'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
     'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
     'merge_output_format': 'mp4',
     'postprocessors': [{
         'key': 'FFmpegVideoConvertor',
-        'preferedformat': 'mp4',
+        'preferredformat': 'mp4',
     }],
     'progress_hooks': [lambda d: download_progress_hook(d, sts, msg)]
 }
