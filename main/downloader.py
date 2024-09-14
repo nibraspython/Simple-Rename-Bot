@@ -12,22 +12,29 @@ import math
 
 def download_progress_hook(d):
     if d['status'] == 'downloading':
-        total_bytes = d.get('total_bytes', d.get('total_bytes_estimate', 0))
+        total_bytes = d.get('total_bytes', d.get('total_bytes_estimate', 0)) or 0
         downloaded_bytes = d.get('downloaded_bytes', 0)
-        percentage = downloaded_bytes / total_bytes * 100 if total_bytes else 0
         speed = d.get('speed', 0)
         elapsed_time = d.get('elapsed', 0)
         eta = d.get('eta', 0)
 
-        # Update the progress message in your bot
+        # Calculate percentage safely
+        percentage = (downloaded_bytes / total_bytes * 100) if total_bytes > 0 else 0
+
+        # Convert to human-readable formats if available
+        human_downloaded_bytes = humanbytes(downloaded_bytes)
+        human_total_bytes = humanbytes(total_bytes)
+        human_speed = humanbytes(speed)
+
+        # Build the progress message
         msg_text = (f"⬇️ **Downloading...**\n"
-                    f"📦 **Downloaded:** {humanbytes(downloaded_bytes)} of {humanbytes(total_bytes)}\n"
-                    f"⚡ **Speed:** {humanbytes(speed)}/s\n"
+                    f"📦 **Downloaded:** {human_downloaded_bytes} of {human_total_bytes}\n"
+                    f"⚡ **Speed:** {human_speed}/s\n"
                     f"⏱ **Elapsed Time:** {math.floor(elapsed_time)} seconds\n"
                     f"⏳ **ETA:** {math.floor(eta)} seconds\n"
                     f"📊 **Progress:** {percentage:.2f}%")
 
-        # You can update the Telegram message here if needed
+        # Update your Telegram message here
         # For example: await download_message.edit_text(msg_text)
 
 
