@@ -10,6 +10,19 @@ from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 import math
 
+async def download_hook(d):
+    if d['status'] == 'downloading':
+        c_time = time.time()
+        await progress_message(
+            f"⬇️ **Downloading...**\n\n{d['filename']}",
+            d['downloaded_bytes'],
+            d['total_bytes'],
+            c_time,
+            d['filename'],
+            None
+        )
+
+
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 **Please send your YouTube links to download.**")
@@ -118,21 +131,10 @@ async def yt_callback_handler(bot, query):
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
+            'progress_hooks': [download_hook]
         }]
 
-       }
-
-    c_time = time.time()
-    
-    def download_progress_hook(d):
-        if d['status'] == 'downloading':
-            percent = d['_percent_str']
-            speed = d['_speed_str']
-            eta = d['_eta_str']
-            progress_text = f"⬇️ **Downloading:** {percent}\n🚀 **Speed:** {speed}\n⏳ **ETA:** {eta}"
-            bot.loop.create_task(download_message.edit_text(progress_text))
-
-    ydl_opts['progress_hooks'] = [download_progress_hook]
+      }
 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
