@@ -26,15 +26,16 @@ async def download_yt_dlp(bot, msg):
     if any(domain in url for domain in BLOCKED_DOMAINS):
         return await msg.reply_text("❌ **YouTube URLs are not supported in this command.**")
 
-    # Starting message with inline keyboard for interaction
+    # Start message with inline keyboard for interaction
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🚀 Status", callback_data="show_status")],
         [InlineKeyboardButton("🗑️ Cancel", callback_data="cancel")]
     ])
-    sts = await msg.reply_text(f"🔄 **Downloading:** `{url}`\n\n🌐 *Starting download...*", reply_markup=keyboard)
+    sts = await msg.reply_text(f"🔄 **Processing:** `{url}`\n\n🌐 *Checking the link and starting download...*", reply_markup=keyboard)
 
     # Downloading with yt-dlp
     try:
+        await sts.edit("🔄 **Downloading... Please wait...**")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=False)
             title = info_dict.get('title', None)
@@ -42,20 +43,26 @@ async def download_yt_dlp(bot, msg):
             downloaded = ydl.download([url])
             file_path = f"{DOWNLOAD_LOCATION}/{title}.{ext}"
             file_size = os.path.getsize(file_path)
+
+        # Inform about download completion
+        await sts.edit(f"✅ **Downloaded successfully!**\n\n📤 **Uploading to Telegram...**", reply_markup=None)
+
     except Exception as e:
+        print(f"Error during download: {str(e)}")  # Debug print for logging
         return await sts.edit(f"❌ **Download failed:** `{str(e)}`")
 
     # Get video duration and thumbnail
-    video_clip = VideoFileClip(file_path)
-    duration = int(video_clip.duration)
-    video_clip.close()
+    try:
+        video_clip = VideoFileClip(file_path)
+        duration = int(video_clip.duration)
+        video_clip.close()
+    except Exception as e:
+        print(f"Error during video processing: {str(e)}")
+        return await sts.edit(f"❌ **Error processing video:** `{str(e)}`")
 
     # Custom Caption
     filesize = humanbytes(file_size)
     cap = f"**{title}**\n\n💽 **Size:** `{filesize}`\n🕒 **Duration:** `{duration} seconds`"
-
-    # Edit download completion message
-    await sts.edit(f"✅ **Downloaded successfully!**\n\n📤 **Uploading to Telegram...**", reply_markup=None)
 
     # Fetch thumbnail if available
     thumbnail = None
@@ -77,6 +84,7 @@ async def download_yt_dlp(bot, msg):
             progress_args=("Upload Started... 📤", sts, c_time)
         )
     except Exception as e:
+        print(f"Error during upload: {str(e)}")
         return await sts.edit(f"❌ **Upload failed:** `{str(e)}`")
 
     # Cleanup after upload
@@ -85,7 +93,7 @@ async def download_yt_dlp(bot, msg):
             os.remove(thumbnail)
         os.remove(file_path)
     except Exception as e:
-        print(f"Error removing file: {e}")
+        print(f"Error during cleanup: {e}")
 
     await sts.delete()
 
