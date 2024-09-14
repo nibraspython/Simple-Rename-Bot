@@ -1,6 +1,7 @@
 import os
 import time
 import asyncio
+import aiohttp  # For downloading the thumbnail
 from pyrogram import Client, filters
 from config import DOWNLOAD_LOCATION, CAPTION, ADMIN
 from main.utils import progress_message, humanbytes
@@ -29,7 +30,8 @@ async def process_dailymotion_url(bot, msg):
             info_dict = ydl.extract_info(url, download=True)
             video_title = info_dict.get('title', 'video')
             video_filename = ydl.prepare_filename(info_dict)
-        
+            thumbnail_url = info_dict.get('thumbnail')  # Get thumbnail URL
+
         await sts.edit(f"✅ Download completed: {video_title}\n🔄 Now starting to upload...")
 
         # Get video info (size, duration, thumbnail)
@@ -38,9 +40,8 @@ async def process_dailymotion_url(bot, msg):
         filesize = humanbytes(os.path.getsize(video_filename))
         video_clip.close()
 
-        # Get video thumbnail
-        og_thumbnail = f"{DOWNLOAD_LOCATION}/thumbnail.jpg"
-        ydl.download([f'{url}#thumb'])
+        # Download the thumbnail
+        og_thumbnail = await download_thumbnail(thumbnail_url, video_title)
 
         # Customize caption
         if CAPTION:
@@ -88,3 +89,15 @@ async def upload_video(bot, msg, video_path, thumbnail, caption, duration, sts):
             pass
         await sts.delete()
 
+async def download_thumbnail(thumbnail_url, video_title):
+    thumbnail_path = f"{DOWNLOAD_LOCATION}/{video_title}_thumb.jpg"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(thumbnail_url) as resp:
+                if resp.status == 200:
+                    with open(thumbnail_path, 'wb') as f:
+                        f.write(await resp.read())
+        return thumbnail_path
+    except Exception as e:
+        print(f"❌ Failed to download thumbnail: {e}")
+        return None
