@@ -15,7 +15,7 @@ ydl_opts = {
 # Block YouTube URLs
 BLOCKED_DOMAINS = ["youtube.com", "youtu.be"]
 
-@Client.on_message(filters.private & filters.command("download") & filters.user(ADMIN))
+@Client.on_message(filters.private & filters.command("daily") & filters.user(ADMIN))
 async def download_yt_dlp(bot, msg):
     if len(msg.command) < 2:
         return await msg.reply_text("🔗 **Please provide a valid URL.**")
