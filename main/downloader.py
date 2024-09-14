@@ -8,20 +8,6 @@ from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
-import math
-
-async def download_hook(d):
-    if d['status'] == 'downloading':
-        c_time = time.time()
-        await progress_message(
-            f"⬇️ **Downloading...**\n\n{d['filename']}",
-            d['downloaded_bytes'],
-            d['total_bytes'],
-            c_time,
-            d['filename'],
-            None
-        )
-
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -130,8 +116,7 @@ async def yt_callback_handler(bot, query):
         'merge_output_format': 'mp4',
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
-            'preferedformat': 'mp4',
-            'progress_hooks': [download_hook]
+            'preferedformat': 'mp4'
         }]
 
       }
