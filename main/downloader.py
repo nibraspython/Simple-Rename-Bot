@@ -8,6 +8,28 @@ from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
+import math
+
+def download_progress_hook(d):
+    if d['status'] == 'downloading':
+        total_bytes = d.get('total_bytes', d.get('total_bytes_estimate', 0))
+        downloaded_bytes = d.get('downloaded_bytes', 0)
+        percentage = downloaded_bytes / total_bytes * 100 if total_bytes else 0
+        speed = d.get('speed', 0)
+        elapsed_time = d.get('elapsed', 0)
+        eta = d.get('eta', 0)
+
+        # Update the progress message in your bot
+        msg_text = (f"⬇️ **Downloading...**\n"
+                    f"📦 **Downloaded:** {humanbytes(downloaded_bytes)} of {humanbytes(total_bytes)}\n"
+                    f"⚡ **Speed:** {humanbytes(speed)}/s\n"
+                    f"⏱ **Elapsed Time:** {math.floor(elapsed_time)} seconds\n"
+                    f"⏳ **ETA:** {math.floor(eta)} seconds\n"
+                    f"📊 **Progress:** {percentage:.2f}%")
+
+        # You can update the Telegram message here if needed
+        # For example: await download_message.edit_text(msg_text)
+
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -117,7 +139,8 @@ async def yt_callback_handler(bot, query):
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
-        }]
+        }],
+        'progress_hooks': [download_progress_hook]  # Add this line for progress tracking  
     }
 
     try:
