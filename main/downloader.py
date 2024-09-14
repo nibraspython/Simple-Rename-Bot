@@ -130,9 +130,8 @@ async def yt_callback_handler(bot, query):
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
-        }],
-        'progress_hooks': [lambda d: download_progress_hook(d, download_message, query.message)]
-      }
+        }]
+    }
     
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
