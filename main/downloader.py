@@ -1,5 +1,6 @@
 import os
 import time
+import asyncio
 import requests
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters
@@ -8,6 +9,17 @@ from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
+
+def download_progress_hook(d, sts, msg):
+    if d['status'] == 'downloading':
+        percent = d['_percent_str']
+        total_size = humanbytes(d['total_bytes'])
+        speed = d['_speed_str']
+        filename = d['filename']
+        c_time = time.time()
+        download_text = f"Downloading {filename}\n\nProgress: {percent}\nTotal Size: {total_size}\nSpeed: {speed}"
+        asyncio.create_task(sts.edit(download_text))
+
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
