@@ -11,10 +11,10 @@ from main.utils import progress_message, humanbytes
 # Hook function to show download progress
 def download_progress_hook(d, download_message, c_time):
     if d['status'] == 'downloading':
-        current = d.get('downloaded_bytes', 0)
-        total = d.get('total_bytes', 0)
-        speed = d.get('speed', 0)
-        eta = d.get('eta', 0)
+        current = d.get('downloaded_bytes', 0) or 0
+        total = d.get('total_bytes', 0) or d.get('total_bytes_estimate', 0) or 0
+        speed = d.get('speed', 0) or 0
+        eta = d.get('eta', 0) or 0
         percent = (current / total) * 100 if total > 0 else 0
 
         message = (
