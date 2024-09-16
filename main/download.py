@@ -132,8 +132,20 @@ async def yt_callback_handler(bot, query):
     # Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    # Reset progress data for new download
+    progress_data = {}
+
+    # Create inline keyboard button for progress
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Progress", callback_data="progress")]
+    ])
+
+    # Send initial download started message with inline button
+    download_message = await query.message.edit_text(
+        f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**🎧 Audio**",
+        reply_markup=keyboard
+    )
+    
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
