@@ -97,8 +97,8 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
-@Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
-async def yt_callback_handler(bot, query):
+    @Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
+    async def yt_callback_handler(bot, query):
     data = query.data.split('_')
     format_id = data[1]
     resolution = data[2]
@@ -107,13 +107,21 @@ async def yt_callback_handler(bot, query):
     # Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    # Send initial download started message with title, resolution, and progress button
+    progress_buttons = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("🔄 Check Progress", callback_data=f"check_progress_{url}")]]
+    )
+    download_message = await query.message.edit_text(
+        f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**",
+        reply_markup=progress_buttons
+    )
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
+        'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(
+            progress_hook(bot, download_message, d), bot.loop).result()],  # Hook for progress
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
@@ -128,6 +136,7 @@ async def yt_callback_handler(bot, query):
     except Exception as e:
         await download_message.edit_text(f"❌ **Error during download:** {e}")
         return
+
 
     final_filesize = os.path.getsize(downloaded_path)
     video = VideoFileClip(downloaded_path)
