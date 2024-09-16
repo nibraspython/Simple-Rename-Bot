@@ -9,6 +9,16 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
+# Progress Hook
+def progress_hook(d):
+    if d['status'] == 'downloading':
+        total = d.get('total_bytes') or d.get('total_bytes_estimate')
+        downloaded = d.get('downloaded_bytes', 0)
+        speed = d.get('speed', 0)
+        progress_str = f"⬇️ **Downloading:** {humanbytes(downloaded)} of {humanbytes(total)} at {humanbytes(speed)}/s"
+        percent = int(downloaded / total * 100) if total else 0
+        d['progress_msg'].edit_text(f"{progress_str} ({percent}%)")
+
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 **Please send your YouTube links to download.**")
@@ -107,21 +117,18 @@ async def yt_callback_handler(bot, query):
     # Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    # Send initial download started message with title, resolution, and progress button
-    progress_buttons = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("🔄 Check Progress", callback_data=f"check_progress_{url}")]]
-    )
-
-    download_message = await query.message.edit_text(
-        f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**",
-        reply_markup=progress_buttons
-    )
+    # Send initial download started message with title and resolution
+    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
-        'progress_hooks': [lambda d: progress_hook(d, download_message, title, resolution)]
+        'progress_hooks': [progress_hook],  # Attach the progress hook
+        'postprocessors': [{
+            'key': 'FFmpegVideoConvertor',
+            'preferedformat': 'mp4'
+        }]
     }
 
     try:
@@ -146,6 +153,7 @@ async def yt_callback_handler(bot, query):
         with open(thumb_path, 'wb') as thumb_file:
             thumb_file.write(response.content)
 
+        
         with Image.open(thumb_path) as img:
             img_width, img_height = img.size
             scale_factor = max(video_width / img_width, video_height / img_height)
