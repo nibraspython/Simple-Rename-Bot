@@ -98,8 +98,8 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
-    @Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
-    async def yt_callback_handler(bot, query):
+ @Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
+ async def yt_callback_handler(bot, query):
     data = query.data.split('_')
     format_id = data[1]
     resolution = data[2]
