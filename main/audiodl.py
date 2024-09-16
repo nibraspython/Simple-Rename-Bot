@@ -3,6 +3,7 @@ import time
 import asyncio
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import DOWNLOAD_LOCATION
 from main.utils import progress_message, humanbytes
 
@@ -15,19 +16,23 @@ def format_progress_message(d):
     eta = d.get('eta', 0)
     
     return (
-        f"⬇️ **Downloading audio...**\n\n"
-        f"**Progress:** {percent:.2f}%\n"
-        f"**Downloaded:** {humanbytes(current)} of {humanbytes(total)}\n"
+        f"**Total:** {humanbytes(total)}\n"
+        f"**Downloaded:** {humanbytes(current)}\n"
+        f"**Completed:** {percent:.2f}%\n"
         f"**Speed:** {humanbytes(speed)}/s\n"
         f"**ETA:** {eta}s"
     )
 
 # yt-dlp progress hook with asyncio integration
-async def download_progress_hook(d, download_message, bot):
+async def download_progress_hook(d, download_message, bot, progress_query):
     if d['status'] == 'downloading':
         try:
-            # Update progress message periodically
-            await download_message.edit_text(format_progress_message(d))
+            # Update the pop-up progress message when the button is clicked
+            await bot.answer_callback_query(
+                progress_query.id, 
+                text=format_progress_message(d), 
+                show_alert=True
+            )
         except Exception as e:
             pass  # Ignore message update errors
 
@@ -38,13 +43,24 @@ async def audio_callback_handler(bot, query):
     # Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    # Send initial download started message with title and "Audio"
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**🎧 Audio**")
+    # Create inline keyboard button for progress
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("Progress", callback_data="progress")]
+    ])
+    
+    # Send initial download started message with inline button
+    download_message = await query.message.edit_text(
+        f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**🎧 Audio**",
+        reply_markup=keyboard
+    )
 
     ydl_opts = {
         'format': 'bestaudio[ext=m4a]',  # Only audio format
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-        'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(download_progress_hook(d, download_message, bot), asyncio.get_event_loop())],
+        'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(
+            download_progress_hook(d, download_message, bot, query), 
+            asyncio.get_event_loop()
+        )],
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'm4a',
@@ -96,3 +112,8 @@ async def audio_callback_handler(bot, query):
     # Clean up the downloaded audio file after sending
     if os.path.exists(downloaded_path):
         os.remove(downloaded_path)
+
+@Client.on_callback_query(filters.regex('progress'))
+async def show_progress_popup(bot, query):
+    # Placeholder text while the progress is fetched
+    await query.answer("Fetching progress...", show_alert=False)
