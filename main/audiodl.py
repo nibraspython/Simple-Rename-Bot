@@ -1,15 +1,13 @@
 import os
 import time
+import asyncio
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from moviepy.editor import VideoFileClip
-from PIL import Image
-from config import DOWNLOAD_LOCATION, ADMIN
+from config import DOWNLOAD_LOCATION
 from main.utils import progress_message, humanbytes
 
-# Hook function to show download progress
-def download_progress_hook(d, download_message, c_time):
+# Hook function to show download progress using asyncio
+async def download_progress_hook(d, download_message, bot, query, c_time):
     if d['status'] == 'downloading':
         current = d.get('downloaded_bytes', 0) or 0
         total = d.get('total_bytes', 0) or d.get('total_bytes_estimate', 0) or 0
@@ -24,9 +22,10 @@ def download_progress_hook(d, download_message, c_time):
             f"**Speed:** {humanbytes(speed)}/s\n"
             f"**ETA:** {eta}s"
         )
-        # Update progress in the bot
+
+        # Use asyncio to update the download message without blocking
         try:
-            bot.loop.create_task(download_message.edit_text(message))
+            await download_message.edit_text(message)
         except Exception as e:
             pass
 
@@ -42,10 +41,11 @@ async def audio_callback_handler(bot, query):
 
     c_time = time.time()  # Start time for tracking
 
+    # YTDL options including progress hooks with asyncio
     ydl_opts = {
         'format': 'bestaudio[ext=m4a]',  # Only audio format
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-        'progress_hooks': [lambda d: download_progress_hook(d, download_message, c_time)],  # Download progress hook
+        'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(download_progress_hook(d, download_message, bot, query, c_time), asyncio.get_event_loop())],  # Progress hook with asyncio
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'm4a',
@@ -54,6 +54,7 @@ async def audio_callback_handler(bot, query):
     }
 
     try:
+        # Start download with progress tracking
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
@@ -71,7 +72,6 @@ async def audio_callback_handler(bot, query):
         f"💽 **Size:** {filesize}\n"
         f"🔉 **Format:** Audio\n"
         f"🕒 **Duration:** {duration} seconds\n"
-        f"**[🔗 URL]({url})**\n\n"
         f"✅ **Download completed!**"
     )
 
@@ -79,13 +79,14 @@ async def audio_callback_handler(bot, query):
 
     c_time = time.time()
     try:
+        # Send audio with upload progress
         await bot.send_audio(
             chat_id=query.message.chat.id,
             audio=downloaded_path,
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=(f"Uploading audio..... Thanks To All Who Supported ❤️\n\n**🎧 {info_dict['title']}**", query.message, c_time)
+            progress_args=(f"Uploading audio... 🎧 {info_dict['title']}", query.message, c_time)
         )
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
