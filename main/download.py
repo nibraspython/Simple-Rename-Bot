@@ -9,16 +9,30 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
-# Progress Hook
-def progress_hook(d, download_message):
+# Store progress info to update upon button click
+progress_data = {}
+
+# Helper function to format progress updates
+def format_progress_message(d):
+    current = d.get('downloaded_bytes', 0)
+    total = d.get('total_bytes', 0) or d.get('total_bytes_estimate', 0)
+    percent = (current / total) * 100 if total else 0
+    speed = d.get('speed', 0)
+    eta = d.get('eta', 0)
+
+    return (
+        f"**Total:** {humanbytes(total)}\n"
+        f"**Downloaded:** {humanbytes(current)}\n"
+        f"**Completed:** {percent:.2f}%\n"
+        f"**Speed:** {humanbytes(speed)}/s\n"
+        f"**ETA:** {eta}s"
+    )
+
+# yt-dlp progress hook with asyncio integration
+async def download_progress_hook(d, download_message):
     if d['status'] == 'downloading':
-        total = d.get('total_bytes') or d.get('total_bytes_estimate')
-        downloaded = d.get('downloaded_bytes', 0)
-        speed = d.get('speed', 0)
-        progress_str = f"⬇️ **Downloading:** {humanbytes(downloaded)} of {humanbytes(total)} at {humanbytes(speed)}/s"
-        percent = int(downloaded / total * 100) if total else 0
-        # Update progress message
-        download_message.edit_text(f"{progress_str} ({percent}%)")
+        # Update the global progress_data dictionary
+        progress_data['status'] = format_progress_message(d)
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
