@@ -151,7 +151,7 @@ async def yt_callback_handler(bot, query):
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
-        'progress_hooks': [lambda d: progress_hook(d, download_message)],  # Attach the progress hook
+        'progress_hooks': [lambda d: download_progress_hook(d, download_message)],  # Attach the progress hook
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
