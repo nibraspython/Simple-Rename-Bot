@@ -254,3 +254,15 @@ async def description_callback_handler(bot, query):
         description = description[:4093] + "..."
 
     await bot.send_message(chat_id=query.message.chat.id, text=f"**📝 Description:**\n\n{description}")
+
+
+@Client.on_callback_query(filters.regex('progress'))
+async def show_progress_popup(bot, query):
+    global progress_data
+    # Check if there's progress data available
+    if 'status' in progress_data:
+        # Display progress in pop-up
+        await query.answer(progress_data['status'], show_alert=True)
+    else:
+        # Placeholder message if progress isn't available yet
+        await query.answer("Progress not available yet. Please wait...", show_alert=True)
