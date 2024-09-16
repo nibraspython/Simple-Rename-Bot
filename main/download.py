@@ -1,4 +1,4 @@
-﻿import os
+import os
 import time
 import requests
 import yt_dlp as youtube_dl
@@ -7,63 +7,21 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import humanbytes
-import math
-
-
-async def progress_message(current, total, message, start_time):
-    """Generates a progress bar for the file upload process."""
-    now = time.time()
-    diff = now - start_time
-
-    if total == 0:
-        percentage = 0
-    else:
-        percentage = current * 100 / total
-
-    speed = current / diff if diff > 0 else 0
-    time_remaining = (total - current) / speed if speed > 0 else 0
-
-    current_human = humanbytes(current)
-    total_human = humanbytes(total)
-
-    progress_bar = "[{0}{1}]".format(
-        ''.join(["●" for i in range(math.floor(percentage / 10))]),
-        ''.join(["○" for i in range(10 - math.floor(percentage / 10))])
-    )
-
-    estimated_time = time.strftime("%M:%S", time.gmtime(time_remaining))
-
-    await message.edit_text(
-        f"**Progress:** {progress_bar} {percentage:.2f}%\n"
-        f"**Downloaded:** {current_human} / {total_human}\n"
-        f"**Speed:** {humanbytes(speed)}/s\n"
-        f"**Estimated Time Remaining:** {estimated_time}"
-    )
-
-
-def download_progress_hook(d, message, start_time):
-    """Progress hook to be used in yt-dlp for synchronous progress tracking."""
-    if d['status'] == 'downloading':
-        current = d['downloaded_bytes']
-        total = d.get('total_bytes', 0)
-        loop = message._client.loop
-        loop.create_task(progress_message(current, total, message, start_time))
-
+from main.utils import progress_message, humanbytes
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 **Please send your YouTube links to download.**")
 
-
 @Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
 
+    # Send processing message
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',  # Prefer AVC/AAC format
         'noplaylist': True,
         'quiet': True
     }
@@ -77,21 +35,22 @@ async def youtube_link_handler(bot, msg):
         description = info_dict.get('description', 'No description available.')
         formats = info_dict.get('formats', [])
 
+    # Extract all available resolutions with their sizes
     available_resolutions = []
     available_audio = []
 
     for f in formats:
-        if f['ext'] == 'mp4' and f.get('vcodec') != 'none':
+        if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
             resolution = f"{f['height']}p"
-            fps = f.get('fps', None)
-            if fps in [50, 60]:
+            fps = f.get('fps', None)  # Get the fps (frames per second)
+            if fps in [50, 60]:  # Append fps to the resolution if it's 50 or 60
                 resolution += f"{fps}fps"
-            filesize = f.get('filesize')
-            if filesize:
-                filesize_str = humanbytes(filesize)
+            filesize = f.get('filesize')  # Fetch the filesize
+            if filesize:  # Only process if filesize is not None
+                filesize_str = humanbytes(filesize)  # Convert size to human-readable format
                 format_id = f['format_id']
                 available_resolutions.append((resolution, filesize_str, format_id))
-        elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':
+        elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':  # Check for audio formats
             audio_bitrate = f.get('abr', 'N/A')
             filesize = f.get('filesize')
             if filesize:
@@ -105,13 +64,14 @@ async def youtube_link_handler(bot, msg):
         button_text = f"🎬 {resolution} - {size}"
         callback_data = f"yt_{format_id}_{resolution}_{url}"
         row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
-        if len(row) == 2:
+        if len(row) == 2:  # Adjust the number of buttons per row if needed
             buttons.append(row)
             row = []
 
     if row:
         buttons.append(row)
 
+    # Add the "Audio" button if available
     if available_audio:
         buttons.append([InlineKeyboardButton("🎧 Audio", callback_data=f"audio_{url}")])
 
@@ -137,7 +97,6 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
-
 @Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
@@ -145,17 +104,24 @@ async def yt_callback_handler(bot, query):
     resolution = data[2]
     url = query.data.split('_', 3)[3]
 
+    # Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    # Send initial download started message with title, resolution, and progress button
+    progress_buttons = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("🔄 Check Progress", callback_data=f"check_progress_{url}")]]
+    )
 
-    start_time = time.time()
+    download_message = await query.message.edit_text(
+        f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**",
+        reply_markup=progress_buttons
+    )
 
     ydl_opts = {
-        'format': f"{format_id}+bestaudio[ext=m4a]",
+        'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
-        'progress_hooks': [lambda d: download_progress_hook(d, download_message, start_time)]
+        'progress_hooks': [lambda d: progress_hook(d, download_message, title, resolution)]
     }
 
     try:
