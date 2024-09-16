@@ -154,16 +154,6 @@ async def yt_callback_handler(bot, query):
         with open(thumb_path, 'wb') as thumb_file:
             thumb_file.write(response.content)
 
-        with Image.open(thumb_path) as img:
-            img_width, img_height = img.size
-            scale_factor = max(video_width / img_width, video_height / img_height)
-            new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
-            img = img.resize(new_size, Image.ANTIALIAS)
-            left = (img.width - video_width) / 2
-            top = (img.height - video_height) / 2
-            right = (img.width + video_width) / 2
-            bottom =
-
         
         with Image.open(thumb_path) as img:
             img_width, img_height = img.size
