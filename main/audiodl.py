@@ -7,7 +7,7 @@ from config import DOWNLOAD_LOCATION
 from main.utils import progress_message, humanbytes
 
 # Hook function to show download progress using asyncio
-async def download_progress_hook(d, download_message, bot, query, c_time):
+async def download_progress_hook(d, download_message, bot, query, last_update_time):
     if d['status'] == 'downloading':
         current = d.get('downloaded_bytes', 0) or 0
         total = d.get('total_bytes', 0) or d.get('total_bytes_estimate', 0) or 0
@@ -15,19 +15,24 @@ async def download_progress_hook(d, download_message, bot, query, c_time):
         eta = d.get('eta', 0) or 0
         percent = (current / total) * 100 if total > 0 else 0
 
-        message = (
-            f"⬇️ **Downloading audio...**\n\n"
-            f"**Progress:** {percent:.2f}%\n"
-            f"**Downloaded:** {humanbytes(current)} of {humanbytes(total)}\n"
-            f"**Speed:** {humanbytes(speed)}/s\n"
-            f"**ETA:** {eta}s"
-        )
+        # Only update every 5 seconds to avoid flooding logs
+        if time.time() - last_update_time > 5:
+            message = (
+                f"⬇️ **Downloading audio...**\n\n"
+                f"**Progress:** {percent:.2f}%\n"
+                f"**Downloaded:** {humanbytes(current)} of {humanbytes(total)}\n"
+                f"**Speed:** {humanbytes(speed)}/s\n"
+                f"**ETA:** {eta}s"
+            )
 
-        # Use asyncio to update the download message without blocking
-        try:
-            await download_message.edit_text(message)
-        except Exception as e:
-            pass
+            try:
+                await download_message.edit_text(message)
+            except Exception as e:
+                pass  # Ignore errors in editing messages (e.g., message deleted)
+
+            return time.time()  # Return the current time as the last update time
+
+    return last_update_time  # Return unchanged if it's not time to update
 
 @Client.on_callback_query(filters.regex(r'^audio_https?://(www\.)?youtube\.com/watch\?v='))
 async def audio_callback_handler(bot, query):
@@ -39,13 +44,13 @@ async def audio_callback_handler(bot, query):
     # Send initial download started message with title and "Audio"
     download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**🎧 Audio**")
 
-    c_time = time.time()  # Start time for tracking
+    last_update_time = time.time()  # Track the last time the message was updated
 
     # YTDL options including progress hooks with asyncio
     ydl_opts = {
         'format': 'bestaudio[ext=m4a]',  # Only audio format
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
-        'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(download_progress_hook(d, download_message, bot, query, c_time), asyncio.get_event_loop())],  # Progress hook with asyncio
+        'progress_hooks': [lambda d: asyncio.run_coroutine_threadsafe(download_progress_hook(d, download_message, bot, query, last_update_time), asyncio.get_event_loop())],  # Progress hook with asyncio
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'm4a',
