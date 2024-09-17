@@ -33,6 +33,10 @@ async def download_progress_hook(d, download_message):
     if d['status'] == 'downloading':
         # Update the global progress_data dictionary
         progress_data['status'] = format_progress_message(d)
+    elif d['status'] == 'finished':
+        # Clear the progress once download is finished
+        progress_data.clear()
+
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
@@ -158,10 +162,15 @@ async def yt_callback_handler(bot, query):
         }]
     }
 
+
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
+        
+        # Clear the progress data once the download is done
+        progress_data.clear()
+
         await download_message.edit_text("✅ **Download completed!**")
     except Exception as e:
         await download_message.edit_text(f"❌ **Error during download:** {e}")
