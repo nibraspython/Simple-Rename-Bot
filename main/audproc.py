@@ -37,9 +37,9 @@ async def audio_trim_start(bot, msg):
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def receive_durations(bot, msg):
-    # Retrieve stored user input
+    # Ensure the user is in the middle of the audio operation
     if msg.chat.id not in user_inputs:
-        return  # If there's no session, ignore the message
+        return  # If there's no session for this user, ignore the message to prevent blocking other commands
     
     user_input = user_inputs[msg.chat.id]
     audio = user_input["audio"]
