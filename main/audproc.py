@@ -24,7 +24,9 @@ async def audio_trim_start(bot, msg):
     if not (audio.mime_type.startswith("audio/mpeg") or audio.mime_type.startswith("audio/x-matroska")):
         return await msg.reply_text("Only .mp3 and .mka audio formats are supported.")
     
-    user_inputs[msg.chat.id] = {"message_id": msg.id, "audio": audio}
+    # Start session for /audio command
+    user_inputs[msg.chat.id] = {"audio": audio}
+    
     await msg.reply_text(
         "🔄 Send me the durations to remove from the audio file in this format: `HH:MM:SS - HH:MM:SS` (e.g., `00:01:30 - 00:02:00` to remove from 1m30s to 2m0s).",
         reply_markup=InlineKeyboardMarkup([
@@ -34,9 +36,10 @@ async def audio_trim_start(bot, msg):
 
 @Client.on_message(filters.private & filters.text & filters.user(ADMIN))
 async def receive_durations(bot, msg):
-    if msg.chat.id not in user_inputs:
-        return
-    
+    # Only process if user is in a valid /audio session
+    if msg.chat.id not in user_inputs or "audio" not in user_inputs[msg.chat.id]:
+        return  # Ignore unrelated messages
+
     try:
         duration_ranges = msg.text.split("-")
         start_time_str, end_time_str = duration_ranges[0].strip(), duration_ranges[1].strip()
