@@ -1,14 +1,14 @@
 YTDL_WELCOME_TEXT = """
             **Youtube Video Downloader**
 
-    📹 ━━━━━━━━❰ **Feautures** ❱━━━━━━━━━━➣
+    📹 ━━━━━━❰ **Feautures** ❱━━━━━━➣
     
-    ➭📹 **Download Youtube Video In All Available Resolutions**
-    ➭🎧 **Download Audio In Highest Bitrate**
-    ➭⚡ **Fastest Youtube Downloading Library** 
-    ➭📤 **Fastest Uploading Library With Progress Tracking**
+   ➭📹 **Download Youtube Video In All Available Resolutions\n**
+   ➭🎧 **Download Audio In Highest Bitrate\n**
+   ➭⚡ **Fastest Youtube Downloading Library\n** 
+   ➭📤 **Fastest Uploading Library With Progress Tracking\n**
 
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━ ➯
+    ━━━━━━━━━━━━━━━━━━━━━━━━ ➯
 
 🔗 **Please Send Your Youtube Links To Start Downloading**
 
