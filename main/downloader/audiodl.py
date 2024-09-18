@@ -9,11 +9,15 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
-@Client.on_callback_query(filters.regex(r'^audio_https?://(www\.)?youtube\.com/watch\?v='))
+@Client.on_callback_query(filters.regex(r'^audio_'))
 async def audio_callback_handler(bot, query):
-    url = '_'.join(query.data.split('_')[1:])
+    # Extract the format ID and YouTube URL from the callback data
+    data = query.data.split('_', 2)  # Split only on the first two underscores
+    format_id = data[1]  # Extract the format ID
+    url = data[2]  # Extract the YouTube URL
+    
 
-    # Get the title from the original message caption
+# Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
     # Send initial download started message with title and "Audio"
