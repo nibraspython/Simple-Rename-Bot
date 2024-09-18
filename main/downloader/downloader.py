@@ -71,10 +71,10 @@ async def youtube_link_handler(bot, msg):
     if row:
         buttons.append(row)
 
-    # Add the "Audio" button if available
-    if available_audio:
-        buttons.append([InlineKeyboardButton("🎧 Audio - {size}", callback_data=f"audio_{url}")])
-
+# Add the "Audio" button with file size if available
+for bitrate, size, format_id in available_audio:
+    buttons.append([InlineKeyboardButton(f"🎧 Audio - {size}", callback_data=f"audio_{format_id}_{url}")])
+    
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
     
