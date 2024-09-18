@@ -9,7 +9,7 @@ PROCESS_MAX_TIMEOUT = 300  # 5 minutes
 CAPTION = "{file_name}\n\n💽 size: {file_size}\n🕒 duration: {duration} seconds"
 ADMIN = int(environ.get("ADMIN", "5380833276"))          
 CAPTION = environ.get("CAPTION", "video")
-OPENAI_API_KEY = "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"
+TELEGRAPH_IMAGE_URL = "https://envs.sh/q2k.jpg"  # Replace with your actual Telegraph image URL
 
 # for thumbnail ( back end is MrMKN brain 😉)
 DOWNLOAD_LOCATION = "./DOWNLOADS"
