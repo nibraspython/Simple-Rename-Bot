@@ -52,52 +52,35 @@ async def youtube_link_handler(bot, msg):
                 available_resolutions.append((resolution, filesize_str, format_id))
         elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':  # Check for audio formats
             filesize = f.get('filesize')  # Fetch the audio filesize
-            
-            # Only process if filesize is available
-            if filesize:
+            if filesize:  # Only process if filesize is available
                 filesize_str = humanbytes(filesize)  # Convert size to human-readable format
                 format_id = f['format_id']
-                
+                available_audio.append((filesize_str, format_id))
+
+    # Creating buttons for resolutions
     buttons = []
     row = []
-     for resolution, size, format_id in available_resolutions:
-    button_text = f"🎬 {resolution} - {size}"
-    callback_data = f"yt_{format_id}_{resolution}_{url}"
-    row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
-    if len(row) == 2:  # Adjust the number of buttons per row if needed
-        buttons.append(row)
-        row = []
+    for resolution, size, format_id in available_resolutions:
+        button_text = f"🎬 {resolution} - {size}"
+        callback_data = f"yt_{format_id}_{resolution}_{url}"
+        row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+        if len(row) == 2:  # Adjust the number of buttons per row if needed
+            buttons.append(row)
+            row = []
 
     if row:
-    buttons.append(row)
+        buttons.append(row)
 
+    # Creating audio buttons
+    for size, format_id in available_audio:
+        audio_button_text = f"🎧 Audio - {size}"
+        buttons.append([InlineKeyboardButton(audio_button_text, callback_data=f"audio_{format_id}_{url}")])
 
-   # Modify the code to include only the audio file size in the audio button text
-     for size, format_id in available_audio:
-    audio_button_text = f"🎧 Audio - {size}"
-    buttons.append([InlineKeyboardButton(audio_button_text, callback_data=f"audio_{format_id}_{url}")])
-   
+    # Adding Thumbnail and Description buttons
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
-    
+
     markup = InlineKeyboardMarkup(buttons)
-
-    caption = (
-        f"**🎬 Title:** {title}\n"
-        f"**👀 Views:** {views}\n"
-        f"**👍 Likes:** {likes}\n\n"
-        f"📥 **Select your resolution or audio format:**"
-    )
-
-    thumb_response = requests.get(thumb_url)
-    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
-    with open(thumb_path, 'wb') as thumb_file:
-        thumb_file.write(thumb_response.content)
-    await bot.send_photo(chat_id=msg.chat.id, photo=thumb_path, caption=caption, reply_markup=markup)
-    os.remove(thumb_path)
-
-    await msg.delete()
-    await processing_message.delete()
 
 
     caption = (
