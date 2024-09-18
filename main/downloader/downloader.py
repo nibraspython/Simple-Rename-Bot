@@ -37,7 +37,7 @@ async def youtube_link_handler(bot, msg):
 
     # Extract all available resolutions with their sizes
     available_resolutions = []
-    available_audio = []
+    best_audio = None
 
     for f in formats:
         if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
@@ -56,7 +56,8 @@ async def youtube_link_handler(bot, msg):
             if filesize:
                 filesize_str = humanbytes(filesize)
                 format_id = f['format_id']
-                available_audio.append((audio_bitrate, filesize_str, format_id))
+                if best_audio is None or audio_bitrate > best_audio[0]:  # Keep only the best audio
+                    best_audio = (audio_bitrate, filesize_str, format_id)
 
     buttons = []
     row = []
@@ -71,10 +72,10 @@ async def youtube_link_handler(bot, msg):
     if row:
         buttons.append(row)
 
-    # Add the "Audio" button with size
-    if available_audio:
-        for audio_bitrate, size, format_id in available_audio:
-            buttons.append([InlineKeyboardButton(f"🎧 {audio_bitrate}kbps - {size}", callback_data=f"audio_{format_id}_{url}")])
+    # Add the "Audio" button if available
+    if best_audio:
+        audio_bitrate, audio_size, audio_format_id = best_audio
+        buttons.append([InlineKeyboardButton(f"🎧 Audio - {audio_size}", callback_data=f"audio_{url}_{audio_format_id}")])
 
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
@@ -108,36 +109,23 @@ async def yt_callback_handler(bot, query):
     # Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    # Get the audio format size
-    ydl_opts_audio = {
-        'format': 'bestaudio[ext=m4a]',
-        'quiet': True
-    }
-
+    # Extract the best audio format (highest bitrate)
+    ydl_opts_audio = {'format': 'bestaudio', 'quiet': True}
     with youtube_dl.YoutubeDL(ydl_opts_audio) as ydl_audio:
         info_dict_audio = ydl_audio.extract_info(url, download=False)
-        audio_format = next(f for f in info_dict_audio['formats'] if f['ext'] == 'm4a' and f.get('acodec') != 'none')
-        audio_size = audio_format.get('filesize', 0)
+        best_audio_format = next(f for f in info_dict_audio['formats'] if f['acodec'] != 'none')
+        audio_filesize = best_audio_format.get('filesize', 0)
 
-    # Calculate the combined size of the video and audio
-    ydl_opts = {
-        'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
-        'quiet': True
-    }
+    # Send initial download started message with title, resolution, and combined size
+    ydl_opts_video = {'format': format_id, 'quiet': True}
+    with youtube_dl.YoutubeDL(ydl_opts_video) as ydl_video:
+        info_dict_video = ydl_video.extract_info(url, download=False)
+        video_filesize = info_dict_video.get('filesize', 0)
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=False)
-        video_size = info_dict['filesize'] if 'filesize' in info_dict else 0
-
-    total_size = video_size + audio_size
-    total_size_str = humanbytes(total_size)
-
-    # Send initial download started message with title, resolution, and total size
+    total_size = humanbytes(video_filesize + audio_filesize)  # Calculate total size
     download_message = await query.message.edit_text(
-        f"⬇️ **Download started...**\n\n"
-        f"**🎬 {title}**\n"
-        f"**📹 {resolution}**\n"
-        f"💽 **Total Size:** {total_size_str}"
+        f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**\n\n"
+        f"💾 **Total Size:** {total_size}"
     )
 
     ydl_opts = {
