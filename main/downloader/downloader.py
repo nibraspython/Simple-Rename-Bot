@@ -51,12 +51,20 @@ async def youtube_link_handler(bot, msg):
                 format_id = f['format_id']
                 available_resolutions.append((resolution, filesize_str, format_id))
         elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':  # Check for audio formats
-            audio_bitrate = f.get('abr', 'N/A')
-            filesize = f.get('filesize')
+            filesize = f.get('filesize')  # Fetch the audio filesize
+            
+            # Only process if filesize is available
             if filesize:
-                filesize_str = humanbytes(filesize)
+                filesize_str = humanbytes(filesize)  # Convert size to human-readable format
                 format_id = f['format_id']
-                available_audio.append((audio_bitrate, filesize_str, format_id))
+                
+                # Append the button with file size instead of bitrate
+                available_audio.append(
+                    InlineKeyboardButton(
+                        f"🎧 Audio - {filesize_str}",  # Display file size on the button
+                        callback_data=f"audio_{format_id}_{url}"  # Pass the format_id and url
+                    )
+                )
 
     buttons = []
     row = []
@@ -71,14 +79,32 @@ async def youtube_link_handler(bot, msg):
     if row:
         buttons.append(row)
 
-# Add the "Audio" button with file size if available
-for bitrate, size, format_id in available_audio:
-    buttons.append([InlineKeyboardButton(f"🎧 Audio - {size}", callback_data=f"audio_{format_id}_{url}")])
-    
+    # Add the "Audio" button with file size if available
+    if available_audio:
+        buttons.append(available_audio)
+
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
     
     markup = InlineKeyboardMarkup(buttons)
+
+    caption = (
+        f"**🎬 Title:** {title}\n"
+        f"**👀 Views:** {views}\n"
+        f"**👍 Likes:** {likes}\n\n"
+        f"📥 **Select your resolution or audio format:**"
+    )
+
+    thumb_response = requests.get(thumb_url)
+    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
+    with open(thumb_path, 'wb') as thumb_file:
+        thumb_file.write(thumb_response.content)
+    await bot.send_photo(chat_id=msg.chat.id, photo=thumb_path, caption=caption, reply_markup=markup)
+    os.remove(thumb_path)
+
+    await msg.delete()
+    await processing_message.delete()
+
 
     caption = (
         f"**🎬 Title:** {title}\n"
