@@ -112,10 +112,18 @@ async def yt_callback_handler(bot, query):
     # Extract the best audio format (highest bitrate)
     ydl_opts_audio = {'format': 'bestaudio', 'quiet': True}
     with youtube_dl.YoutubeDL(ydl_opts_audio) as ydl_audio:
-        info_dict_audio = ydl_audio.extract_info(url, download=False)
-        best_audio_format = next(f for f in info_dict_audio['formats'] if f['acodec'] != 'none')
-        audio_filesize = best_audio_format.get('filesize', 0)
-
+    info_dict_audio = ydl_audio.extract_info(url, download=False)
+    
+    # Handle missing 'acodec' key
+    best_audio_format = next((f for f in info_dict_audio['formats'] if f.get('acodec') and f['acodec'] != 'none'), None)
+    
+    if best_audio_format is None:
+        await query.message.edit_text("❌ **No valid audio format found.**")
+        return
+    
+    audio_filesize = best_audio_format.get('filesize', 0)
+  
+    
     # Send initial download started message with title, resolution, and combined size
     ydl_opts_video = {'format': format_id, 'quiet': True}
     with youtube_dl.YoutubeDL(ydl_opts_video) as ydl_video:
