@@ -25,10 +25,10 @@ async def ytdl(bot, msg):
         parse_mode=enums.ParseMode.MARKDOWN
     )
 
-@Client.on_message(filters.private & filters.user(ADMIN) & (filters.regex(r'https?://(www.)?(youtube.com/watch?v=|youtu.be/)')))
+@Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
-
+ 
     # Send processing message
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
