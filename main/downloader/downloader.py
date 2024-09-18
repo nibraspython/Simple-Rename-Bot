@@ -58,31 +58,25 @@ async def youtube_link_handler(bot, msg):
                 filesize_str = humanbytes(filesize)  # Convert size to human-readable format
                 format_id = f['format_id']
                 
-                # Append the button with file size instead of bitrate
-                available_audio.append(
-                    InlineKeyboardButton(
-                        f"🎧 Audio - {filesize_str}",  # Display file size on the button
-                        callback_data=f"audio_{format_id}_{url}"  # Pass the format_id and url
-                    )
-                )
-
     buttons = []
     row = []
-    for resolution, size, format_id in available_resolutions:
-        button_text = f"🎬 {resolution} - {size}"
-        callback_data = f"yt_{format_id}_{resolution}_{url}"
-        row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
-        if len(row) == 2:  # Adjust the number of buttons per row if needed
-            buttons.append(row)
-            row = []
+     for resolution, size, format_id in available_resolutions:
+    button_text = f"🎬 {resolution} - {size}"
+    callback_data = f"yt_{format_id}_{resolution}_{url}"
+    row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+    if len(row) == 2:  # Adjust the number of buttons per row if needed
+        buttons.append(row)
+        row = []
 
     if row:
-        buttons.append(row)
+    buttons.append(row)
 
-    # Add the "Audio" button with file size if available
-    if available_audio:
-        buttons.append(available_audio)
 
+   # Modify the code to include only the audio file size in the audio button text
+  for  size, format_id in available_audio:
+    audio_button_text = f"🎧 Audio - {size}"
+    buttons.append([InlineKeyboardButton(audio_button_text, callback_data=f"audio_{format_id}_{url}")])
+   
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
     
