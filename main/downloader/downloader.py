@@ -63,7 +63,7 @@ async def youtube_link_handler(bot, msg):
     row = []
     for resolution, size, format_id in available_resolutions:
         button_text = f"🎬 {resolution} - {size}"
-        callback_data = f"yt_{format_id}_{resolution}_{url}"
+        callback_data = f"yt_{format_id}"  # Shortened callback data
         row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
         if len(row) == 2:  # Adjust the number of buttons per row if needed
             buttons.append(row)
@@ -75,10 +75,10 @@ async def youtube_link_handler(bot, msg):
     # Add the "Audio" button if available
     if best_audio:
         audio_bitrate, audio_size, audio_format_id = best_audio
-        buttons.append([InlineKeyboardButton(f"🎧 Audio - {audio_size}", callback_data=f"audio_{url}_{audio_format_id}")])
+        buttons.append([InlineKeyboardButton(f"🎧 Audio - {audio_size}", callback_data=f"audio_{audio_format_id}")])
 
-    buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
-    buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
+    buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb")])
+    buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc")])
     
     markup = InlineKeyboardMarkup(buttons)
 
@@ -99,14 +99,13 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
-@Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
+@Client.on_callback_query(filters.regex(r'^yt_\d+$'))
 async def yt_callback_handler(bot, query):
-    data = query.data.split('_')
-    format_id = data[1]
-    resolution = data[2]
-    url = query.data.split('_', 3)[3]
+    format_id = query.data.split('_')[1]
+    url = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    # Get the title from the original message caption
+
+# Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
     # Extract the best audio format (highest bitrate)
