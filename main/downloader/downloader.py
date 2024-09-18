@@ -73,9 +73,9 @@ async def youtube_link_handler(bot, msg):
 
  # Calculate total audio size if available and add to the audio button
  if available_audio:
-    total_audio_size = sum(float(audio[1].replace("MB", "").strip()) * 1024 * 1024 for audio in available_audio if "MB" in audio[1])
-    audio_size_str = humanbytes(total_audio_size)
-    buttons.append([InlineKeyboardButton(f"🎧 Audio - {audio_size_str}", callback_data=f"audio_{url}")])
+     total_audio_size = sum(float(audio[1].replace("MB", "").strip()) * 1024 * 1024 for audio in available_audio if "MB" in audio[1])
+     audio_size_str = humanbytes(total_audio_size)
+     buttons.append([InlineKeyboardButton(f"🎧 Audio - {audio_size_str}", callback_data=f"audio_{url}")])
 
     
 
