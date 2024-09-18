@@ -37,7 +37,7 @@ async def youtube_link_handler(bot, msg):
 
     # Extract all available resolutions with their sizes
     available_resolutions = []
-    available_audio = []
+    best_audio = None
 
     for f in formats:
         if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
@@ -53,9 +53,12 @@ async def youtube_link_handler(bot, msg):
         elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':  # Check for audio formats
             filesize = f.get('filesize')  # Fetch the audio filesize
             if filesize:  # Only process if filesize is available
-                filesize_str = humanbytes(filesize)  # Convert size to human-readable format
-                format_id = f['format_id']
-                available_audio.append((filesize_str, format_id))
+                if best_audio is None or filesize > best_audio['filesize']:
+                    best_audio = {
+                        'filesize': filesize,
+                        'filesize_str': humanbytes(filesize),  # Convert size to human-readable format
+                        'format_id': f['format_id']
+                    }
 
     # Creating buttons for resolutions
     buttons = []
@@ -71,11 +74,12 @@ async def youtube_link_handler(bot, msg):
     if row:
         buttons.append(row)
 
-    # Creating audio buttons
-    for size, format_id in available_audio:
-        audio_button_text = f"🎧 Audio - {size}"
-        buttons.append([InlineKeyboardButton(audio_button_text, callback_data=f"audio_{format_id}_{url}")])
+    # Adding only the best audio button
+    if best_audio:
+        audio_button_text = f"🎧 Audio - {best_audio['filesize_str']}"
+        buttons.append([InlineKeyboardButton(audio_button_text, callback_data=f"audio_{best_audio['format_id']}_{url}")])
 
+   
     # Adding Thumbnail and Description buttons
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
