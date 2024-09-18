@@ -9,7 +9,8 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from config import TELEGRAPH_IMAGE_URL  # Import TELEGRAPH_IMAGE_URL from config.py
-from downloader.ytdl_text import YTDL_WELCOME_TEXT
+from ytdl_text import YTDL_WELCOME_TEXT
+
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
