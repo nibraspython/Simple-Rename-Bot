@@ -117,22 +117,35 @@ async def yt_callback_handler(bot, query):
         'quiet': True
     }
 
-    # Fetch audio size to calculate the total size (video + audio)
+    # Fetch video and audio size to calculate the total size (video + audio)
+    video_size = 0
     audio_size = 0
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=False)
         formats = info_dict['formats']
+
         for f in formats:
-            if f.get('format_id') == format_id:
-                video_size = f['filesize']
+            # Get video size for the selected format
+            if f.get('format_id') == format_id and f.get('vcodec') != 'none':
+                video_size = f.get('filesize', 0)
+            # Get audio size
             if f.get('acodec') != 'none' and f.get('ext') in ['m4a', 'webm']:
                 audio_size = f.get('filesize', 0)
+
         total_size = video_size + audio_size
         total_size_str = humanbytes(total_size)
 
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**\n\n**💽 Total size: {total_size_str}**")
+    # Show download started message with title, resolution, and total size
+    download_message = await query.message.edit_text(
+        f"⬇️ **Download started...**\n\n"
+        f"**🎬 {title}**\n"
+        f"**📹 Resolution:** {resolution}\n"
+        f"**🎧 Audio size:** {humanbytes(audio_size)}\n"
+        f"**💽 Total size:** {total_size_str}"
+    )
 
     try:
+        # Start the download
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
