@@ -71,9 +71,10 @@ async def youtube_link_handler(bot, msg):
     if row:
         buttons.append(row)
 
-    # Add the "Audio" button if available
+    # Add the "Audio" button with size
     if available_audio:
-        buttons.append([InlineKeyboardButton("🎧 Audio", callback_data=f"audio_{url}")])
+        for audio_bitrate, size, format_id in available_audio:
+            buttons.append([InlineKeyboardButton(f"🎧 {audio_bitrate}kbps - {size}", callback_data=f"audio_{format_id}_{url}")])
 
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
@@ -107,8 +108,37 @@ async def yt_callback_handler(bot, query):
     # Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    # Get the audio format size
+    ydl_opts_audio = {
+        'format': 'bestaudio[ext=m4a]',
+        'quiet': True
+    }
+
+    with youtube_dl.YoutubeDL(ydl_opts_audio) as ydl_audio:
+        info_dict_audio = ydl_audio.extract_info(url, download=False)
+        audio_format = next(f for f in info_dict_audio['formats'] if f['ext'] == 'm4a' and f.get('acodec') != 'none')
+        audio_size = audio_format.get('filesize', 0)
+
+    # Calculate the combined size of the video and audio
+    ydl_opts = {
+        'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
+        'quiet': True
+    }
+
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=False)
+        video_size = info_dict['filesize'] if 'filesize' in info_dict else 0
+
+    total_size = video_size + audio_size
+    total_size_str = humanbytes(total_size)
+
+    # Send initial download started message with title, resolution, and total size
+    download_message = await query.message.edit_text(
+        f"⬇️ **Download started...**\n\n"
+        f"**🎬 {title}**\n"
+        f"**📹 {resolution}**\n"
+        f"💽 **Total Size:** {total_size_str}"
+    )
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
@@ -141,6 +171,7 @@ async def yt_callback_handler(bot, query):
     if response.status_code == 200:
         with open(thumb_path, 'wb') as thumb_file:
             thumb_file.write(response.content)
+
 
         with Image.open(thumb_path) as img:
             img_width, img_height = img.size
