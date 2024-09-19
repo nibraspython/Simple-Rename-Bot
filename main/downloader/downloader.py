@@ -9,6 +9,11 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
+# Queue to store pending downloads
+download_queue = []
+currently_downloading = None  # To track if any video is being downloaded
+
+# Update the existing handler for sending YouTube links
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     await msg.reply_text("🎥 **Please send your YouTube links to download.**")
@@ -21,7 +26,7 @@ async def youtube_link_handler(bot, msg):
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',  # Prefer AVC/AAC format
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
         'noplaylist': True,
         'quiet': True
     }
@@ -35,22 +40,21 @@ async def youtube_link_handler(bot, msg):
         description = info_dict.get('description', 'No description available.')
         formats = info_dict.get('formats', [])
 
-    # Extract all available resolutions with their sizes
     available_resolutions = []
     available_audio = []
 
     for f in formats:
-        if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
+        if f['ext'] == 'mp4' and f.get('vcodec') != 'none':
             resolution = f"{f['height']}p"
-            fps = f.get('fps', None)  # Get the fps (frames per second)
-            if fps in [50, 60]:  # Append fps to the resolution if it's 50 or 60
+            fps = f.get('fps', None)
+            if fps in [50, 60]:
                 resolution += f"{fps}fps"
-            filesize = f.get('filesize')  # Fetch the filesize
-            if filesize:  # Only process if filesize is not None
-                filesize_str = humanbytes(filesize)  # Convert size to human-readable format
+            filesize = f.get('filesize')
+            if filesize:
+                filesize_str = humanbytes(filesize)
                 format_id = f['format_id']
                 available_resolutions.append((resolution, filesize_str, format_id))
-        elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':  # Check for audio formats
+        elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':
             audio_bitrate = f.get('abr', 'N/A')
             filesize = f.get('filesize')
             if filesize:
@@ -64,20 +68,19 @@ async def youtube_link_handler(bot, msg):
         button_text = f"🎬 {resolution} - {size}"
         callback_data = f"yt_{format_id}_{resolution}_{url}"
         row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
-        if len(row) == 2:  # Adjust the number of buttons per row if needed
+        if len(row) == 2:
             buttons.append(row)
             row = []
 
     if row:
         buttons.append(row)
 
-    # Add the "Audio" button if available
     if available_audio:
         buttons.append([InlineKeyboardButton("🎧 Audio", callback_data=f"audio_{url}")])
 
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
-    
+
     markup = InlineKeyboardMarkup(buttons)
 
     caption = (
@@ -97,6 +100,7 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
+# Process the resolution button click and handle queuing
 @Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
@@ -107,11 +111,29 @@ async def yt_callback_handler(bot, query):
     # Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    # Check if a download is already in progress
+    if currently_downloading:
+        # Queue the download and show "Download Pending"
+        download_queue.append((query, format_id, resolution, url, title))
+        await query.message.edit_text(
+            f"⏳ **Download Pending...**\n\n**🎬 {title}**\n\n**📹 {resolution}**"
+        )
+    else:
+        # No download in progress, start downloading immediately
+        await start_download(bot, query, format_id, resolution, url, title)
+
+# Function to start the actual download process
+async def start_download(bot, query, format_id, resolution, url, title):
+    global currently_downloading
+    currently_downloading = True  # Mark as downloading
+
+    # Update message to show download started
+    download_message = await query.message.edit_text(
+        f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**"
+    )
 
     ydl_opts = {
-        'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
+        'format': f"{format_id}+bestaudio[ext=m4a]",
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
         'postprocessors': [{
@@ -127,6 +149,7 @@ async def yt_callback_handler(bot, query):
         await download_message.edit_text("✅ **Download completed!**")
     except Exception as e:
         await download_message.edit_text(f"❌ **Error during download:** {e}")
+        currently_downloading = False  # Reset download flag
         return
 
     final_filesize = os.path.getsize(downloaded_path)
@@ -164,6 +187,7 @@ async def yt_callback_handler(bot, query):
         f"**[🔗 URL]({url})**\n\n"
         f"✅ **Download completed!**"
     )
+
 
     uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
 
