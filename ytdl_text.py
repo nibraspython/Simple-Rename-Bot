@@ -1,5 +1,5 @@
 YTDL_WELCOME_TEXT = """
-            **Youtube Video Downloader**
+            **Youtube Video Downloader 🎬**
 
     📹 ━━━━━━❰ **Feautures** ❱━━━━━━➣
     
@@ -14,7 +14,7 @@ YTDL_WELCOME_TEXT = """
 
 
 VID_TRIMMER_TEXT = """
-         **Video Trimmer **
+         **Video Trimmer ✂**
 
     ✂ ━━━━━━❰ **Feautures** ❱━━━━━━➣
 
@@ -25,3 +25,4 @@ VID_TRIMMER_TEXT = """
 ❤ **Thanks To K-MAC For His Great Trimming Code.\n**
 
 **📂 Please Send Your Video Or Document To Trim.**
+"""
