@@ -3,7 +3,7 @@ import time
 import requests
 import logging
 import asyncio
-import yt-dlp as youtube-dl
+import yt_dlp as youtube_dl
 from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
