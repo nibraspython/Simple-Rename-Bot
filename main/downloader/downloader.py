@@ -1,17 +1,64 @@
 import os
 import time
-import logging
 import requests
-import yt_dlp as youtube_dl
+import logging
+import asyncio
+import youtube_dl as youtube_dl
 from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
-from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import progress_message, humanbytes
-from config import TELEGRAPH_IMAGE_URL  # Import TELEGRAPH_IMAGE_URL from config.py
-from ytdl_text import YTDL_WELCOME_TEXT
-from progress_utils import status_bar  
+from config import DOWNLOAD_LOCATION, ADMIN, TELEGRAPH_IMAGE_URL
+from progress_utils import status_bar  # Import the status_bar function
+
+def sizeUnit(bytes):
+    # Convert bytes to a human-readable format
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if bytes < 1024:
+            return f"{bytes:.2f} {unit}"
+        bytes /= 1024
+    return f"{bytes:.2f} PB"
+
+def getTime(seconds):
+    # Convert seconds to a human-readable time format
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
+
+async def my_hook(d):
+    if d['status'] == 'downloading':
+        percent = d.get('percent', 0)
+        dl_bytes = d.get('downloaded_bytes', 0)
+        total_bytes = d.get('total_bytes', 0)
+        speed = d.get('speed', 0)
+        eta = d.get('eta', 0)
+        
+        YTDL.header = ""
+        YTDL.speed = sizeUnit(speed) if speed else "N/A"
+        YTDL.percentage = percent
+        YTDL.eta = getTime(eta) if eta else "N/A"
+        YTDL.done = sizeUnit(dl_bytes) if dl_bytes else "N/A"
+        YTDL.left = sizeUnit(total_bytes) if total_bytes else "N/A"
+        
+        # Create a formatted progress message
+        progress_message = (
+            f"🔄 **Downloading:** {YTDL.done} of {YTDL.left} ({YTDL.percentage:.2f}%)\n"
+            f"⏳ **Speed:** {YTDL.speed}\n"
+            f"🕒 **ETA:** {YTDL.eta}"
+        )
+        # Use the appropriate method to update the message
+        # This assumes you have a global or accessible `download_message` to update
+        if 'download_message' in globals():
+            await bot.edit_message_text(chat_id=download_message.chat.id, message_id=download_message.message_id, text=progress_message)
+    elif d['status'] == 'finished':
+        # Handle the completed download
+        if 'download_message' in globals():
+            await bot.edit_message_text(chat_id=download_message.chat.id, message_id=download_message.message_id, text=f"✅ **Download completed!**")
+    elif d['status'] == 'downloading fragment':
+        # Optionally handle fragment downloading
+        pass
+    else:
+        logging.info(d)
 
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
@@ -141,19 +188,7 @@ async def yt_callback_handler(bot, query):
         'progress_hooks': [my_hook]  # Add the progress hook here
     }
 
-    def my_hook(d):
-        if d['status'] == 'downloading':
-            # Get the progress percentage
-            percent = d['downloaded_bytes'] / d['total_bytes'] * 100
-            # Get the downloaded and total sizes
-            downloaded_size = humanbytes(d['downloaded_bytes'])
-            total_size = humanbytes(d['total_bytes'])
-            # Update the message with the progress
-            progress_message = f"🔄 **Downloading:** {downloaded_size} of {total_size} ({percent:.2f}%)"
-            bot.edit_message_text(chat_id=query.message.chat.id, message_id=download_message.message_id, text=progress_message)
-        elif d['status'] == 'finished':
-            bot.edit_message_text(chat_id=query.message.chat.id, message_id=download_message.message_id, text="✅ **Download completed!**")
-
+    
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
