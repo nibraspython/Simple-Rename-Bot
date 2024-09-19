@@ -28,32 +28,6 @@ async def ytdl(bot, msg):
     )
 
 
-import os
-import time
-import requests
-import youtube_dl as youtube_dl
-from pyrogram import Client, filters, enums
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from moviepy.editor import VideoFileClip
-from PIL import Image
-from config import DOWNLOAD_LOCATION, ADMIN, TELEGRAPH_IMAGE_URL
-from progress_utils import status_bar  # Import the status_bar function
-
-# Initialize your bot here
-app = Client("my_bot", api_id="API_ID", api_hash="API_HASH", bot_token="BOT_TOKEN")
-
-@Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
-async def ytdl(bot, msg):
-    caption_text = f"Welcome to YTDL Bot! Use this bot to download YouTube videos. For more information, visit [here]({TELEGRAPH_IMAGE_URL})."
-    
-    # Send the image with the updated caption
-    await bot.send_photo(
-        chat_id=msg.chat.id,
-        photo=TELEGRAPH_IMAGE_URL,  # Using the URL from config.py
-        caption=caption_text,
-        parse_mode=enums.ParseMode.MARKDOWN
-    )
-
 @Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
