@@ -3,13 +3,14 @@ import time
 import requests
 import logging
 import asyncio
-import youtube_dl as youtube_dl
+import yt-dlp as youtube-dl
 from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN, TELEGRAPH_IMAGE_URL
 from progress_utils import status_bar  # Import the status_bar function
+from ytdl_text import YTDL_WELCOME_TEXT
 
 def sizeUnit(bytes):
     # Convert bytes to a human-readable format
