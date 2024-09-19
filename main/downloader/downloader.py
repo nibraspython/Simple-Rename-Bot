@@ -226,7 +226,6 @@ async def start_download(bot, query, format_id, resolution, url, title):
     if thumb_path and os.path.exists(thumb_path):
         os.remove(thumb_path)
 
-    finally:
         # Clear the current download
         current_download = None
 
