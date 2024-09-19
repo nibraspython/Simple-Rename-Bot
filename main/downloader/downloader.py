@@ -112,6 +112,7 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
+
 @Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     global current_download
@@ -125,9 +126,11 @@ async def yt_callback_handler(bot, query):
 
     # Check if a download is already running
     if current_download:
+        # Immediately show "Download Pending" message
         await query.message.edit_text(f"⏳ **Download Pending...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
         download_queue.append((bot, query, format_id, resolution, url, title))
     else:
+        # No ongoing download, start this one immediately
         current_download = (bot, query, format_id, resolution, url, title)
         await start_download(bot, query, format_id, resolution, url, title)
 
