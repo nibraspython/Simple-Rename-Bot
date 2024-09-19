@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 import requests
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters, enums
@@ -10,12 +11,40 @@ from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from config import TELEGRAPH_IMAGE_URL  # Import TELEGRAPH_IMAGE_URL from config.py
 from ytdl_text import YTDL_WELCOME_TEXT
+from progress_utils import status_bar  
 
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     # Replace the placeholder with the actual URL from config.py
     caption_text = YTDL_WELCOME_TEXT.replace("TELEGRAPH_IMAGE_URL", TELEGRAPH_IMAGE_URL)
+    
+    # Send the image with the updated caption
+    await bot.send_photo(
+        chat_id=msg.chat.id,
+        photo=TELEGRAPH_IMAGE_URL,  # Using the URL from config.py
+        caption=caption_text,
+        parse_mode=enums.ParseMode.MARKDOWN
+    )
+
+
+import os
+import time
+import requests
+import youtube_dl as youtube_dl
+from pyrogram import Client, filters, enums
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from moviepy.editor import VideoFileClip
+from PIL import Image
+from config import DOWNLOAD_LOCATION, ADMIN, TELEGRAPH_IMAGE_URL
+from progress_utils import status_bar  # Import the status_bar function
+
+# Initialize your bot here
+app = Client("my_bot", api_id="API_ID", api_hash="API_HASH", bot_token="BOT_TOKEN")
+
+@Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
+async def ytdl(bot, msg):
+    caption_text = f"Welcome to YTDL Bot! Use this bot to download YouTube videos. For more information, visit [here]({TELEGRAPH_IMAGE_URL})."
     
     # Send the image with the updated caption
     await bot.send_photo(
@@ -91,13 +120,11 @@ async def youtube_link_handler(bot, msg):
         audio_button_text = f"🎧 Audio - {best_audio['filesize_str']}"
         buttons.append([InlineKeyboardButton(audio_button_text, callback_data=f"audio_{best_audio['format_id']}_{url}")])
 
-   
     # Adding Thumbnail and Description buttons
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
-
 
     caption = (
         f"**🎬 Title:** {title}\n"
@@ -136,18 +163,32 @@ async def yt_callback_handler(bot, query):
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
-        }]
+        }],
+        'progress_hooks': [my_hook]  # Add the progress hook here
     }
+
+    def my_hook(d):
+        if d['status'] == 'downloading':
+            # Get the progress percentage
+            percent = d['downloaded_bytes'] / d['total_bytes'] * 100
+            # Get the downloaded and total sizes
+            downloaded_size = humanbytes(d['downloaded_bytes'])
+            total_size = humanbytes(d['total_bytes'])
+            # Update the message with the progress
+            progress_message = f"🔄 **Downloading:** {downloaded_size} of {total_size} ({percent:.2f}%)"
+            bot.edit_message_text(chat_id=query.message.chat.id, message_id=download_message.message_id, text=progress_message)
+        elif d['status'] == 'finished':
+            bot.edit_message_text(chat_id=query.message.chat.id, message_id=download_message.message_id, text="✅ **Download completed!**")
 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            downloaded_path = ydl.prepare_filename(info_dict)
+            ydl.download([url])
         await download_message.edit_text("✅ **Download completed!**")
     except Exception as e:
         await download_message.edit_text(f"❌ **Error during download:** {e}")
         return
 
+    # Continue with your existing code to handle the downloaded file and send it to the user
     final_filesize = os.path.getsize(downloaded_path)
     video = VideoFileClip(downloaded_path)
     duration = int(video.duration)
@@ -161,6 +202,7 @@ async def yt_callback_handler(bot, query):
         with open(thumb_path, 'wb') as thumb_file:
             thumb_file.write(response.content)
 
+    
         with Image.open(thumb_path) as img:
             img_width, img_height = img.size
             scale_factor = max(video_width / img_width, video_height / img_height)
