@@ -124,18 +124,13 @@ async def yt_callback_handler(bot, query):
 
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    # If a video is already downloading
+    # Check if a download is already running
     if current_download:
-        # Show "Download Pending" immediately when a new button is clicked
         await query.message.edit_text(f"⏳ **Download Pending...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
-        
-        # Add the new download request to the queue
         download_queue.append((bot, query, format_id, resolution, url, title))
     else:
-        # Start downloading immediately if no current download
         current_download = (bot, query, format_id, resolution, url, title)
         await start_download(bot, query, format_id, resolution, url, title)
-
 
 async def start_download(bot, query, format_id, resolution, url, title):
     global current_download
@@ -226,15 +221,12 @@ async def start_download(bot, query, format_id, resolution, url, title):
     if thumb_path and os.path.exists(thumb_path):
         os.remove(thumb_path)
 
-        # Clear the current download
-        current_download = None
+    current_download = None
 
-        # Check if there are pending downloads in the queue
-        if download_queue:
-            next_download = download_queue.pop(0)
-            bot, query, format_id, resolution, url, title = next_download
-            current_download = next_download
-            await start_download(bot, query, format_id, resolution, url, title)
+    # Check if there are more downloads in the queue
+    if download_queue:
+        next_download = download_queue.popleft()
+        await start_download(*next_download)
 
 @Client.on_callback_query(filters.regex(r'^thumb_https?://(www\.)?youtube\.com/watch\?v='))
 async def thumb_callback_handler(bot, query):
