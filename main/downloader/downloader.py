@@ -86,12 +86,21 @@ async def youtube_link_handler(bot, msg):
     if row:
         buttons.append(row)
 
-    # Add the "Audio" button if available
-    if available_audio:
-        buttons.append([InlineKeyboardButton("🎧 Audio", callback_data=f"audio_{url}")])
+   if best_audio:
+    audio_button_text = f"🎧 Audio - {best_audio['filesize_str']}"
+    row.append(InlineKeyboardButton(audio_button_text, callback_data=f"audio_{best_audio['format_id']}_{url}"))
 
-    buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
-    buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
+# Grid style for thumbnail, description, audio, and cancel buttons
+buttons.append([
+    InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}"),
+    InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")
+])
+
+if best_audio:
+    buttons[-1].append(InlineKeyboardButton(audio_button_text, callback_data=f"audio_{best_audio['format_id']}_{url}"))
+
+# Add Cancel button in the last row
+buttons.append([InlineKeyboardButton("❌ Cancel", callback_data="cancel_process")])
     
     markup = InlineKeyboardMarkup(buttons)
 
@@ -250,6 +259,13 @@ async def thumb_callback_handler(bot, query):
         os.remove(thumb_path)
     else:
         await query.message.edit_text("❌ **Failed to download thumbnail.**")
+
+
+@Client.on_callback_query(filters.regex(r"cancel_process"))
+async def cancel_process_callback(bot, query):
+    await query.message.edit_text("❌ **Process cancelled.**")
+    time.sleep(2)
+    await query.message.delete()  # Automatically delete the message after showing cancellation
 
 @Client.on_callback_query(filters.regex(r'^desc_https?://(www\.)?youtube\.com/watch\?v='))
 async def description_callback_handler(bot, query):
