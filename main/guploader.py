@@ -14,20 +14,21 @@ def create_drive_service():
 @Client.on_message(filters.private & filters.command("gupload") & filters.user(ADMIN))
 async def upload_to_gdrive(bot, msg):
     # Ask the user to send the file to upload
-    prompt = await msg.reply_text("📤 Send your file to upload to Google Drive.")
+    prompt = await msg.reply_text("📤 Please reply to a file (document, video, or audio) to upload to Google Drive.")
     
-    # Wait for a file to be sent
-    response = await bot.listen(msg.chat.id, filters=document | filters.video | filters.audio)
-    media = response.document or response.audio or response.video
+    # Wait for a file in the reply
+    response = await bot.listen(msg.chat.id)
+    reply = response.reply_to_message
+    media = reply.document or reply.audio or reply.video
     if not media:
-        return await prompt.edit_text("Please send a valid file.")
+        return await prompt.edit_text("Please reply to a valid file (document, video, or audio).")
     
     # Notify the user about the downloading process
-    og_media = getattr(response, response.media.value)
+    og_media = getattr(reply, reply.media.value)
     new_name = media.file_name
     sts = await msg.reply_text(f"🔄 Downloading **{new_name}**...📥")
     c_time = time.time()
-    downloaded = await response.download(file_name=new_name, progress=progress_message, progress_args=(f"Downloading **{new_name}**...", sts, c_time))
+    downloaded = await reply.download(file_name=new_name, progress=progress_message, progress_args=(f"Downloading **{new_name}**...", sts, c_time))
     filesize = humanbytes(og_media.file_size)
 
     # Google Drive Upload
@@ -51,4 +52,3 @@ async def upload_to_gdrive(bot, msg):
         os.remove(downloaded)
     except Exception as e:
         print(f"Error removing file: {e}")
-
