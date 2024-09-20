@@ -10,6 +10,7 @@ CAPTION = "{file_name}\n\n💽 size: {file_size}\n🕒 duration: {duration} seco
 ADMIN = int(environ.get("ADMIN", "5380833276"))          
 CAPTION = environ.get("CAPTION", "video")
 TELEGRAPH_IMAGE_URL = "https://envs.sh/q2k.jpg"  # Replace with your actual Telegraph image URL
+VID_TTRIMMER_URL = "https://envs.sh/qNI.jpg"
 
 # for thumbnail ( back end is MrMKN brain 😉)
 DOWNLOAD_LOCATION = "./DOWNLOADS"
