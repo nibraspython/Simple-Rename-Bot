@@ -8,7 +8,7 @@ from google.oauth2.credentials import Credentials
 
 # Load Google Drive credentials from the token.pickle file
 def create_drive_service():
-    creds = Credentials.from_authorized_user_file('/mnt/data/token.pickle', ['https://www.googleapis.com/auth/drive.file'])
+    creds = Credentials.from_authorized_user_file('/content/Simple-Rename-Bot/token.pickle', ['https://www.googleapis.com/auth/drive.file'])
     return build('drive', 'v3', credentials=creds)
 
 @Client.on_message(filters.private & filters.command("gupload") & filters.user(ADMIN))
