@@ -10,7 +10,6 @@ from config import DOWNLOAD_LOCATION, ADMIN, TELEGRAPH_IMAGE_URL
 from main.utils import progress_message, humanbytes
 from ytdl_text import YTDL_WELCOME_TEXT
 
-
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     caption_text = YTDL_WELCOME_TEXT.replace("TELEGRAPH_IMAGE_URL", TELEGRAPH_IMAGE_URL)
@@ -234,12 +233,6 @@ async def thumb_callback_handler(bot, query):
     else:
         await query.message.edit_text("❌ **Failed to download thumbnail.**")
 
-
-@Client.on_callback_query(filters.regex(r"cancel_process"))
-async def cancel_process_callback(bot, query):
-    await query.message.edit_text("❌ **Process cancelled.**")
-    time.sleep(2)
-    await query.message.delete()  # Automatically delete the message after showing cancellation
 
 @Client.on_callback_query(filters.regex(r'^desc_https?://(www\.)?youtube\.com/watch\?v='))
 async def description_callback_handler(bot, query):
