@@ -161,15 +161,30 @@ async def start_download(bot, query, format_id, resolution, url, title):
     video_width, video_height = video.size
     filesize = humanbytes(final_filesize)
 
-    thumb_url = info_dict.get('thumbnail', None)
-    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
-    response = requests.get(thumb_url)
-    if response.status_code == 200:
-        with open(thumb_path, 'wb') as thumb_file:
-            thumb_file.write(response.content)
+thumb_response = requests.get(thumb_url)
+thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
+if thumb_response.status_code == 200:
+    with open(thumb_path, 'wb') as thumb_file:
+        thumb_file.write(thumb_response.content)
+
+    with Image.open(thumb_path) as img:
+        img_width, img_height = img.size
+        scale_factor = max(video_width / img_width, video_height / img_height)
+        new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
+        img = img.resize(new_size, Image.LANCZOS)
+        left = (img.width - video_width) / 2
+        top = (img.height - video_height) / 2
+        right = (img.width + video_width) / 2
+        bottom = (img.height + video_height) / 2
+        img = img.crop((left, top, right, bottom))
+        img.save(thumb_path)
+else:
+    thumb_path = None
 
 
-        with Image.open(thumb_path) as img:
+
+
+       with Image.open(thumb_path) as img:
             img_width, img_height = img.size
             scale_factor = max(video_width / img_width, video_height / img_height)
             new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
