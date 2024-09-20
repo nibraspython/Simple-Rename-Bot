@@ -10,15 +10,15 @@ from config import DOWNLOAD_LOCATION, ADMIN, TELEGRAPH_IMAGE_URL
 from main.utils import progress_message, humanbytes
 from ytdl_text import YTDL_WELCOME_TEXT
 
+
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
-    # Replace the placeholder with the actual URL from config.py
     caption_text = YTDL_WELCOME_TEXT.replace("TELEGRAPH_IMAGE_URL", TELEGRAPH_IMAGE_URL)
     
     # Send the image with the updated caption
     await bot.send_photo(
         chat_id=msg.chat.id,
-        photo=TELEGRAPH_IMAGE_URL,  # Using the URL from config.py
+        photo=TELEGRAPH_IMAGE_URL,
         caption=caption_text,
         parse_mode=enums.ParseMode.MARKDOWN
     )
@@ -26,6 +26,7 @@ async def ytdl(bot, msg):
     # Send processing message
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
+    url = msg.text.split(maxsplit=1)[1]  # Assuming URL is provided as argument
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',  # Prefer AVC/AAC format
         'noplaylist': True,
@@ -41,57 +42,53 @@ async def ytdl(bot, msg):
         description = info_dict.get('description', 'No description available.')
         formats = info_dict.get('formats', [])
 
-    # Extract all available resolutions with their sizes
     available_resolutions = []
     best_audio = None
 
     for f in formats:
-        if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Check for video formats
+        if f['ext'] == 'mp4' and f.get('vcodec') != 'none':  # Video formats
             resolution = f"{f['height']}p"
-            fps = f.get('fps', None)  # Get the fps (frames per second)
-            if fps in [50, 60]:  # Append fps to the resolution if it's 50 or 60
+            fps = f.get('fps', None)  # Get fps
+            if fps in [50, 60]:
                 resolution += f"{fps}fps"
-            filesize = f.get('filesize')  # Fetch the filesize
-            if filesize:  # Only process if filesize is not None
-                filesize_str = humanbytes(filesize)  # Convert size to human-readable format
+            filesize = f.get('filesize')
+            if filesize:
+                filesize_str = humanbytes(filesize)
                 format_id = f['format_id']
                 available_resolutions.append((resolution, filesize_str, format_id))
-        elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':  # Check for audio formats
-            filesize = f.get('filesize')  # Fetch the audio filesize
-            if filesize:  # Only process if filesize is available
+        elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':  # Audio formats
+            filesize = f.get('filesize')
+            if filesize:
                 if best_audio is None or filesize > best_audio['filesize']:
                     best_audio = {
                         'filesize': filesize,
-                        'filesize_str': humanbytes(filesize),  # Convert size to human-readable format
+                        'filesize_str': humanbytes(filesize),
                         'format_id': f['format_id']
                     }
 
-    # Creating buttons for resolutions
     buttons = []
     row = []
     for resolution, size, format_id in available_resolutions:
         button_text = f"🎬 {resolution} - {size}"
         callback_data = f"yt_{format_id}_{resolution}_{url}"
         row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
-        if len(row) == 2:  # Adjust the number of buttons per row if needed
+        if len(row) == 2:
             buttons.append(row)
             row = []
 
     if row:
         buttons.append(row)
 
-    # Adding only the best audio button
     if best_audio:
         audio_button_text = f"🎧 Audio - {best_audio['filesize_str']}"
         buttons.append([InlineKeyboardButton(audio_button_text, callback_data=f"audio_{best_audio['format_id']}_{url}")])
 
-    # Adding Thumbnail and Description buttons
     buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
     buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
 
     markup = InlineKeyboardMarkup(buttons)
-    
-caption = (
+
+    caption = (
         f"**🎬 Title:** {title}\n"
         f"**👀 Views:** {views}\n"
         f"**👍 Likes:** {likes}\n\n"
@@ -102,7 +99,13 @@ caption = (
     thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
     with open(thumb_path, 'wb') as thumb_file:
         thumb_file.write(thumb_response.content)
-    await bot.send_photo(chat_id=msg.chat.id, photo=thumb_path, caption=caption, reply_markup=markup)
+
+    await bot.send_photo(
+        chat_id=msg.chat.id, 
+        photo=thumb_path, 
+        caption=caption, 
+        reply_markup=markup
+    )
     os.remove(thumb_path)
 
     await msg.delete()
@@ -111,8 +114,6 @@ caption = (
 
 @Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
-    global current_download
-
     data = query.data.split('_')
     format_id = data[1]
     resolution = data[2]
@@ -120,18 +121,6 @@ async def yt_callback_handler(bot, query):
 
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
-    # Check if a download is already running
-    if current_download:
-        await query.message.edit_text(f"⏳ **Download Pending...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
-        download_queue.append((bot, query, format_id, resolution, url, title))
-    else:
-        current_download = (bot, query, format_id, resolution, url, title)
-        await start_download(bot, query, format_id, resolution, url, title)
-
-async def start_download(bot, query, format_id, resolution, url, title):
-    global current_download
-
-    # Send initial download started message
     download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
     ydl_opts = {
@@ -151,7 +140,6 @@ async def start_download(bot, query, format_id, resolution, url, title):
         await download_message.edit_text("✅ **Download completed!**")
     except Exception as e:
         await download_message.edit_text(f"❌ **Error during download:** {e}")
-        current_download = None
         return
 
     final_filesize = os.path.getsize(downloaded_path)
@@ -160,13 +148,14 @@ async def start_download(bot, query, format_id, resolution, url, title):
     video_width, video_height = video.size
     filesize = humanbytes(final_filesize)
 
-thumb_response = requests.get(thumb_url)
-thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
-if thumb_response.status_code == 200:
-    with open(thumb_path, 'wb') as thumb_file:
-        thumb_file.write(thumb_response.content)
+    thumb_url = info_dict.get('thumbnail', None)
+    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
+    response = requests.get(thumb_url)
+    if response.status_code == 200:
+        with open(thumb_path, 'wb') as thumb_file:
+            thumb_file.write(response.content)
 
-       with Image.open(thumb_path) as img:
+        with Image.open(thumb_path) as img:
             img_width, img_height = img.size
             scale_factor = max(video_width / img_width, video_height / img_height)
             new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
