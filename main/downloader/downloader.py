@@ -23,7 +23,6 @@ async def ytdl(bot, msg):
         parse_mode=enums.ParseMode.MARKDOWN
     )
 
-
     # Send processing message
     processing_message = await msg.reply_text("🔄 **Processing your request...**")
 
@@ -166,23 +165,6 @@ thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
 if thumb_response.status_code == 200:
     with open(thumb_path, 'wb') as thumb_file:
         thumb_file.write(thumb_response.content)
-
-    with Image.open(thumb_path) as img:
-        img_width, img_height = img.size
-        scale_factor = max(video_width / img_width, video_height / img_height)
-        new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
-        img = img.resize(new_size, Image.LANCZOS)
-        left = (img.width - video_width) / 2
-        top = (img.height - video_height) / 2
-        right = (img.width + video_width) / 2
-        bottom = (img.height + video_height) / 2
-        img = img.crop((left, top, right, bottom))
-        img.save(thumb_path)
-else:
-    thumb_path = None
-
-
-
 
        with Image.open(thumb_path) as img:
             img_width, img_height = img.size
