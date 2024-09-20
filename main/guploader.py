@@ -1,14 +1,14 @@
-import time, os
+import time, os, pickle
 from pyrogram import Client, filters
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from google.oauth2.credentials import Credentials
 
 # Load Google Drive credentials from the token.pickle file
 def create_drive_service():
-    creds = Credentials.from_authorized_user_file('/content/Simple-Rename-Bot/token.pickle', ['https://www.googleapis.com/auth/drive.file'])
+    with open('/content/Simple-Rename-Bot/token.pickle', 'rb') as token_file:
+        creds = pickle.load(token_file)
     return build('drive', 'v3', credentials=creds)
 
 @Client.on_message(filters.private & filters.command("gupload") & filters.user(ADMIN))
@@ -17,11 +17,10 @@ async def upload_to_gdrive(bot, msg):
     if not reply or not (reply.document or reply.audio or reply.video):
         return await msg.reply_text("Please reply to a file (document, video, or audio) to upload to Google Drive.")
     
-    # Get the media and original file name
     media = reply.document or reply.audio or reply.video
     og_media = getattr(reply, reply.media.value)
     new_name = media.file_name
-    
+
     # Start downloading the file with progress bar
     sts = await msg.reply_text(f"🔄 Downloading **{new_name}**...📥")
     c_time = time.time()
