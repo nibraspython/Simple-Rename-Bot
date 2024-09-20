@@ -2,10 +2,11 @@ import time
 import os
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import DOWNLOAD_LOCATION, ADMIN
+from config import DOWNLOAD_LOCATION, ADMIN, VID_TRIMMER_URL 
 from main.utils import progress_message, humanbytes
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from moviepy.editor import VideoFileClip
+from ytdl_text import VID_TRIMMER_TEXT
 
 # Temporary storage for media and trimming durations
 trim_data = {}
@@ -14,7 +15,14 @@ trim_data = {}
 async def start_trim_process(bot, msg):
     chat_id = msg.chat.id
     trim_data[chat_id] = {}
-    await msg.reply_text("🔄 **Please send the video or document you want to trim.**")
+    
+    # Sending the welcome message with the trimmer logo
+    await bot.send_photo(
+        chat_id=chat_id,
+        photo=VID_TRIMMER_URL,
+        caption=VID_TRIMMER_TEXT,
+        parse_mode="markdown"
+    )
 
 @Client.on_message(filters.private & filters.media & filters.user(ADMIN))
 async def receive_media(bot, msg):
