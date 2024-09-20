@@ -13,41 +13,39 @@ def create_drive_service():
 
 @Client.on_message(filters.private & filters.command("gupload") & filters.user(ADMIN))
 async def upload_to_gdrive(bot, msg):
-    # Ask the user to send the file to upload
-    prompt = await msg.reply_text("📤 Please reply to a file (document, video, or audio) to upload to Google Drive.")
+    reply = msg.reply_to_message
+    if not reply or not (reply.document or reply.audio or reply.video):
+        return await msg.reply_text("Please reply to a file (document, video, or audio) to upload to Google Drive.")
     
-    # Wait for a file in the reply
-    response = await bot.listen(msg.chat.id)
-    reply = response.reply_to_message
+    # Get the media and original file name
     media = reply.document or reply.audio or reply.video
-    if not media:
-        return await prompt.edit_text("Please reply to a valid file (document, video, or audio).")
-    
-    # Notify the user about the downloading process
     og_media = getattr(reply, reply.media.value)
     new_name = media.file_name
+    
+    # Start downloading the file with progress bar
     sts = await msg.reply_text(f"🔄 Downloading **{new_name}**...📥")
     c_time = time.time()
     downloaded = await reply.download(file_name=new_name, progress=progress_message, progress_args=(f"Downloading **{new_name}**...", sts, c_time))
     filesize = humanbytes(og_media.file_size)
 
     # Google Drive Upload
-    sts = await sts.edit(f"🚀 Uploading **{new_name}** to Google Drive... 📤")
+    await sts.edit(f"🚀 Uploading **{new_name}** to Google Drive... 📤")
     
     try:
+        # Create Google Drive service
         drive_service = create_drive_service()
         file_metadata = {'name': new_name}
-        media = MediaFileUpload(downloaded, resumable=True)
+        media_body = MediaFileUpload(downloaded, resumable=True)
 
-        # Create the file in Google Drive
-        upload = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        
-        # Notify user on completion
+        # Upload the file to Google Drive
+        uploaded_file = drive_service.files().create(body=file_metadata, media_body=media_body, fields='id').execute()
+
+        # Notify user on successful upload
         await sts.edit(f"✅ File **{new_name}** uploaded successfully to Google Drive!\n💽 Size: {filesize}")
     except Exception as e:
-        return await sts.edit(f"❌ Upload failed: {e}")
-
-    # Clean up
+        await sts.edit(f"❌ Upload failed: {e}")
+    
+    # Clean up the downloaded file
     try:
         os.remove(downloaded)
     except Exception as e:
