@@ -1,6 +1,6 @@
 import time
 import os
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import DOWNLOAD_LOCATION, ADMIN, VID_TRIMMER_URL 
 from main.utils import progress_message, humanbytes
@@ -21,7 +21,7 @@ async def start_trim_process(bot, msg):
         chat_id=chat_id,
         photo=VID_TRIMMER_URL,
         caption=VID_TRIMMER_TEXT,
-        parse_mode="markdown"
+        parse_mode=enums.ParseMode.MARKDOWN
     )
 
 @Client.on_message(filters.private & filters.media & filters.user(ADMIN))
