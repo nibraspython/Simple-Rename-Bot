@@ -67,7 +67,7 @@ async def youtube_link_handler(bot, msg):
             if filesize:
                 filesize_str = humanbytes(filesize)  # Show file size instead of bitrate
                 format_id = f['format_id']
-                available_audio.append((filesize_str, format_id))
+                available_audio.append((filesize, filesize_str, format_id))
 
     buttons = []
     row = []
@@ -84,17 +84,21 @@ async def youtube_link_handler(bot, msg):
     if row:
         buttons.append(row)
 
-    # Add the "Audio" button if available
+    # Find the audio with the largest file size (highest quality)
     if available_audio:
-        for size, format_id in available_audio:
-            audio_text = f"🎧 Audio - {size}"  # Show size for audio
-            buttons.append([InlineKeyboardButton(audio_text, callback_data=f"audio_{format_id}_{url}")])
+        highest_quality_audio = max(available_audio, key=lambda x: x[0])
+        audio_filesize_str = highest_quality_audio[1]
+        audio_format_id = highest_quality_audio[2]
+        audio_text = f"🎧 Audio - {audio_filesize_str}"
+        # Keep the original callback data format
+        buttons.append([InlineKeyboardButton(audio_text, callback_data=f"yt_{audio_format_id}_audio_{url}")])
 
     # Add description and thumbnail buttons in the same row
     buttons.append([
         InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}"),
         InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")
     ])
+
 
     markup = InlineKeyboardMarkup(buttons)
 
