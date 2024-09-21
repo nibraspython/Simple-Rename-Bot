@@ -10,6 +10,9 @@ from config import DOWNLOAD_LOCATION, ADMIN, TELEGRAPH_IMAGE_URL
 from main.utils import progress_message, humanbytes
 from ytdl_text import YTDL_WELCOME_TEXT
 
+# Global variable to track ongoing downloads
+download_in_progress = False
+
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     # Replace the placeholder with the actual URL from config.py
@@ -110,6 +113,16 @@ async def youtube_link_handler(bot, msg):
 
 @Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
+    global download_in_progress
+
+    if download_in_progress:
+        # Send a pop-up notification that a download is already in progress
+        await query.answer("⏳ Please wait until the previous video is downloaded and uploaded.", show_alert=True)
+        return
+
+    # Mark that a download is in progress
+    download_in_progress = True
+
     data = query.data.split('_')
     format_id = data[1]
     resolution = data[2]
@@ -153,6 +166,8 @@ async def yt_callback_handler(bot, query):
         if download_message.text != error_message:
             await download_message.edit_text(error_message)
         
+        # Reset the download state
+        download_in_progress = False
         return
 
     final_filesize = os.path.getsize(downloaded_path)
@@ -215,6 +230,9 @@ async def yt_callback_handler(bot, query):
         os.remove(downloaded_path)
     if thumb_path and os.path.exists(thumb_path):
         os.remove(thumb_path)
+
+    # Reset the download state after the upload is done
+    download_in_progress = False
 
 @Client.on_callback_query(filters.regex(r'^thumb_https?://(www\.)?youtube\.com/watch\?v='))
 async def thumb_callback_handler(bot, query):
