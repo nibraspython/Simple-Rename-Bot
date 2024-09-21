@@ -119,7 +119,11 @@ async def yt_callback_handler(bot, query):
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
     # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    initial_message = f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**"
+    
+    # Check if the current message content is different before editing
+    if query.message.text != initial_message:
+        download_message = await query.message.edit_text(initial_message)
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
@@ -135,9 +139,20 @@ async def yt_callback_handler(bot, query):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
-        await download_message.edit_text("✅ **Download completed!**")
+        
+        completed_message = "✅ **Download completed!**"
+        
+        # Check if the current message content is different before editing
+        if download_message.text != completed_message:
+            await download_message.edit_text(completed_message)
+    
     except Exception as e:
-        await download_message.edit_text(f"❌ **Error during download:** {e}")
+        error_message = f"❌ **Error during download:** {e}"
+        
+        # Check if the current message content is different before editing
+        if download_message.text != error_message:
+            await download_message.edit_text(error_message)
+        
         return
 
     final_filesize = os.path.getsize(downloaded_path)
