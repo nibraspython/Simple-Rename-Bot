@@ -6,7 +6,7 @@ from config import DOWNLOAD_LOCATION, ADMIN, VID_TRIMMER_URL
 from main.utils import progress_message, humanbytes
 from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from moviepy.editor import VideoFileClip
-from ytdl_text import VID_TRIMMER_TEXT
+from main.downloader.ytdl_text import VID_TRIMMER_TEXT
 
 # Temporary storage for media and trimming durations
 trim_data = {}
