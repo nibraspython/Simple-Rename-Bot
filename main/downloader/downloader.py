@@ -84,11 +84,12 @@ async def youtube_link_handler(bot, msg):
     if row:
         buttons.append(row)
 
-    # Find the highest quality audio with the largest file size
+    # Determine the highest bitrate audio format
     if available_audio:
-        _, size, format_id = max(available_audio, key=lambda x: x[1])  # Extract size and format_id
-        buttons.append([InlineKeyboardButton(f"🎧 Audio - {size}", callback_data=f"audio_{format_id}_{url}")])
-    
+        highest_audio = max(available_audio, key=lambda x: int(x[0].replace('kbps', '')))  # Find highest bitrate
+        filesize_str = highest_audio[1]  # Get the file size
+        buttons.append([InlineKeyboardButton(f"🎧 Audio - {filesize_str}", callback_data=f"audio_{highest_audio[2]}_{url}")])
+   
     # Add description and thumbnail buttons in the same row
     buttons.append([
         InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}"),
