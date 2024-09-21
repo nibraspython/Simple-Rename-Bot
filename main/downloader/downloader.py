@@ -157,7 +157,7 @@ async def yt_callback_handler(bot, query):
             img_width, img_height = img.size
             scale_factor = max(video_width / img_width, video_height / img_height)
             new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
-            img = img.resize(new_size, Image.ANTIALIAS)
+            img = img.resize(new_size, Image.LANCZOS)
             left = (img.width - video_width) / 2
             top = (img.height - video_height) / 2
             right = (img.width + video_width) / 2
