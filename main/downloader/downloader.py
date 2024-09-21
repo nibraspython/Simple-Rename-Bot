@@ -2,16 +2,27 @@ import os
 import time
 import requests
 import yt_dlp as youtube_dl
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 from PIL import Image
-from config import DOWNLOAD_LOCATION, ADMIN
+from config import DOWNLOAD_LOCATION, ADMIN, TELEGRAPH_IMAGE_URL
 from main.utils import progress_message, humanbytes
+from ytdl_text import YTDL_WELCOME_TEXT
 
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
-    await msg.reply_text("🎥 **Please send your YouTube links to download.**")
+    # Replace the placeholder with the actual URL from config.py
+    caption_text = YTDL_WELCOME_TEXT.replace("TELEGRAPH_IMAGE_URL", TELEGRAPH_IMAGE_URL)
+    
+    # Send the image with the updated caption
+    await bot.send_photo(
+        chat_id=msg.chat.id,
+        photo=TELEGRAPH_IMAGE_URL,  # Using the URL from config.py
+        caption=caption_text,
+        parse_mode=enums.ParseMode.MARKDOWN
+    )
+
 
 @Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
 async def youtube_link_handler(bot, msg):
