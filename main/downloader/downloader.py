@@ -10,6 +10,7 @@ from config import DOWNLOAD_LOCATION, ADMIN, TELEGRAPH_IMAGE_URL
 from main.utils import progress_message, humanbytes
 from main.downloader.ytdl_text import YTDL_WELCOME_TEXT
 
+# Command to display welcome text with the YouTube link handler
 @Client.on_message(filters.private & filters.command("ytdl") & filters.user(ADMIN))
 async def ytdl(bot, msg):
     # Replace the placeholder with the actual URL from config.py
@@ -23,7 +24,7 @@ async def ytdl(bot, msg):
         parse_mode=enums.ParseMode.MARKDOWN
     )
 
-
+# Command to handle YouTube video link and provide resolution/audio options
 @Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
@@ -62,15 +63,16 @@ async def youtube_link_handler(bot, msg):
                 format_id = f['format_id']
                 available_resolutions.append((resolution, filesize_str, format_id))
         elif f['ext'] in ['m4a', 'webm'] and f.get('acodec') != 'none':  # Check for audio formats
-            audio_bitrate = f.get('abr', 'N/A')
             filesize = f.get('filesize')
             if filesize:
-                filesize_str = humanbytes(filesize)
+                filesize_str = humanbytes(filesize)  # Show file size instead of bitrate
                 format_id = f['format_id']
-                available_audio.append((audio_bitrate, filesize_str, format_id))
+                available_audio.append((filesize_str, format_id))
 
     buttons = []
     row = []
+    
+    # Add available resolutions to the buttons
     for resolution, size, format_id in available_resolutions:
         button_text = f"🎬 {resolution} - {size}"
         callback_data = f"yt_{format_id}_{resolution}_{url}"
@@ -84,11 +86,16 @@ async def youtube_link_handler(bot, msg):
 
     # Add the "Audio" button if available
     if available_audio:
-        buttons.append([InlineKeyboardButton("🎧 Audio", callback_data=f"audio_{url}")])
+        for size, format_id in available_audio:
+            audio_text = f"🎧 Audio - {size}"  # Show size for audio
+            buttons.append([InlineKeyboardButton(audio_text, callback_data=f"audio_{format_id}_{url}")])
 
-    buttons.append([InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")])
-    buttons.append([InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}")])
-    
+    # Add description and thumbnail buttons in the same row
+    buttons.append([
+        InlineKeyboardButton("📝 Description", callback_data=f"desc_{url}"),
+        InlineKeyboardButton("🖼️ Thumbnail", callback_data=f"thumb_{url}")
+    ])
+
     markup = InlineKeyboardMarkup(buttons)
 
     caption = (
