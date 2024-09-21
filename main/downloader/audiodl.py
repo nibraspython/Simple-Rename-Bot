@@ -9,9 +9,10 @@ from PIL import Image
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 
-@Client.on_callback_query(filters.regex(r'^audio_{format_id}_https?://(www\.)?youtube\.com/watch\?v='))
+@Client.on_callback_query(filters.regex(r'^audio_(\w+)_https?://(www\.)?youtube\.com/watch\?v='))
 async def audio_callback_handler(bot, query):
-    url = '_'.join(query.data.split('_')[1:])
+    format_id = query.data.split('_')[1]  # Extract format_id
+    url = '_'.join(query.data.split('_')[2:])  # Extract the URL
 
 # Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
