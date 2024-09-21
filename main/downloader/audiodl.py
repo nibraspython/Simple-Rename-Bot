@@ -15,7 +15,6 @@ async def audio_callback_handler(bot, query):
     data = query.data.split('_', 2)  # Split only on the first two underscores
     format_id = data[1]  # Extract the format ID
     url = data[2]  # Extract the YouTube URL
-    
 
 # Get the title from the original message caption
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
