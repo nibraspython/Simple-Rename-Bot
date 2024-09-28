@@ -66,8 +66,8 @@ async def download_videos(bot, msg):
         video_clip.close()
 
         # Auto-generate thumbnail
-        thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{video_title}_thumb.jpg")
-        os.system(f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 {thumbnail}")
+        thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{os.path.splitext(os.path.basename(file_path))[0]}_thumb.jpg")
+        os.system(f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\"")
 
         await sts.edit(f"🚀 Uploading {video_title}...")
         c_time = time.time()
