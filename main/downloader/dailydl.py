@@ -47,7 +47,11 @@ async def download_videos(bot, msg):
                 for f in valid_formats:
                     res = f.get('format_note')
                     size = humanbytes(f.get('filesize', 0))
-                    buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"{url}|{f['format_id']}")[:64]])
+                    # Ensure callback data stays within 64 characters
+                    callback_data = f"{url}|{f['format_id']}"
+                    if len(callback_data) > 64:
+                        callback_data = callback_data[:64]  # Truncate if too long
+                    buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=callback_data)])
 
                 await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(buttons))
 
