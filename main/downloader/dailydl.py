@@ -30,10 +30,14 @@ async def download_videos(bot, msg):
                     res = f.get('format_note')
                     size = humanbytes(f.get('filesize', 0))
                     if res and size:
-                        buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"{url}|{f['format_id']}")])
+                        # Limit callback_data to 64 characters
+                        buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"{url}|{f['format_id']}")[:64]])
 
-                # Show resolution options
-                await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(buttons))
+                # Ensure that reply_markup is constructed properly
+                if buttons:
+                    await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(buttons))
+                else:
+                    await sts.edit(f"Error: No valid formats found for {video_title}.")
 
         except Exception as e:
             await sts.edit(f"Error: {e}")
