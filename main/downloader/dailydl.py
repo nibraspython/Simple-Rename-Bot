@@ -19,58 +19,47 @@ ydl_opts = {
 async def download_videos(bot, msg):
     reply = msg.reply_to_message
     if not reply or not reply.text:
-        return await msg.reply_text("Please reply to a message containing URLs of videos to download.")
+        return await msg.reply_text("Please reply to a message containing a Dailymotion URL.")
 
-    urls = reply.text.splitlines()
+    url = reply.text.strip()
 
-    for url in urls:
-        sts = await msg.reply_text("🔄 Processing your request...")
-        
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(url, download=False)
-                video_title = info_dict.get('title', 'Unknown Video')
-                formats = info_dict.get('formats', [])
+    sts = await msg.reply_text("🔄 Processing your request...")
 
-                # Filter out valid formats that have both resolution and file size
-                valid_formats = [f for f in formats if f.get('format_note') and f.get('filesize')]
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=False)
+            video_title = info_dict.get('title', 'Unknown Video')
+            formats = info_dict.get('formats', [])
 
-                if not valid_formats:
-                    await sts.edit(f"Error: No valid formats found for {video_title}. Trying fallback...")
-                    formats = info_dict.get('formats', [])
-                    if not formats:
-                        await sts.edit(f"Failed to fetch formats for {video_title}. Skipping...")
-                        continue
+            # Filter valid formats with resolution and file size
+            valid_formats = [f for f in formats if f.get('format_note') and f.get('filesize')]
 
-                # Create InlineKeyboard buttons for available resolutions (3 buttons per row to avoid Telegram limits)
-                buttons = []
-                for f in valid_formats:
-                    res = f.get('format_note') or f.get('resolution', 'Unknown')
-                    size = humanbytes(f.get('filesize', 0))
-                    # Ensure callback data stays within 64 characters
-                    callback_data = f"{url}|{f['format_id']}"
-                    if len(callback_data) > 64:
-                        callback_data = callback_data[:64]  # Truncate if too long
-                    buttons.append(InlineKeyboardButton(f"{res} - {size}", callback_data=callback_data))
+            if not valid_formats:
+                await sts.edit(f"No valid formats found for {video_title}.")
+                return
 
-                # Limit buttons to 3 per row
-                keyboard = [buttons[i:i + 3] for i in range(0, len(buttons), 3)]
-                
-                await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(keyboard))
+            # Create buttons for each available resolution
+            buttons = []
+            for f in valid_formats:
+                res = f.get('format_note')
+                size = humanbytes(f.get('filesize', 0))
+                callback_data = f"{url}|{f['format_id']}"
+                buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=callback_data)])
 
-        except yt_dlp.utils.DownloadError as e:
-            await sts.edit(f"yt-dlp error: {str(e)}")
-            continue
-        except Exception as e:
-            await sts.edit(f"Error: {e}")
-            continue
+            # Send resolution selection buttons
+            await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(buttons))
+
+    except yt_dlp.utils.DownloadError as e:
+        await sts.edit(f"yt-dlp error: {str(e)}")
+    except Exception as e:
+        await sts.edit(f"Error: {e}")
 
 @Client.on_callback_query()
 async def button(bot, query):
     data = query.data.split("|")
     url, format_id = data[0], data[1]
     
-    sts = await query.message.edit(f"🔄 Downloading your video...")
+    sts = await query.message.edit(f"🔄 Downloading video...")
 
     try:
         ydl_opts.update({"format": format_id})
