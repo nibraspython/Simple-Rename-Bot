@@ -5,7 +5,15 @@ from main.utils import progress_message, humanbytes
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 
-ydl_opts = {"format": "best", "noplaylist": True}
+ydl_opts = {
+    "format": "best",  # Automatically choose the best available format
+    "noplaylist": False,  # Allow playlists or multi-format extraction
+    "ignoreerrors": True,  # Continue processing even if errors occur
+    "geo_bypass": True,  # Bypass geo-restricted sites
+    "restrictfilenames": True,  # Avoid special characters in filenames
+    "no_warnings": True,  # Hide non-critical warnings
+    "quiet": True,  # Suppress output except for errors
+}
 
 @Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
 async def download_videos(bot, msg):
@@ -28,8 +36,11 @@ async def download_videos(bot, msg):
                 valid_formats = [f for f in formats if f.get('format_note') and f.get('filesize')]
 
                 if not valid_formats:
-                    await sts.edit(f"Error: No valid formats found for {video_title}.")
-                    continue
+                    await sts.edit(f"Error: No valid formats found for {video_title}. Trying fallback...")
+                    formats = info_dict.get('formats', [])
+                    if not formats:
+                        await sts.edit(f"Failed to fetch formats for {video_title}. Skipping...")
+                        continue
 
                 # Create InlineKeyboard buttons for available resolutions
                 buttons = []
@@ -38,7 +49,6 @@ async def download_videos(bot, msg):
                     size = humanbytes(f.get('filesize', 0))
                     buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"{url}|{f['format_id']}")[:64]])
 
-                # Ensure that reply_markup is constructed properly
                 await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(buttons))
 
         except yt_dlp.utils.DownloadError as e:
