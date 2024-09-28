@@ -44,12 +44,21 @@ async def download_videos(bot, msg):
             # Update yt-dlp options to download the selected format
             ydl_opts.update({"format": format_id})
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Download the video
                 info_dict = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info_dict)
 
-                # Ensure the file has a proper extension
+                # Ensure the file has a proper extension and check for the output directory
+                if not os.path.exists(DOWNLOAD_LOCATION):
+                    os.makedirs(DOWNLOAD_LOCATION)
+
                 if not file_path.lower().endswith(('.mp4', '.mkv', '.webm', '.avi', '.mov')):
                     file_path += '.mp4'  # Default to mp4 if no valid extension is found
+                
+                # Move the downloaded file to the DOWNLOAD_LOCATION
+                new_file_path = os.path.join(DOWNLOAD_LOCATION, os.path.basename(file_path))
+                os.rename(file_path, new_file_path)
+                file_path = new_file_path
 
         # Get thumbnail and duration
         video_clip = VideoFileClip(file_path)
@@ -57,7 +66,7 @@ async def download_videos(bot, msg):
         video_clip.close()
 
         # Auto-generate thumbnail
-        thumbnail = f"{DOWNLOAD_LOCATION}/{video_title}_thumb.jpg"
+        thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{video_title}_thumb.jpg")
         os.system(f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 {thumbnail}")
 
         await sts.edit(f"🚀 Uploading {video_title}...")
