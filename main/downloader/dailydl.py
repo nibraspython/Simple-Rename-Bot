@@ -39,7 +39,7 @@ async def download_videos(bot, msg):
                 return
 
             format_id = highest_res_format['format_id']
-            await sts.edit(f"🎬 {video_title}\nDownloading the highest resolution available...")
+            await sts.edit(f"🎬 {video_title}\n\nDownloading the highest resolution available...")
 
             # Update yt-dlp options to download the selected format
             ydl_opts.update({"format": format_id})
@@ -69,16 +69,17 @@ async def download_videos(bot, msg):
         thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{os.path.splitext(os.path.basename(file_path))[0]}_thumb.jpg")
         os.system(f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\"")
 
-        await sts.edit(f"🚀 Uploading {video_title}...")
+        await sts.edit(f"🚀 Uploading Started... Thanks To All Who Supported ❤\n\n**{video_title}**")
         c_time = time.time()
 
         await bot.send_video(
             msg.chat.id,
             video=file_path,
             thumb=thumbnail,
+            duration=duration,
             caption=f"{video_title}\n🕒 Duration: {duration} seconds",
             progress=progress_message,
-            progress_args=(f"Uploading {video_title}...", sts, c_time)
+            progress_args=(f"📤Uploading Started...\n\n**{video_title}**...", sts, c_time)
         )
 
         # Cleanup
