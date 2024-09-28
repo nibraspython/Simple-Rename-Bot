@@ -42,7 +42,7 @@ async def download_videos(bot, msg):
                         await sts.edit(f"Failed to fetch formats for {video_title}. Skipping...")
                         continue
 
-                # Create InlineKeyboard buttons for available resolutions
+                # Create InlineKeyboard buttons for available resolutions (3 buttons per row to avoid Telegram limits)
                 buttons = []
                 for f in valid_formats:
                     res = f.get('format_note') or f.get('resolution', 'Unknown')
@@ -51,9 +51,12 @@ async def download_videos(bot, msg):
                     callback_data = f"{url}|{f['format_id']}"
                     if len(callback_data) > 64:
                         callback_data = callback_data[:64]  # Truncate if too long
-                    buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=callback_data)])
+                    buttons.append(InlineKeyboardButton(f"{res} - {size}", callback_data=callback_data))
 
-                await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(buttons))
+                # Limit buttons to 3 per row
+                keyboard = [buttons[i:i + 3] for i in range(0, len(buttons), 3)]
+                
+                await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(keyboard))
 
         except yt_dlp.utils.DownloadError as e:
             await sts.edit(f"yt-dlp error: {str(e)}")
