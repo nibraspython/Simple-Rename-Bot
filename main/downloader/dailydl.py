@@ -31,42 +31,21 @@ async def download_videos(bot, msg):
             video_title = info_dict.get('title', 'Unknown Video')
             formats = info_dict.get('formats', [])
 
-            # Filter valid formats with resolution and file size
-            valid_formats = [f for f in formats if f.get('format_note') and f.get('filesize')]
+            # Sort formats by resolution (height) and select the highest available
+            highest_res_format = max(formats, key=lambda f: f.get('height', 0), default=None)
 
-            if not valid_formats:
+            if not highest_res_format:
                 await sts.edit(f"No valid formats found for {video_title}.")
                 return
 
-            # Create buttons for each available resolution
-            buttons = []
-            for f in valid_formats:
-                res = f.get('format_note')
-                size = humanbytes(f.get('filesize', 0))
-                callback_data = f"{url}|{f['format_id']}"
-                buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=callback_data)])
+            format_id = highest_res_format['format_id']
+            await sts.edit(f"🎬 {video_title}\nDownloading the highest resolution available...")
 
-            # Send resolution selection buttons
-            await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(buttons))
-
-    except yt_dlp.utils.DownloadError as e:
-        await sts.edit(f"yt-dlp error: {str(e)}")
-    except Exception as e:
-        await sts.edit(f"Error: {e}")
-
-@Client.on_callback_query()
-async def button(bot, query):
-    data = query.data.split("|")
-    url, format_id = data[0], data[1]
-    
-    sts = await query.message.edit(f"🔄 Downloading video...")
-
-    try:
-        ydl_opts.update({"format": format_id})
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            file_path = ydl.prepare_filename(info_dict)
-            video_title = info_dict.get('title', 'Unknown Video')
+            # Update yt-dlp options to download the selected format
+            ydl_opts.update({"format": format_id})
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info_dict = ydl.extract_info(url, download=True)
+                file_path = ydl.prepare_filename(info_dict)
 
         # Get thumbnail and duration
         video_clip = VideoFileClip(file_path)
@@ -81,7 +60,7 @@ async def button(bot, query):
         c_time = time.time()
 
         await bot.send_video(
-            query.message.chat.id,
+            msg.chat.id,
             video=file_path,
             thumb=thumbnail,
             caption=f"{video_title}\n🕒 Duration: {duration} seconds",
@@ -89,11 +68,11 @@ async def button(bot, query):
             progress_args=(f"Uploading {video_title}...", sts, c_time)
         )
 
+        # Cleanup
         os.remove(file_path)
         os.remove(thumbnail)
 
+    except yt_dlp.utils.DownloadError as e:
+        await sts.edit(f"yt-dlp error: {str(e)}")
     except Exception as e:
-        await sts.edit(f"Error during download or upload: {e}")
-        return
-
-    await sts.delete()
+        await sts.edit(f"Error: {e}")
