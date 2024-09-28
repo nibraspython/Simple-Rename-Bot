@@ -45,7 +45,7 @@ async def download_videos(bot, msg):
                 # Create InlineKeyboard buttons for available resolutions
                 buttons = []
                 for f in valid_formats:
-                    res = f.get('format_note')
+                    res = f.get('format_note') or f.get('resolution', 'Unknown')
                     size = humanbytes(f.get('filesize', 0))
                     # Ensure callback data stays within 64 characters
                     callback_data = f"{url}|{f['format_id']}"
