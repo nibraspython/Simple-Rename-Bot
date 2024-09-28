@@ -1,8 +1,9 @@
-import time, os, yt_dlp
-from pyrogram import Client, filters, enums
+import time
+import os
+import yt_dlp
+from pyrogram import Client, filters
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from moviepy.editor import VideoFileClip
 
 ydl_opts = {
@@ -22,7 +23,6 @@ async def download_videos(bot, msg):
         return await msg.reply_text("Please reply to a message containing a Dailymotion URL.")
 
     url = reply.text.strip()
-
     sts = await msg.reply_text("🔄 Processing your request...")
 
     try:
@@ -46,6 +46,10 @@ async def download_videos(bot, msg):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=True)
                 file_path = ydl.prepare_filename(info_dict)
+
+                # Ensure the file has a proper extension
+                if not file_path.lower().endswith(('.mp4', '.mkv', '.webm', '.avi', '.mov')):
+                    file_path += '.mp4'  # Default to mp4 if no valid extension is found
 
         # Get thumbnail and duration
         video_clip = VideoFileClip(file_path)
