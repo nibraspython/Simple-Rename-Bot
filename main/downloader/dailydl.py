@@ -14,7 +14,7 @@ async def download_videos(bot, msg):
         return await msg.reply_text("Please reply to a message containing URLs of videos to download.")
 
     urls = reply.text.splitlines()
-    
+
     for url in urls:
         sts = await msg.reply_text("🔄 Processing your request...")
         
@@ -24,21 +24,26 @@ async def download_videos(bot, msg):
                 video_title = info_dict.get('title', 'Unknown Video')
                 formats = info_dict.get('formats', [])
 
+                # Filter out valid formats that have both resolution and file size
+                valid_formats = [f for f in formats if f.get('format_note') and f.get('filesize')]
+
+                if not valid_formats:
+                    await sts.edit(f"Error: No valid formats found for {video_title}.")
+                    continue
+
                 # Create InlineKeyboard buttons for available resolutions
                 buttons = []
-                for f in formats:
+                for f in valid_formats:
                     res = f.get('format_note')
                     size = humanbytes(f.get('filesize', 0))
-                    if res and size:
-                        # Limit callback_data to 64 characters
-                        buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"{url}|{f['format_id']}")[:64]])
+                    buttons.append([InlineKeyboardButton(f"{res} - {size}", callback_data=f"{url}|{f['format_id']}")[:64]])
 
                 # Ensure that reply_markup is constructed properly
-                if buttons:
-                    await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(buttons))
-                else:
-                    await sts.edit(f"Error: No valid formats found for {video_title}.")
+                await sts.edit(f"🎬 {video_title}\nSelect a resolution to download:", reply_markup=InlineKeyboardMarkup(buttons))
 
+        except yt_dlp.utils.DownloadError as e:
+            await sts.edit(f"yt-dlp error: {str(e)}")
+            continue
         except Exception as e:
             await sts.edit(f"Error: {e}")
             continue
@@ -49,7 +54,7 @@ async def button(bot, query):
     url, format_id = data[0], data[1]
     
     sts = await query.message.edit(f"🔄 Downloading your video...")
-    
+
     try:
         ydl_opts.update({"format": format_id})
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -86,4 +91,3 @@ async def button(bot, query):
         return
 
     await sts.delete()
-
