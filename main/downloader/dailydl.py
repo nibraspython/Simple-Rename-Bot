@@ -7,86 +7,96 @@ from main.utils import progress_message, humanbytes
 from moviepy.editor import VideoFileClip
 
 ydl_opts = {
-    "format": "best",  # Automatically choose the best available format
-    "noplaylist": False,  # Allow playlists or multi-format extraction
-    "ignoreerrors": True,  # Continue processing even if errors occur
-    "geo_bypass": True,  # Bypass geo-restricted sites
-    "restrictfilenames": True,  # Avoid special characters in filenames
-    "no_warnings": True,  # Hide non-critical warnings
-    "quiet": True,  # Suppress output except for errors
+    "format": "best",
+    "noplaylist": False,
+    "ignoreerrors": True,
+    "geo_bypass": True,
+    "restrictfilenames": True,
+    "no_warnings": True,
+    "quiet": True,
 }
 
 @Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
 async def download_videos(bot, msg):
     reply = msg.reply_to_message
     if not reply or not reply.text:
-        return await msg.reply_text("Please reply to a message containing a Dailymotion URL.")
+        return await msg.reply_text("❗ Please reply to a message containing Dailymotion URLs.")
+    
+    urls = reply.text.strip().splitlines()  # Split URLs by new lines
+    total_urls = len(urls)
+    if total_urls == 0:
+        return await msg.reply_text("❗ No valid URLs found in the message.")
+    
+    for idx, url in enumerate(urls, 1):
+        sts = await msg.reply_text(f"🔄 Processing URL {idx}/{total_urls}...\n\n🔗 {url}")
 
-    url = reply.text.strip()
-    sts = await msg.reply_text("🔄 Processing your request...")
-
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=False)
-            video_title = info_dict.get('title', 'Unknown Video')
-            formats = info_dict.get('formats', [])
-
-            # Sort formats by resolution (height) and select the highest available
-            highest_res_format = max(formats, key=lambda f: f.get('height', 0), default=None)
-
-            if not highest_res_format:
-                await sts.edit(f"No valid formats found for {video_title}.")
-                return
-
-            format_id = highest_res_format['format_id']
-            await sts.edit(f"🎬 {video_title}\n\nDownloading the highest resolution available...")
-
-            # Update yt-dlp options to download the selected format
-            ydl_opts.update({"format": format_id})
+        try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Download the video
-                info_dict = ydl.extract_info(url, download=True)
-                file_path = ydl.prepare_filename(info_dict)
+                info_dict = ydl.extract_info(url, download=False)
+                video_title = info_dict.get('title', 'Unknown Video')
+                formats = info_dict.get('formats', [])
 
-                # Ensure the file has a proper extension and check for the output directory
-                if not os.path.exists(DOWNLOAD_LOCATION):
-                    os.makedirs(DOWNLOAD_LOCATION)
+                # Sort formats by resolution (height) and select the highest available
+                highest_res_format = max(formats, key=lambda f: f.get('height', 0), default=None)
 
-                if not file_path.lower().endswith(('.mp4', '.mkv', '.webm', '.avi', '.mov')):
-                    file_path += '.mp4'  # Default to mp4 if no valid extension is found
-                
-                # Move the downloaded file to the DOWNLOAD_LOCATION
-                new_file_path = os.path.join(DOWNLOAD_LOCATION, os.path.basename(file_path))
-                os.rename(file_path, new_file_path)
-                file_path = new_file_path
+                if not highest_res_format:
+                    await sts.edit(f"❗ No valid formats found for **{video_title}**.")
+                    continue
 
-        # Get thumbnail and duration
-        video_clip = VideoFileClip(file_path)
-        duration = int(video_clip.duration)
-        video_clip.close()
+                format_id = highest_res_format['format_id']
+                file_size = humanbytes(highest_res_format.get('filesize', 0))
+                resolution = f"{highest_res_format.get('height', 0)}p"
 
-        # Auto-generate thumbnail
-        thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{os.path.splitext(os.path.basename(file_path))[0]}_thumb.jpg")
-        os.system(f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\"")
+                await sts.edit(f"🎬 **{video_title}**\n\n📥 Downloading the highest resolution available...\n"
+                               f"⚙️ **Resolution:** {resolution}\n📦 **Size:** {file_size}")
 
-        await sts.edit(f"🚀 Uploading Started... Thanks To All Who Supported ❤\n\n**{video_title}**")
-        c_time = time.time()
+                # Update yt-dlp options to download the selected format
+                ydl_opts.update({"format": format_id})
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info_dict = ydl.extract_info(url, download=True)
+                    file_path = ydl.prepare_filename(info_dict)
 
-        await bot.send_video(
-            msg.chat.id,
-            video=file_path,
-            thumb=thumbnail,
-            duration=duration,
-            caption=f"{video_title}\n🕒 Duration: {duration} seconds",
-            progress=progress_message,
-            progress_args=(f"📤Uploading Started...\n\n**{video_title}**...", sts, c_time)
-        )
+                    # Ensure the file has a proper extension and check for the output directory
+                    if not os.path.exists(DOWNLOAD_LOCATION):
+                        os.makedirs(DOWNLOAD_LOCATION)
 
-        # Cleanup
-        os.remove(file_path)
-        os.remove(thumbnail)
+                    if not file_path.lower().endswith(('.mp4', '.mkv', '.webm', '.avi', '.mov')):
+                        file_path += '.mp4'  # Default to mp4 if no valid extension is found
 
-    except yt_dlp.utils.DownloadError as e:
-        await sts.edit(f"yt-dlp error: {str(e)}")
-    except Exception as e:
-        await sts.edit(f"Error: {e}")
+                    # Move the downloaded file to the DOWNLOAD_LOCATION
+                    new_file_path = os.path.join(DOWNLOAD_LOCATION, os.path.basename(file_path))
+                    os.rename(file_path, new_file_path)
+                    file_path = new_file_path
+
+            # Get thumbnail and duration
+            video_clip = VideoFileClip(file_path)
+            duration = int(video_clip.duration)
+            video_clip.close()
+
+            # Auto-generate thumbnail
+            thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{os.path.splitext(os.path.basename(file_path))[0]}_thumb.jpg")
+            os.system(f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\"")
+
+            await sts.edit(f"🚀 **Uploading Started...**\n\n**{video_title}**")
+            c_time = time.time()
+
+            await bot.send_video(
+                msg.chat.id,
+                video=file_path,
+                thumb=thumbnail,
+                duration=duration,
+                caption=f"**{video_title}**\n🕒 Duration: {duration} seconds\n⚙️ Resolution: {resolution}\n📦 Size: {file_size}",
+                progress=progress_message,
+                progress_args=(f"📤 Uploading...\n\n**{video_title}**...", sts, c_time)
+            )
+
+            # Cleanup
+            os.remove(file_path)
+            os.remove(thumbnail)
+
+        except yt_dlp.utils.DownloadError as e:
+            await sts.edit(f"❗ yt-dlp error for URL {idx}/{total_urls}: {str(e)}")
+        except Exception as e:
+            await sts.edit(f"❗ Error for URL {idx}/{total_urls}: {e}")
+
+    await msg.reply_text(f"✅ All {total_urls} URLs have been processed.")
