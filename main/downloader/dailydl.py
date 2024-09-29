@@ -1,128 +1,80 @@
-import os
-import yt_dlp
-from pyrogram import Client, filters
-from moviepy.editor import VideoFileClip
+import time, os
+from pyrogram import Client, filters, enums
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import humanbytes, progress_message  # Importing the existing progress function
-import time
+from main.utils import progress_message, humanbytes
+from yt_dlp import YoutubeDL
 
-ydl_opts = {
-    "format": "best",
-    "noplaylist": False,
-    "ignoreerrors": True,
-    "geo_bypass": True,
-    "restrictfilenames": True,
-    "no_warnings": True,
-    "quiet": True,
-}
+# Dailymotion Download Function
+def download_dailymotion(url):
+    ydl_opts = {
+        'format': 'best',  # download the best quality
+        'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
+        'noplaylist': True,
+        'quiet': True,
+        'no_warnings': True,
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        file_path = ydl.prepare_filename(info)
+        return file_path, info.get('title'), info.get('duration', 0), info.get('filesize', 0)
 
 @Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
-async def download_videos(bot, msg):
+async def dailymotion_download(bot, msg):
     reply = msg.reply_to_message
     if not reply or not reply.text:
-        return await msg.reply_text("❗ Please reply to a message containing Dailymotion URLs.")
+        return await msg.reply_text("Please reply to a message containing one or more Dailymotion URLs.")
     
-    urls = reply.text.strip().splitlines()
-    total_urls = len(urls)
-    if total_urls == 0:
-        return await msg.reply_text("❗ No valid URLs found in the message.")
-    
-    for idx, url in enumerate(urls, 1):
-        progress_message = await msg.reply_text(f"🔄 Processing URL {idx}/{total_urls}...\n\n🔗 {url}")
+    urls = reply.text.split()  # Split the message to extract multiple URLs
+    if not urls:
+        return await msg.reply_text("Please provide valid Dailymotion URLs.")
 
+    # Iterate over each URL
+    for url in urls:
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(url, download=False)
-                if not info_dict:
-                    await progress_message.edit(f"❗ Unable to retrieve video info for URL {url}")
-                    continue
+            # Display processing message
+            sts = await msg.reply_text(f"🔄 Processing your request for {url}...")
 
-                video_title = info_dict.get('title', 'Unknown Video')
-                formats = info_dict.get('formats', [])
-                highest_res_format = max(formats, key=lambda f: f.get('height', 0), default=None)
-
-                if not highest_res_format:
-                    await progress_message.edit(f"❗ No valid formats found for **{video_title}**.")
-                    continue
-
-                format_id = highest_res_format['format_id']
-                file_size = humanbytes(highest_res_format.get('filesize', 0))
-                resolution = f"{highest_res_format.get('height', 0)}p"
-
-                await progress_message.edit(f"🎬 **{video_title}**\n\n📥 Downloading the highest resolution available...\n"
-                                            f"⚙️ **Resolution:** {resolution}\n📦 **Size:** {file_size}")
-
-                # Update yt-dlp options to download the correct format
-                ydl_opts.update({"format": format_id})
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info_dict = ydl.extract_info(url, download=True)
-                    file_path = ydl.prepare_filename(info_dict)
-
-                    if not file_path or not os.path.exists(file_path):
-                        await progress_message.edit(f"❗ File not found after download for **{video_title}**.")
-                        continue
-
-                    # Ensure valid extension
-                    if not file_path.lower().endswith(('.mp4', '.mkv', '.webm', '.avi', '.mov')):
-                        file_path += '.mp4'
-
-                    # Move the file to the desired DOWNLOAD_LOCATION
-                    new_file_path = os.path.join(DOWNLOAD_LOCATION, os.path.basename(file_path))
-                    os.rename(file_path, new_file_path)
-                    file_path = new_file_path
-
-            await msg.reply(f"✅ Downloaded to: {file_path}")
-
-            # Check if the file exists before uploading
-            if not os.path.exists(file_path):
-                await progress_message.edit(f"❗ File not found for upload: {file_path}")
-                continue
-
-            # Process the video for duration and generate thumbnail
-            try:
-                video_clip = VideoFileClip(file_path)
-                duration = int(video_clip.duration)
-                video_clip.close()
-            except Exception as e:
-                await progress_message.edit(f"❗ Error processing video file: {e}")
-                continue
-
-            # Generate thumbnail
-            thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{os.path.splitext(os.path.basename(file_path))[0]}_thumb.jpg")
-            thumbnail_cmd = f"ffmpeg -i \"{file_path}\" -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\""
-            os.system(thumbnail_cmd)
-
-            # Check if thumbnail exists before attempting to use it
-            if not os.path.exists(thumbnail):
-                thumbnail = None
-
-            # Upload the video
-            await progress_message.edit(f"🚀 Uploading Started for {video_title}")
+            # Start downloading the video
             c_time = time.time()
-
-            try:
-                await bot.send_video(
-                    msg.chat.id,
-                    video=file_path,
-                    thumb=thumbnail,  # Ensure valid thumbnail
-                    duration=duration,
-                    caption=f"{video_title}\n🕒 Duration: {duration} seconds\n⚙️ Resolution: {resolution}\n📦 Size: {file_size}",
-                    progress=progress_message,  # Use the imported progress function
-                    progress_args=(progress_message, c_time)
-                )
-            except Exception as e:
-                await msg.reply(f"❗ Error during file upload: {e}")
-                continue         
-
-            # Clean up downloaded files after upload
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            if thumbnail and os.path.exists(thumbnail):
+            downloaded, video_title, duration, file_size = download_dailymotion(url)
+            human_size = humanbytes(file_size)
+            
+            await sts.edit(f"📥 Downloading: {video_title}\nResolution: Highest\n💽 Size: {human_size}")
+            
+            # Download complete message
+            await sts.edit("✅ Download Completed! 📥")
+            
+            # Thumbnail (optional: Download thumbnail if available)
+            thumbnail = None
+            if 'thumbnail' in reply:
+                thumbnail = await bot.download_media(reply.thumbnail.file_id)
+            
+            # Prepare the caption with emojis
+            cap = f"🎬 **{video_title}**\n\n💽 Size: {human_size}\n🕒 Duration: {duration // 60} mins {duration % 60} secs"
+            
+            # Upload to Telegram
+            await sts.edit(f"🚀 Uploading: {video_title} 📤")
+            c_time = time.time()
+            
+            await bot.send_video(
+                msg.chat.id,
+                video=downloaded,
+                thumb=thumbnail,
+                caption=cap,
+                duration=duration,
+                progress=progress_message,
+                progress_args=(f"🚀 Uploading {video_title}... 📤", sts, c_time),
+            )
+            
+            # Remove downloaded files
+            os.remove(downloaded)
+            if thumbnail:
                 os.remove(thumbnail)
+                
+            await sts.edit(f"✅ Successfully uploaded: {video_title}")
 
-        except yt_dlp.utils.DownloadError as e:
-            await progress_message.edit(f"❗ yt-dlp error for URL {idx}/{total_urls}: {str(e)}")
         except Exception as e:
-            await progress_message.edit(f"❗ Error for URL {idx}/{total_urls}: {e}")
+            await msg.reply_text(f"❌ Failed to process {url}. Error: {str(e)}")
 
-    await msg.reply_text(f"✅ All {total_urls} URLs have been processed.")
+    # All URLs processed
+    await msg.reply_text("🎉 All URLs processed successfully!")
