@@ -33,6 +33,10 @@ async def download_videos(bot, msg):
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=False)
+                if not info_dict:
+                    await progress_message.reply(f"❗ Unable to retrieve video info for URL {url}")
+                    continue
+
                 video_title = info_dict.get('title', 'Unknown Video')
                 formats = info_dict.get('formats', [])
 
@@ -55,7 +59,14 @@ async def download_videos(bot, msg):
                 ydl_opts.update({"format": format_id})
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info_dict = ydl.extract_info(url, download=True)
+                    if not info_dict:
+                        await progress_message.reply(f"❗ Download failed for **{video_title}**.")
+                        continue
+
                     file_path = ydl.prepare_filename(info_dict)
+                    if not file_path or not os.path.exists(file_path):
+                        await progress_message.reply(f"❗ File not found after download for **{video_title}**.")
+                        continue
 
                     # Ensure the file has a proper extension and check for the output directory
                     if not os.path.exists(DOWNLOAD_LOCATION):
