@@ -3,7 +3,7 @@ import yt_dlp
 from pyrogram import Client, filters
 from moviepy.editor import VideoFileClip
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import humanbytes
+from main.utils import humanbytes, progress  # Importing the existing progress function
 import time
 
 ydl_opts = {
@@ -107,8 +107,8 @@ async def download_videos(bot, msg):
                     thumb=thumbnail,  # Ensure valid thumbnail
                     duration=duration,
                     caption=f"{video_title}\n🕒 Duration: {duration} seconds\n⚙️ Resolution: {resolution}\n📦 Size: {file_size}",
-                    progress=progress_message,
-                    progress_args=(f"📤 Uploading...\n\n{video_title}...", progress_message, c_time)
+                    progress=progress,  # Use the imported progress function
+                    progress_args=(progress_message, c_time)
                 )
             except Exception as e:
                 await msg.reply(f"❗ Error during file upload: {e}")
