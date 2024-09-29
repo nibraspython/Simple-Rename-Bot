@@ -81,9 +81,13 @@ async def download_videos(bot, msg):
                     file_path = new_file_path
 
             # Get thumbnail and duration
-            video_clip = VideoFileClip(file_path)
-            duration = int(video_clip.duration)
-            video_clip.close()
+            try:
+                video_clip = VideoFileClip(file_path)
+                duration = int(video_clip.duration)
+                video_clip.close()
+            except Exception as e:
+                await msg.reply(f"❗ Error processing video file: {e}")
+                continue
 
             # Auto-generate thumbnail
             thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{os.path.splitext(os.path.basename(file_path))[0]}_thumb.jpg")
@@ -93,15 +97,19 @@ async def download_videos(bot, msg):
             await msg.reply(f"🚀 **Uploading Started** for **{video_title}**")
             c_time = time.time()
 
-            await bot.send_video(
-                msg.chat.id,
-                video=file_path,
-                thumb=thumbnail,
-                duration=duration,
-                caption=f"**{video_title}**\n🕒 Duration: {duration} seconds\n⚙️ Resolution: {resolution}\n📦 Size: {file_size}",
-                progress=progress_message,
-                progress_args=(f"📤 Uploading...\n\n**{video_title}**...", progress_message, c_time)
-            )
+            try:
+                await bot.send_video(
+                    msg.chat.id,
+                    video=file_path,
+                    thumb=thumbnail,
+                    duration=duration,
+                    caption=f"**{video_title}**\n🕒 Duration: {duration} seconds\n⚙️ Resolution: {resolution}\n📦 Size: {file_size}",
+                    progress=progress_message,
+                    progress_args=(f"📤 Uploading...\n\n**{video_title}**...", progress_message, c_time)
+                )
+            except Exception as e:
+                await msg.reply(f"❗ Error during file upload: {e}")
+                continue
 
             # Cleanup
             os.remove(file_path)
