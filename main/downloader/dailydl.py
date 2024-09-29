@@ -89,30 +89,30 @@ async def download_videos(bot, msg):
 
             # Generate thumbnail
             thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{os.path.splitext(os.path.basename(file_path))[0]}_thumb.jpg")
-            thumbnail_cmd = f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\""
+            thumbnail_cmd = f"ffmpeg -i \"{file_path}\" -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\""
             os.system(thumbnail_cmd)
 
-   # Check if thumbnail exists before attempting to use it
-if not thumbnail:
-    thumbnail = None
+            # Check if thumbnail exists before attempting to use it
+            if not os.path.exists(thumbnail):
+                thumbnail = None
 
-# Upload the video
-await progress_message.edit(f"🚀 Uploading Started for {video_title}")
-c_time = time.time()
+            # Upload the video
+            await progress_message.edit(f"🚀 Uploading Started for {video_title}")
+            c_time = time.time()
 
-try:
-    await bot.send_video(
-        msg.chat.id,
-        video=file_path,
-        thumb=thumbnail if thumbnail and os.path.exists(thumbnail) else None,  # Ensure valid thumbnail
-        duration=duration,
-        caption=f"{video_title}n🕒 Duration: {duration} secondsn⚙️ Resolution: {resolution}n📦 Size: {file_size}",
-        progress=progress_message,
-        progress_args=(f"📤 Uploading...nn{video_title}...", progress_message, c_time)
-    )
-except Exception as e:
-    await msg.reply(f"❗ Error during file upload: {e}")
-    continue         
+            try:
+                await bot.send_video(
+                    msg.chat.id,
+                    video=file_path,
+                    thumb=thumbnail,  # Ensure valid thumbnail
+                    duration=duration,
+                    caption=f"{video_title}\n🕒 Duration: {duration} seconds\n⚙️ Resolution: {resolution}\n📦 Size: {file_size}",
+                    progress=progress_message,
+                    progress_args=(f"📤 Uploading...\n\n{video_title}...", progress_message, c_time)
+                )
+            except Exception as e:
+                await msg.reply(f"❗ Error during file upload: {e}")
+                continue         
 
             # Clean up downloaded files after upload
             if os.path.exists(file_path):
