@@ -3,7 +3,7 @@ import yt_dlp
 from pyrogram import Client, filters
 from moviepy.editor import VideoFileClip
 from config import DOWNLOAD_LOCATION, ADMIN
-from main.utils import humanbytes, progress  # Importing the existing progress function
+from main.utils import humanbytes, progress_message  # Importing the existing progress function
 import time
 
 ydl_opts = {
@@ -107,7 +107,7 @@ async def download_videos(bot, msg):
                     thumb=thumbnail,  # Ensure valid thumbnail
                     duration=duration,
                     caption=f"{video_title}\n🕒 Duration: {duration} seconds\n⚙️ Resolution: {resolution}\n📦 Size: {file_size}",
-                    progress=progress,  # Use the imported progress function
+                    progress=progress_message,  # Use the imported progress function
                     progress_args=(progress_message, c_time)
                 )
             except Exception as e:
