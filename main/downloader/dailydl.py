@@ -6,6 +6,7 @@ from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import humanbytes
 import time
 
+# yt-dlp options for downloading videos
 ydl_opts = {
     "format": "best",
     "noplaylist": False,
@@ -31,10 +32,11 @@ async def download_videos(bot, msg):
         progress_message = await msg.reply_text(f"🔄 Processing URL {idx}/{total_urls}...\n\n🔗 {url}")
 
         try:
+            # Extract video info from the URL
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=False)
                 if not info_dict:
-                    await progress_message.reply(f"❗ Unable to retrieve video info for URL {url}")
+                    await progress_message.edit(f"❗ Unable to retrieve video info for URL {url}")
                     continue
 
                 video_title = info_dict.get('title', 'Unknown Video')
@@ -42,64 +44,70 @@ async def download_videos(bot, msg):
                 highest_res_format = max(formats, key=lambda f: f.get('height', 0), default=None)
 
                 if not highest_res_format:
-                    await progress_message.reply(f"❗ No valid formats found for **{video_title}**.")
+                    await progress_message.edit(f"❗ No valid formats found for **{video_title}**.")
                     continue
 
                 format_id = highest_res_format['format_id']
                 file_size = humanbytes(highest_res_format.get('filesize', 0))
                 resolution = f"{highest_res_format.get('height', 0)}p"
 
-                await msg.reply(f"🎬 **{video_title}**\n\n📥 Downloading the highest resolution available...\n"
-                                f"⚙️ **Resolution:** {resolution}\n📦 **Size:** {file_size}")
+                await progress_message.edit(f"🎬 **{video_title}**\n\n📥 Downloading the highest resolution available...\n"
+                                            f"⚙️ **Resolution:** {resolution}\n📦 **Size:** {file_size}")
 
+                # Update yt-dlp options to download the correct format
                 ydl_opts.update({"format": format_id})
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info_dict = ydl.extract_info(url, download=True)
                     file_path = ydl.prepare_filename(info_dict)
 
                     if not file_path or not os.path.exists(file_path):
-                        await progress_message.reply(f"❗ File not found after download for **{video_title}**.")
+                        await progress_message.edit(f"❗ File not found after download for **{video_title}**.")
                         continue
 
                     # Ensure valid extension
                     if not file_path.lower().endswith(('.mp4', '.mkv', '.webm', '.avi', '.mov')):
                         file_path += '.mp4'
 
-                    # Move file to the DOWNLOAD_LOCATION
+                    # Move the file to the desired DOWNLOAD_LOCATION
                     new_file_path = os.path.join(DOWNLOAD_LOCATION, os.path.basename(file_path))
                     os.rename(file_path, new_file_path)
                     file_path = new_file_path
 
-            # Log file path to confirm
+            # Confirm the file has been downloaded successfully
             await msg.reply(f"✅ Downloaded to: {file_path}")
 
-            # Check if file exists before proceeding to upload
+            # Check if the file exists before uploading
             if not os.path.exists(file_path):
-                await msg.reply(f"❗ File not found for upload: {file_path}")
+                await progress_message.edit(f"❗ File not found for upload: {file_path}")
                 continue
 
-            # Process video for duration and thumbnail
+            # Process the video to retrieve its duration and generate a thumbnail
             try:
                 video_clip = VideoFileClip(file_path)
                 duration = int(video_clip.duration)
                 video_clip.close()
             except Exception as e:
-                await msg.reply(f"❗ Error processing video file: {e}")
+                await progress_message.edit(f"❗ Error processing video file: {e}")
                 continue
 
             # Generate thumbnail
             thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{os.path.splitext(os.path.basename(file_path))[0]}_thumb.jpg")
-            os.system(f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\"")
+            thumbnail_cmd = f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\""
+            os.system(thumbnail_cmd)
 
-            # Confirm file is ready for upload
-            await msg.reply(f"🚀 **Uploading Started** for **{video_title}**")
+            # Ensure thumbnail exists before uploading
+            if not os.path.exists(thumbnail):
+                thumbnail = None  # Use no thumbnail if creation fails
+
+            # Upload the video
+            await progress_message.edit(f"🚀 **Uploading Started** for **{video_title}**")
             c_time = time.time()
 
             try:
                 await bot.send_video(
                     msg.chat.id,
                     video=file_path,
-                    thumb=thumbnail if os.path.exists(thumbnail) else None,  # Only use thumbnail if it exists
+                    thumb=thumbnail,  # Only use thumbnail if it exists
                     duration=duration,
                     caption=f"**{video_title}**\n🕒 Duration: {duration} seconds\n⚙️ Resolution: {resolution}\n📦 Size: {file_size}",
                     progress=progress_message,
@@ -112,12 +120,12 @@ async def download_videos(bot, msg):
             # Clean up downloaded files after upload
             if os.path.exists(file_path):
                 os.remove(file_path)
-            if os.path.exists(thumbnail):
+            if thumbnail and os.path.exists(thumbnail):
                 os.remove(thumbnail)
 
         except yt_dlp.utils.DownloadError as e:
-            await msg.reply(f"❗ yt-dlp error for URL {idx}/{total_urls}: {str(e)}")
+            await progress_message.edit(f"❗ yt-dlp error for URL {idx}/{total_urls}: {str(e)}")
         except Exception as e:
-            await msg.reply(f"❗ Error for URL {idx}/{total_urls}: {e}")
+            await progress_message.edit(f"❗ Error for URL {idx}/{total_urls}: {e}")
 
     await msg.reply_text(f"✅ All {total_urls} URLs have been processed.")
