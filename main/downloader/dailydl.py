@@ -28,7 +28,7 @@ async def download_videos(bot, msg):
         return await msg.reply_text("❗ No valid URLs found in the message.")
     
     for idx, url in enumerate(urls, 1):
-        sts = await msg.reply_text(f"🔄 Processing URL {idx}/{total_urls}...\n\n🔗 {url}")
+        sts = await msg.reply_text(f"🔄 Processing URL {idx}/{total_urls}...\n\n🔗 {url} \u200b")  # Adding invisible character to make the message unique
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -40,7 +40,7 @@ async def download_videos(bot, msg):
                 highest_res_format = max(formats, key=lambda f: f.get('height', 0), default=None)
 
                 if not highest_res_format:
-                    await sts.edit(f"❗ No valid formats found for **{video_title}**.")
+                    await sts.edit(f"❗ No valid formats found for **{video_title}**. \u200b")
                     continue
 
                 format_id = highest_res_format['format_id']
@@ -48,7 +48,7 @@ async def download_videos(bot, msg):
                 resolution = f"{highest_res_format.get('height', 0)}p"
 
                 await sts.edit(f"🎬 **{video_title}**\n\n📥 Downloading the highest resolution available...\n"
-                               f"⚙️ **Resolution:** {resolution}\n📦 **Size:** {file_size}")
+                               f"⚙️ **Resolution:** {resolution}\n📦 **Size:** {file_size} \u200b")
 
                 # Update yt-dlp options to download the selected format
                 ydl_opts.update({"format": format_id})
@@ -77,7 +77,7 @@ async def download_videos(bot, msg):
             thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{os.path.splitext(os.path.basename(file_path))[0]}_thumb.jpg")
             os.system(f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\"")
 
-            await sts.edit(f"🚀 **Uploading Started...**\n\n**{video_title}**")
+            await sts.edit(f"🚀 **Uploading Started...**\n\n**{video_title}** \u200b")  # Add a non-breaking space to make it unique
             c_time = time.time()
 
             await bot.send_video(
@@ -95,8 +95,8 @@ async def download_videos(bot, msg):
             os.remove(thumbnail)
 
         except yt_dlp.utils.DownloadError as e:
-            await sts.edit(f"❗ yt-dlp error for URL {idx}/{total_urls}: {str(e)}")
+            await sts.edit(f"❗ yt-dlp error for URL {idx}/{total_urls}: {str(e)} \u200b")  # Make message unique
         except Exception as e:
-            await sts.edit(f"❗ Error for URL {idx}/{total_urls}: {e}")
+            await sts.edit(f"❗ Error for URL {idx}/{total_urls}: {e} \u200b")  # Make message unique
 
     await msg.reply_text(f"✅ All {total_urls} URLs have been processed.")
