@@ -28,8 +28,7 @@ async def download_videos(bot, msg):
         return await msg.reply_text("❗ No valid URLs found in the message.")
     
     for idx, url in enumerate(urls, 1):
-        dynamic_part = time.time()  # Using the current time to ensure uniqueness
-        sts = await msg.reply_text(f"🔄 Processing URL {idx}/{total_urls}...\n\n🔗 {url} \n🕒 {dynamic_part}")
+        progress_message = await msg.reply_text(f"🔄 Processing URL {idx}/{total_urls}...\n\n🔗 {url}")
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -41,15 +40,16 @@ async def download_videos(bot, msg):
                 highest_res_format = max(formats, key=lambda f: f.get('height', 0), default=None)
 
                 if not highest_res_format:
-                    await sts.edit(f"❗ No valid formats found for **{video_title}**. \n🕒 {dynamic_part}")
+                    await progress_message.reply(f"❗ No valid formats found for **{video_title}**.")
                     continue
 
                 format_id = highest_res_format['format_id']
                 file_size = humanbytes(highest_res_format.get('filesize', 0))
                 resolution = f"{highest_res_format.get('height', 0)}p"
 
-                await sts.edit(f"🎬 **{video_title}**\n\n📥 Downloading the highest resolution available...\n"
-                               f"⚙️ **Resolution:** {resolution}\n📦 **Size:** {file_size} \n🕒 {dynamic_part}")
+                # Send a new message to avoid repeated editing
+                await msg.reply(f"🎬 **{video_title}**\n\n📥 Downloading the highest resolution available...\n"
+                                f"⚙️ **Resolution:** {resolution}\n📦 **Size:** {file_size}")
 
                 # Update yt-dlp options to download the selected format
                 ydl_opts.update({"format": format_id})
@@ -78,8 +78,8 @@ async def download_videos(bot, msg):
             thumbnail = os.path.join(DOWNLOAD_LOCATION, f"{os.path.splitext(os.path.basename(file_path))[0]}_thumb.jpg")
             os.system(f"ffmpeg -i {file_path} -vf 'thumbnail,scale=320:180' -frames:v 1 \"{thumbnail}\"")
 
-            dynamic_part = time.time()  # Update the dynamic part
-            await sts.edit(f"🚀 **Uploading Started...**\n\n**{video_title}** \n🕒 {dynamic_part}")
+            # Upload notification without overwriting previous status messages
+            await msg.reply(f"🚀 **Uploading Started** for **{video_title}**")
             c_time = time.time()
 
             await bot.send_video(
@@ -89,7 +89,7 @@ async def download_videos(bot, msg):
                 duration=duration,
                 caption=f"**{video_title}**\n🕒 Duration: {duration} seconds\n⚙️ Resolution: {resolution}\n📦 Size: {file_size}",
                 progress=progress_message,
-                progress_args=(f"📤 Uploading...\n\n**{video_title}**...", sts, c_time)
+                progress_args=(f"📤 Uploading...\n\n**{video_title}**...", progress_message, c_time)
             )
 
             # Cleanup
@@ -97,10 +97,8 @@ async def download_videos(bot, msg):
             os.remove(thumbnail)
 
         except yt_dlp.utils.DownloadError as e:
-            dynamic_part = time.time()
-            await sts.edit(f"❗ yt-dlp error for URL {idx}/{total_urls}: {str(e)} \n🕒 {dynamic_part}")
+            await msg.reply(f"❗ yt-dlp error for URL {idx}/{total_urls}: {str(e)}")
         except Exception as e:
-            dynamic_part = time.time()
-            await sts.edit(f"❗ Error for URL {idx}/{total_urls}: {e} \n🕒 {dynamic_part}")
+            await msg.reply(f"❗ Error for URL {idx}/{total_urls}: {e}")
 
     await msg.reply_text(f"✅ All {total_urls} URLs have been processed.")
