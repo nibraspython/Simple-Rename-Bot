@@ -44,10 +44,12 @@ async def dailymotion_download(bot, msg):
             # Download complete message
             await sts.edit("✅ Download Completed! 📥")
             
-            # Thumbnail (optional: Download thumbnail if available)
+            # Thumbnail Handling (Check if the message contains video or document and extract thumbnail)
             thumbnail = None
-            if 'thumbnail' in reply:
-                thumbnail = await bot.download_media(reply.thumbnail.file_id)
+            if reply.video and reply.video.thumbs:
+                thumbnail = await bot.download_media(reply.video.thumbs[0].file_id)
+            elif reply.document and reply.document.thumbs:
+                thumbnail = await bot.download_media(reply.document.thumbs[0].file_id)
             
             # Prepare the caption with emojis
             cap = f"🎬 **{video_title}**\n\n💽 Size: {human_size}\n🕒 Duration: {duration // 60} mins {duration % 60} secs"
