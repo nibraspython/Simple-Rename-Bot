@@ -3,6 +3,7 @@ from pyrogram import Client, filters, enums
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from yt_dlp import YoutubeDL
+import requests
 
 # Dailymotion Download Function
 def download_dailymotion(url):
@@ -16,7 +17,20 @@ def download_dailymotion(url):
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         file_path = ydl.prepare_filename(info)
-        return file_path, info.get('title'), info.get('duration', 0), info.get('filesize', 0)
+        thumbnail_url = info.get('thumbnail')  # Get the thumbnail URL from the info
+        return file_path, info.get('title'), info.get('duration', 0), info.get('filesize', 0), thumbnail_url
+
+# Function to download the thumbnail
+def download_thumbnail(thumbnail_url, title):
+    if not thumbnail_url:
+        return None
+    thumbnail_path = f"{DOWNLOAD_LOCATION}/{title}_thumbnail.jpg"
+    response = requests.get(thumbnail_url)
+    if response.status_code == 200:
+        with open(thumbnail_path, 'wb') as f:
+            f.write(response.content)
+        return thumbnail_path
+    return None
 
 @Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
 async def dailymotion_download(bot, msg):
@@ -36,7 +50,7 @@ async def dailymotion_download(bot, msg):
 
             # Start downloading the video
             c_time = time.time()
-            downloaded, video_title, duration, file_size = download_dailymotion(url)
+            downloaded, video_title, duration, file_size, thumbnail_url = download_dailymotion(url)
             human_size = humanbytes(file_size)
             
             await sts.edit(f"📥 Downloading: {video_title}\nResolution: Highest\n💽 Size: {human_size}")
@@ -44,13 +58,9 @@ async def dailymotion_download(bot, msg):
             # Download complete message
             await sts.edit("✅ Download Completed! 📥")
             
-            # Thumbnail Handling (Check if the message contains video or document and extract thumbnail)
-            thumbnail = None
-            if reply.video and reply.video.thumbs:
-                thumbnail = await bot.download_media(reply.video.thumbs[0].file_id)
-            elif reply.document and reply.document.thumbs:
-                thumbnail = await bot.download_media(reply.document.thumbs[0].file_id)
-            
+            # Download the thumbnail from the video
+            thumbnail_path = download_thumbnail(thumbnail_url, video_title)
+
             # Prepare the caption with emojis
             cap = f"🎬 **{video_title}**\n\n💽 Size: {human_size}\n🕒 Duration: {duration // 60} mins {duration % 60} secs"
             
@@ -61,7 +71,7 @@ async def dailymotion_download(bot, msg):
             await bot.send_video(
                 msg.chat.id,
                 video=downloaded,
-                thumb=thumbnail,
+                thumb=thumbnail_path if thumbnail_path else None,
                 caption=cap,
                 duration=duration,
                 progress=progress_message,
@@ -70,8 +80,8 @@ async def dailymotion_download(bot, msg):
             
             # Remove downloaded files
             os.remove(downloaded)
-            if thumbnail:
-                os.remove(thumbnail)
+            if thumbnail_path:
+                os.remove(thumbnail_path)
                 
             await sts.edit(f"✅ Successfully uploaded: {video_title}")
 
