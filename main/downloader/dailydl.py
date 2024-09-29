@@ -4,8 +4,9 @@ from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from yt_dlp import YoutubeDL
 import requests
+from moviepy.editor import VideoFileClip
 
-# Dailymotion Download Function
+# Dailymotion Download Function with Resolution and Thumbnail URL
 def download_dailymotion(url):
     ydl_opts = {
         'format': 'best',  # download the best quality
@@ -17,10 +18,26 @@ def download_dailymotion(url):
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         file_path = ydl.prepare_filename(info)
+        video_title = info.get('title')
+        duration = info.get('duration', 0)
+        file_size = info.get('filesize', 0)
+        resolution = info.get('height')  # Get video resolution height
         thumbnail_url = info.get('thumbnail')  # Get the thumbnail URL from the info
-        return file_path, info.get('title'), info.get('duration', 0), info.get('filesize', 0), thumbnail_url
+        return file_path, video_title, duration, file_size, resolution, thumbnail_url
 
-# Function to download the thumbnail
+# Function to generate thumbnail from the video if no thumbnail is available
+def generate_thumbnail(video_path):
+    thumbnail_path = f"{video_path}_thumbnail.jpg"
+    try:
+        video_clip = VideoFileClip(video_path)
+        video_clip.save_frame(thumbnail_path, t=video_clip.duration / 2)  # Capture thumbnail at the middle of the video
+        video_clip.close()
+        return thumbnail_path
+    except Exception as e:
+        print(f"Error generating thumbnail: {e}")
+        return None
+
+# Function to download the thumbnail if available
 def download_thumbnail(thumbnail_url, title):
     if not thumbnail_url:
         return None
@@ -50,19 +67,23 @@ async def dailymotion_download(bot, msg):
 
             # Start downloading the video
             c_time = time.time()
-            downloaded, video_title, duration, file_size, thumbnail_url = download_dailymotion(url)
+            downloaded, video_title, duration, file_size, resolution, thumbnail_url = download_dailymotion(url)
             human_size = humanbytes(file_size)
             
-            await sts.edit(f"📥 Downloading: {video_title}\nResolution: Highest\n💽 Size: {human_size}")
-            
+            # Display Downloading Text with Resolution and Size
+            await sts.edit(f"📥 Downloading: {video_title}\nResolution: {resolution}p\n💽 Size: {human_size}")
+
+            # Generate or download thumbnail
+            thumbnail_path = download_thumbnail(thumbnail_url, video_title)
+            if not thumbnail_path:
+                # Generate thumbnail from video if no external thumbnail is available
+                thumbnail_path = generate_thumbnail(downloaded)
+
             # Download complete message
             await sts.edit("✅ Download Completed! 📥")
             
-            # Download the thumbnail from the video
-            thumbnail_path = download_thumbnail(thumbnail_url, video_title)
-
             # Prepare the caption with emojis
-            cap = f"🎬 **{video_title}**\n\n💽 Size: {human_size}\n🕒 Duration: {duration // 60} mins {duration % 60} secs"
+            cap = f"🎬 **{video_title}**\n\n💽 Size: {human_size}\n🕒 Duration: {duration // 60} mins {duration % 60} secs\n📹 Resolution: {resolution}p"
             
             # Upload to Telegram
             await sts.edit(f"🚀 Uploading: {video_title} 📤")
