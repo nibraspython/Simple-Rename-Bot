@@ -6,7 +6,6 @@ from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import humanbytes
 import time
 
-# yt-dlp options for downloading videos
 ydl_opts = {
     "format": "best",
     "noplaylist": False,
@@ -32,7 +31,6 @@ async def download_videos(bot, msg):
         progress_message = await msg.reply_text(f"🔄 Processing URL {idx}/{total_urls}...\n\n🔗 {url}")
 
         try:
-            # Extract video info from the URL
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(url, download=False)
                 if not info_dict:
@@ -73,7 +71,6 @@ async def download_videos(bot, msg):
                     os.rename(file_path, new_file_path)
                     file_path = new_file_path
 
-            # Confirm the file has been downloaded successfully
             await msg.reply(f"✅ Downloaded to: {file_path}")
 
             # Check if the file exists before uploading
@@ -81,7 +78,7 @@ async def download_videos(bot, msg):
                 await progress_message.edit(f"❗ File not found for upload: {file_path}")
                 continue
 
-            # Process the video to retrieve its duration and generate a thumbnail
+            # Process the video for duration and generate thumbnail
             try:
                 video_clip = VideoFileClip(file_path)
                 duration = int(video_clip.duration)
@@ -97,7 +94,7 @@ async def download_videos(bot, msg):
 
             # Ensure thumbnail exists before uploading
             if not os.path.exists(thumbnail):
-                thumbnail = None  # Use no thumbnail if creation fails
+                thumbnail = None  # Don't use a thumbnail if it wasn't created successfully
 
             # Upload the video
             await progress_message.edit(f"🚀 **Uploading Started** for **{video_title}**")
@@ -107,7 +104,7 @@ async def download_videos(bot, msg):
                 await bot.send_video(
                     msg.chat.id,
                     video=file_path,
-                    thumb=thumbnail,  # Only use thumbnail if it exists
+                    thumb=thumbnail if thumbnail and os.path.exists(thumbnail) else None,  # Ensure valid thumbnail
                     duration=duration,
                     caption=f"**{video_title}**\n🕒 Duration: {duration} seconds\n⚙️ Resolution: {resolution}\n📦 Size: {file_size}",
                     progress=progress_message,
