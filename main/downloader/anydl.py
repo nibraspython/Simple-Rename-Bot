@@ -62,7 +62,7 @@ async def callback_handler(bot, query):
             [InlineKeyboardButton("✅ Confirm", callback_data=f"confirm_{url}")],
             [InlineKeyboardButton("❌ Cancel", callback_data="cancel")]
         ]
-        await query.message.edit(f"File: {file_name}\n💽 Size: {human_size}", reply_markup=InlineKeyboardMarkup(buttons)
+        await query.message.edit(f"File: {file_name}n💽 Size: {human_size}", reply_markup=InlineKeyboardMarkup(buttons))
         
 # Handle Confirm or Cancel
 @Client.on_callback_query(filters.regex(r"(confirm|cancel)"))
