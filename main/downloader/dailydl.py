@@ -8,6 +8,9 @@ from moviepy.editor import VideoFileClip
 from urllib.parse import urlparse
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+# Dictionary to keep track of downloads (url -> file information)
+download_requests = {}
+
 # Function to get file name from the URL or response headers
 def get_file_name(url, response):
     if 'Content-Disposition' in response.headers:
@@ -56,6 +59,16 @@ async def dailymotion_download(bot, msg):
                 
                 unique_id = generate_unique_id(url)  # Generate a short unique identifier
 
+                # Store file information in the dictionary for later access
+                download_requests[unique_id] = {
+                    "url": url,
+                    "file_name": file_name,
+                    "file_size": file_size,
+                    "file_size_human": file_size_human,
+                    "message": sts  # Keep track of the status message
+                }
+
+                # Display confirm and cancel buttons
                 confirm_buttons = InlineKeyboardMarkup([
                     [InlineKeyboardButton("✅ Confirm", callback_data=f"confirm_{unique_id}")],
                     [InlineKeyboardButton("❌ Cancel", callback_data=f"cancel_{unique_id}")]
@@ -66,52 +79,6 @@ async def dailymotion_download(bot, msg):
                     reply_markup=confirm_buttons
                 )
 
-                @Client.on_callback_query(filters.regex(f"confirm_{unique_id}"))
-                async def on_confirm(client, callback_query):
-                    await callback_query.answer()
-                    await callback_query.message.delete()
-
-                    # Start downloading
-                    c_time = time.time()
-                    await sts.edit(f"📥 Downloading: {file_name}...\n💽 Size: {file_size_human}")
-                    download_path = f"{DOWNLOAD_LOCATION}/{file_name}"
-                    
-                    with requests.get(url, stream=True) as r:
-                        r.raise_for_status()
-                        with open(download_path, 'wb') as f:
-                            total_length = int(r.headers.get('content-length', 0))
-                            dl = 0
-                            for chunk in r.iter_content(chunk_size=8192):
-                                if chunk:
-                                    f.write(chunk)
-                                    dl += len(chunk)
-                                    done = int(50 * dl / total_length)
-                                    # Update progress
-                                    await progress_message(f"📥 Downloading {file_name}...", sts, c_time, dl, total_length)
-
-                    await sts.edit("✅ Download Completed! 📥")
-
-                    await sts.edit(f"🚀 Uploading: {file_name} 📤")
-                    c_time = time.time()
-
-                    await bot.send_document(
-                        msg.chat.id,
-                        document=download_path,
-                        caption=f"📄 **{file_name}**",
-                        progress=progress_message,
-                        progress_args=(f"🚀 Uploading {file_name}... 📤", sts, c_time),
-                    )
-
-                    os.remove(download_path)
-
-                    await sts.edit(f"✅ Successfully uploaded: {file_name}")
-
-                @Client.on_callback_query(filters.regex(f"cancel_{unique_id}"))
-                async def on_cancel(client, callback_query):
-                    await callback_query.answer()
-                    await callback_query.message.delete()
-                    await sts.edit("❌ Download cancelled.")
-            
             else:
                 downloaded, video_title, duration, file_size, resolution, thumbnail_url = download_dailymotion(url)
                 human_size = humanbytes(file_size)
@@ -149,3 +116,69 @@ async def dailymotion_download(bot, msg):
             await msg.reply_text(f"❌ Failed to process {url}. Error: {str(e)}")
 
     await msg.reply_text("🎉 All URLs processed successfully!")
+
+@Client.on_callback_query(filters.regex("^confirm_"))
+async def on_confirm(client, callback_query):
+    unique_id = callback_query.data.split("_")[1]  # Extract unique ID from callback data
+    await callback_query.answer()
+
+    # Get file information from the stored dictionary
+    if unique_id in download_requests:
+        file_info = download_requests[unique_id]
+        url = file_info["url"]
+        file_name = file_info["file_name"]
+        file_size_human = file_info["file_size_human"]
+        sts = file_info["message"]  # Retrieve the status message object
+
+        # Start downloading
+        await sts.edit(f"📥 Downloading: {file_name}...\n💽 Size: {file_size_human}")
+        download_path = f"{DOWNLOAD_LOCATION}/{file_name}"
+
+        c_time = time.time()
+
+        with requests.get(url, stream=True) as r:
+            r.raise_for_status()
+            with open(download_path, 'wb') as f:
+                total_length = int(r.headers.get('content-length', 0))
+                dl = 0
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        dl += len(chunk)
+                        # Update progress
+                        await progress_message(f"📥 Downloading {file_name}...", sts, c_time, dl, total_length)
+
+        await sts.edit("✅ Download Completed! 📥")
+
+        # Start uploading the file
+        await sts.edit(f"🚀 Uploading: {file_name} 📤")
+        c_time = time.time()
+
+        await client.send_document(
+            sts.chat.id,
+            document=download_path,
+            caption=f"📄 **{file_name}**",
+            progress=progress_message,
+            progress_args=(f"🚀 Uploading {file_name}... 📤", sts, c_time),
+        )
+
+        os.remove(download_path)  # Clean up the downloaded file after upload
+
+        await sts.edit(f"✅ Successfully uploaded: {file_name}")
+
+        # Remove the completed download from the dictionary
+        del download_requests[unique_id]
+
+@Client.on_callback_query(filters.regex("^cancel_"))
+async def on_cancel(client, callback_query):
+    unique_id = callback_query.data.split("_")[1]  # Extract unique ID from callback data
+    await callback_query.answer()
+
+    # If the download was requested, we can clean up the state and inform the user
+    if unique_id in download_requests:
+        file_info = download_requests[unique_id]
+        sts = file_info["message"]
+        await sts.edit("❌ Download cancelled.")
+
+        # Remove the request from the dictionary
+        del download_requests[unique_id]
