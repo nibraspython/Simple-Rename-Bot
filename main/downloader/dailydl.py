@@ -49,9 +49,11 @@ def download_thumbnail(thumbnail_url, title):
         return thumbnail_path
     return None
 
-@Client.on_callback_query(filters.regex(r"^dmotion_"))
-async def dailymotion_callback_handler(bot, query):
-    url = query.data.split("_", 1)[1]  # Extract the URL from the callback data
+@Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
+async def dailymotion_download(bot, msg):
+    reply = msg.reply_to_message
+    if not reply or not reply.text:
+        return await msg.reply_text("Please reply to a message containing one or more Dailymotion URLs.")
     
     urls = reply.text.split()  # Split the message to extract multiple URLs
     if not urls:
@@ -109,4 +111,3 @@ async def dailymotion_callback_handler(bot, query):
 
     # All URLs processed
     await msg.reply_text("🎉 All URLs processed successfully!")
-
