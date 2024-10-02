@@ -1,6 +1,6 @@
 import time
 from pyrogram import Client, filters
-from aiotelegraph import Telegraph
+import Telegraph
 
 # Initialize Telegraph account
 telegraph = Telegraph()
