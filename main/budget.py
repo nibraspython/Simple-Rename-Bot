@@ -6,40 +6,61 @@ import telegraph
 telegraph = telegraph.Telegraph()
 telegraph.create_account(short_name='budget_saver')
 
-# Store savings data temporarily
-savings_data = {}  # Dictionary to store the date and savings amount
+# Store savings data and user states
+user_states = {}  # Keeps track of users' progress in the conversation
+savings_data = {}  # Dictionary to store the date and saving amount per user
 telegraph_content = ""  # HTML content for the Telegraph page
 
 # Command to initiate budget saving
 @Client.on_message(filters.private & filters.command("budget"))
 async def start_budgeting(bot, msg):
+    user_id = msg.from_user.id
+    # Ask for the date
     await msg.reply_text("Please send today's date in this format: `YYYY-MM-DD`")
+    
+    # Set user state to "awaiting_date"
+    user_states[user_id] = 'awaiting_date'
 
-    # Wait for the user to send the date
-    @Client.on_message(filters.private & filters.text)
-    async def receive_date(client, date_msg):
-        date_text = date_msg.text.strip()
-        if len(date_text) != 10 or date_text[4] != '-' or date_text[7] != '-':
-            return await date_msg.reply_text("Invalid format. Please send the date in `YYYY-MM-DD` format.")
-        
-        # Store the date
-        savings_data['date'] = date_text
-        await date_msg.reply_text("Now, send your saving amount (in numbers).")
+# Handle the user's input after `/budget`
+@Client.on_message(filters.private & filters.text)
+async def handle_user_input(bot, msg):
+    user_id = msg.from_user.id
+    
+    # Check if the user is in the middle of a budget operation
+    if user_id in user_states:
+        state = user_states[user_id]
 
-        # Wait for the saving amount
-        @Client.on_message(filters.private & filters.text)
-        async def receive_saving(client, saving_msg):
+        # If we're expecting a date
+        if state == 'awaiting_date':
+            date_text = msg.text.strip()
+            
+            # Validate the date format
+            if len(date_text) != 10 or date_text[4] != '-' or date_text[7] != '-':
+                return await msg.reply_text("Invalid format. Please send the date in `YYYY-MM-DD` format.")
+            
+            # Store the date for the user
+            savings_data[user_id] = {'date': date_text}
+            
+            # Ask for the saving amount
+            await msg.reply_text("Now, send your saving amount (in numbers).")
+            
+            # Update state to expect the saving amount
+            user_states[user_id] = 'awaiting_saving'
+
+        # If we're expecting the saving amount
+        elif state == 'awaiting_saving':
             try:
-                saving_price = float(saving_msg.text)
+                saving_price = float(msg.text)
             except ValueError:
-                return await saving_msg.reply_text("Please send a valid number.")
-
+                return await msg.reply_text("Please send a valid number.")
+            
             # Store the saving amount
-            savings_data['price'] = saving_price
+            savings_data[user_id]['price'] = saving_price
 
             # Update the Telegraph content
             global telegraph_content
-            telegraph_content += f"<p>Date: {savings_data['date']} - Saved: {savings_data['price']} units</p>"
+            user_data = savings_data[user_id]
+            telegraph_content += f"<p>Date: {user_data['date']} - Saved: {user_data['price']} units</p>"
 
             # Create or update the Telegraph page
             response = telegraph.create_page(
@@ -49,5 +70,8 @@ async def start_budgeting(bot, msg):
 
             # Send the Telegraph URL to the user
             telegraph_url = f"https://telegra.ph/{response['path']}"
-            await saving_msg.reply_text(f"Added to the site! ✅\nView your savings here: {telegraph_url}")
-
+            await msg.reply_text(f"Added to the site! ✅\nView your savings here: {telegraph_url}")
+            
+            # Clear user state after the process is done
+            del user_states[user_id]
+            del savings_data[user_id]
