@@ -3,7 +3,7 @@ from pyrogram import Client, filters
 import telegraph
 
 # Initialize Telegraph account
-telegraph = Telegraph()
+telegraph = telegraph.Telegraph()
 telegraph.create_account(short_name='budget_saver')
 
 # Store savings data temporarily
