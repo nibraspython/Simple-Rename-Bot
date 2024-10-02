@@ -1,6 +1,6 @@
 import time
 from pyrogram import Client, filters
-import Telegraph
+import telegraph
 
 # Initialize Telegraph account
 telegraph = Telegraph()
