@@ -180,8 +180,7 @@ async def yt_callback_handler(bot, query):
         f"📹 **Resolution:** {resolution}, | 💽 **Size:** {filesize}\n"
         f"🕒 **Duration:** {duration} seconds\n"
         f"📹 **Resolution:** {resolution}\n"
-        f"**[🔗 URL]({url})**\n\n"
-        f"✅ **Download completed!**"
+        f"**[🔗 URL]({url})**\n"
     )
 
     uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
