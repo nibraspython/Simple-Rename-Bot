@@ -9,4 +9,4 @@ ffmpeg
 telegraph
 pymediainfo
 aiohttp
-pydub
+aiotelegraph
