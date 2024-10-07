@@ -103,19 +103,10 @@ async def dailymotion_download(bot, msg):
             os.remove(downloaded)
             if thumbnail_path:
                 os.remove(thumbnail_path)
-                
-            await sts.edit(f"✅ Successfully uploaded: {video_title}")
-
+                       
         except Exception as e:
             await msg.reply_text(f"❌ Failed to process {url}. Error: {str(e)}")
 
     # All URLs processed
     await msg.reply_text("🎉 All URLs processed successfully!")
 
-modify this script to Adding this functionality
-
-1.when a video of url uploaded it should show extracting audio text.after it should extracts its audio and upload it to bot with same uploading progress and the audio should be mka format and it should be with video name.
-
-2.after extracted audio uploaded it should do next url procress if i reply to bulk links text.
-
-3.all the script should be customized with emojis for better look.
