@@ -4,7 +4,7 @@ from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from yt_dlp import YoutubeDL
 import requests
-from moviepy.editor import VideoFileClip
+from moviepy.editor import VideoFileClip, AudioFileClip
 
 # Dailymotion Download Function with Resolution and Thumbnail URL
 def download_dailymotion(url):
@@ -49,6 +49,20 @@ def download_thumbnail(thumbnail_url, title):
         return thumbnail_path
     return None
 
+# Function to extract audio and save it in .mka format
+def extract_audio(video_path, video_title):
+    audio_path = f"{DOWNLOAD_LOCATION}/{video_title}.mka"
+    try:
+        video_clip = VideoFileClip(video_path)
+        audio_clip = video_clip.audio
+        audio_clip.write_audiofile(audio_path, codec="opus")  # Save audio in .mka format (Opus codec)
+        audio_clip.close()
+        video_clip.close()
+        return audio_path
+    except Exception as e:
+        print(f"Error extracting audio: {e}")
+        return None
+
 @Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
 async def dailymotion_download(bot, msg):
     reply = msg.reply_to_message
@@ -78,9 +92,6 @@ async def dailymotion_download(bot, msg):
             if not thumbnail_path:
                 # Generate thumbnail from video if no external thumbnail is available
                 thumbnail_path = generate_thumbnail(downloaded)
-
-            # Download complete message
-            await sts.edit("✅ Download Completed! 📥")
             
             # Prepare the caption with emojis
             cap = f"🎬 **{video_title}**\n\n💽 Size: {human_size}\n🕒 Duration: {duration // 60} mins {duration % 60} secs\n📹 Resolution: {resolution}p"
@@ -98,16 +109,35 @@ async def dailymotion_download(bot, msg):
                 progress=progress_message,
                 progress_args=(f"🚀 Uploading {video_title}... 📤", sts, c_time),
             )
-            
+
+            # Extract and upload the audio after the video upload is complete
+            await sts.edit(f"🔊 Extracting audio from {video_title}... 🎧")
+            audio_path = extract_audio(downloaded, video_title)
+
+            if audio_path:
+                await sts.edit(f"🎶 Uploading audio: {video_title}.mka 🎤")
+                c_time = time.time()
+
+                await bot.send_audio(
+                    msg.chat.id,
+                    audio=audio_path,
+                    caption=f"🎧 **Audio from {video_title}**",
+                    title=f"{video_title}.mka",
+                    progress=progress_message,
+                    progress_args=(f"🎶 Uploading {video_title} audio... 🎤", sts, c_time),
+                )
+                
+                # Remove the audio file after upload
+                os.remove(audio_path)
+
             # Remove downloaded files
             os.remove(downloaded)
             if thumbnail_path:
                 os.remove(thumbnail_path)
-                
-            await sts.edit(f"✅ Successfully uploaded: {video_title}")
-
+                        
         except Exception as e:
             await msg.reply_text(f"❌ Failed to process {url}. Error: {str(e)}")
 
     # All URLs processed
-    await msg.reply_text("🎉 All URLs processed successfully!")
+    await msg.reply_text("🎉 All URLs processed successfully! 🎬🎧")
+
