@@ -1,10 +1,10 @@
-import subprocess
 import time, os
 from pyrogram import Client, filters, enums
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
 from yt_dlp import YoutubeDL
 import requests
+from moviepy.editor import VideoFileClip
 
 # Dailymotion Download Function with Resolution and Thumbnail URL
 def download_dailymotion(url):
@@ -25,6 +25,18 @@ def download_dailymotion(url):
         thumbnail_url = info.get('thumbnail')  # Get the thumbnail URL from the info
         return file_path, video_title, duration, file_size, resolution, thumbnail_url
 
+# Function to generate thumbnail from the video if no thumbnail is available
+def generate_thumbnail(video_path):
+    thumbnail_path = f"{video_path}_thumbnail.jpg"
+    try:
+        video_clip = VideoFileClip(video_path)
+        video_clip.save_frame(thumbnail_path, t=video_clip.duration / 2)  # Capture thumbnail at the middle of the video
+        video_clip.close()
+        return thumbnail_path
+    except Exception as e:
+        print(f"Error generating thumbnail: {e}")
+        return None
+
 # Function to download the thumbnail if available
 def download_thumbnail(thumbnail_url, title):
     if not thumbnail_url:
@@ -36,24 +48,6 @@ def download_thumbnail(thumbnail_url, title):
             f.write(response.content)
         return thumbnail_path
     return None
-
-# Fast Audio extraction using FFmpeg
-def extract_audio_ffmpeg(video_path, video_title):
-    audio_path = f"{DOWNLOAD_LOCATION}/{video_title}.mka"
-    try:
-        # Run FFmpeg command to extract audio and save as .mka with Opus codec
-        cmd = [
-            'ffmpeg', '-i', video_path, '-vn',  # Input video, no video stream
-            '-acodec', 'opus',                  # Opus codec for audio
-            '-b:a', '128k',                     # Set audio bitrate
-            '-ar', '48000',                     # Set audio sample rate
-            audio_path                          # Output file
-        ]
-        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        return audio_path
-    except subprocess.CalledProcessError as e:
-        print(f"Error extracting audio: {e}")
-        return None
 
 @Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
 async def dailymotion_download(bot, msg):
@@ -81,6 +75,9 @@ async def dailymotion_download(bot, msg):
 
             # Generate or download thumbnail
             thumbnail_path = download_thumbnail(thumbnail_url, video_title)
+            if not thumbnail_path:
+                # Generate thumbnail from video if no external thumbnail is available
+                thumbnail_path = generate_thumbnail(downloaded)
 
             # Download complete message
             await sts.edit("✅ Download Completed! 📥")
@@ -101,36 +98,24 @@ async def dailymotion_download(bot, msg):
                 progress=progress_message,
                 progress_args=(f"🚀 Uploading {video_title}... 📤", sts, c_time),
             )
-
-            # Extract and upload the audio after the video upload is complete
-            await sts.edit(f"🔊 Extracting audio from {video_title}... 🎧")
-            audio_path = extract_audio_ffmpeg(downloaded, video_title)
-
-            if audio_path:
-                await sts.edit(f"🎶 Uploading audio: {video_title}.mka 🎤")
-                c_time = time.time()
-
-                await bot.send_audio(
-                    msg.chat.id,
-                    audio=audio_path,
-                    caption=f"🎧 **Audio from {video_title}**",
-                    title=f"{video_title}.mka",
-                    progress=progress_message,
-                    progress_args=(f"🎶 Uploading {video_title} audio... 🎤", sts, c_time),
-                )
-                
-                # Remove the audio file after upload
-                os.remove(audio_path)
-
+            
             # Remove downloaded files
             os.remove(downloaded)
             if thumbnail_path:
                 os.remove(thumbnail_path)
                 
-            await sts.edit(f"✅ Successfully uploaded: {video_title} with extracted audio 🎉")
+            await sts.edit(f"✅ Successfully uploaded: {video_title}")
 
         except Exception as e:
             await msg.reply_text(f"❌ Failed to process {url}. Error: {str(e)}")
 
     # All URLs processed
-    await msg.reply_text("🎉 All URLs processed successfully! 🎬🎧")
+    await msg.reply_text("🎉 All URLs processed successfully!")
+
+modify this script to Adding this functionality
+
+1.when a video of url uploaded it should show extracting audio text.after it should extracts its audio and upload it to bot with same uploading progress and the audio should be mka format and it should be with video name.
+
+2.after extracted audio uploaded it should do next url procress if i reply to bulk links text.
+
+3.all the script should be customized with emojis for better look.
