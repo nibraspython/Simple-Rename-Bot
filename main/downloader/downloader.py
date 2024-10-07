@@ -177,9 +177,8 @@ async def yt_callback_handler(bot, query):
 
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
-        f"📹 **Resolution:** {resolution}, | 💽 **Size:** {filesize}\n"
+        f"📹 **Resolution:** {resolution}  | 💽 **Size:** {filesize}\n"
         f"🕒 **Duration:** {duration} seconds\n"
-        f"📹 **Resolution:** {resolution}\n"
         f"**[🔗 URL]({url})**\n"
     )
 
