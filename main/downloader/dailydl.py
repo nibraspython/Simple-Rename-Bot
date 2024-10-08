@@ -50,12 +50,15 @@ def download_thumbnail(thumbnail_url, title):
         return thumbnail_path
     return None
 
-# Function to extract audio in MKA format using ffmpeg
+#funtion to extract audio
 def extract_audio(video_path, audio_path):
     try:
-        stream = ffmpeg.input(video_path)
-        audio = ffmpeg.output(stream, audio_path, format='mka', acodec='copy')  # Fast extraction
-        ffmpeg.run(audio)
+        (
+            ffmpeg
+            .input(video_path)
+            .output(audio_path, acodec='libvorbis', format='mka')  # Encode audio to Vorbis for .mka
+            .run(quiet=True, overwrite_output=True)  # Suppress logs and allow overwriting
+        )
         return audio_path
     except Exception as e:
         print(f"Error extracting audio: {e}")
