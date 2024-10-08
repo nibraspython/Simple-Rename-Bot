@@ -140,13 +140,15 @@ async def process_selected_items(bot, msg):
     with open(selected_items_file, "r") as f:
         items = f.readlines()
 
-    # Filter and organize items by category
+    # Filter and organize items by category with image paths
     categorized_items = {}
     for line in items:
         category, item = line.strip().split(": ")
-        categorized_items.setdefault(category, []).append(item)
+        # Assume a function `get_image_path` that returns the image path for an item
+        image_path = get_image_path(item)  # Function to fetch image paths
+        categorized_items.setdefault(category, []).append({"image_path": image_path, "name": item})
 
-    # Create grocery list image (same process as before)
+    # Create grocery list image
     output_image_path = os.path.join(DOWNLOAD_LOCATION, "grocery_list.png")
     create_grocery_image(categorized_items, output_image_path)
 
@@ -157,7 +159,6 @@ async def process_selected_items(bot, msg):
     )
 
     # Clean up
-    os.remove(output_image_path)
     if os.path.exists(selected_items_file):
         os.remove(selected_items_file)    
 
@@ -194,36 +195,38 @@ def create_grocery_image(categorized_items, output_image_path):
     y_offset = title_bbox[3] + 4 * margin  # Update based on title height
     items_per_row = 3  # Number of items per row for better layout
     
-    # Get images and names from categorized_items
-    images = [item['image_path'] for item in categorized_items]
-    names = [item['name'] for item in categorized_items]
+    # Iterate through categorized_items to create images
+    for category, items in categorized_items.items():
+        for i, item in enumerate(items):
+            img_path = item['image_path']
+            name = item['name']
 
-    for i, (img_path, name) in enumerate(zip(images, names)):
-        # Open each image and resize
-        try:
-            item_img = Image.open(img_path)
-            item_img = item_img.resize(box_size)
-        except Exception as e:
-            print(f"Error loading image {img_path}: {e}")
-            continue
+            # Open each image and resize
+            try:
+                item_img = Image.open(img_path)
+                item_img = item_img.resize(box_size)
+            except Exception as e:
+                print(f"Error loading image {img_path}: {e}")
+                continue
 
-        # Calculate x position (items_per_row items per row)
-        x_offset = (i % items_per_row) * (box_size[0] + margin) + margin
-        if i % items_per_row == 0 and i > 0:
-            y_offset += box_size[1] + 4 * margin  # Increase vertical spacing
+            # Calculate x position (items_per_row items per row)
+            x_offset = (i % items_per_row) * (box_size[0] + margin) + margin
+            if i % items_per_row == 0 and i > 0:
+                y_offset += box_size[1] + 4 * margin  # Increase vertical spacing
 
-        # Paste the image
-        image.paste(item_img, (x_offset, y_offset))
+            # Paste the image
+            image.paste(item_img, (x_offset, y_offset))
 
-        # Draw text box and item name
-        draw.rectangle([(x_offset, y_offset + box_size[1]), 
-                        (x_offset + box_size[0], y_offset + box_size[1] + 80)], fill=box_color)
+            # Draw text box and item name
+            draw.rectangle([(x_offset, y_offset + box_size[1]), 
+                            (x_offset + box_size[0], y_offset + box_size[1] + 80)], fill=box_color)
 
-        # Center the item name
-        name_bbox = draw.textbbox((0, 0), name, font=item_font)
-        name_w = name_bbox[2] - name_bbox[0]
-        draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] + 10), name, fill="black", font=item_font)
+            # Center the item name
+            name_bbox = draw.textbbox((0, 0), name, font=item_font)
+            name_w = name_bbox[2] - name_bbox[0]
+            draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] + 10), name, fill="black", font=item_font)
 
     # Save the image
     image.save(output_image_path)
-      
+ 
+                     
