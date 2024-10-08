@@ -20,6 +20,12 @@ selected_items = {}
 # File path for storing selected items
 selected_items_file = os.path.join(DOWNLOAD_LOCATION, "selected_items.txt")
 
+def get_image_path(item):
+    # Assuming images are stored in a specific directory named 'grocery_images'
+    image_directory = os.path.join(DOWNLOAD_LOCATION, "grocery_images")
+    # Create the image path by combining the directory and item name
+    return os.path.join(image_directory, f"{item}.png")  # Assuming images are named as 'item_name.png'
+
 # Step 1: Handle the /grocery command
 @Client.on_message(filters.private & filters.command("grocery") & filters.reply & filters.user(ADMIN))
 async def handle_grocery_command(bot, msg):
