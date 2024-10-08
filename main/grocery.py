@@ -109,7 +109,9 @@ def create_grocery_image(images, names, output_image_path):
 
     # Draw the title
     title_text = "Grocery Items"
-    title_w, title_h = draw.textsize(title_text, font=title_font)
+    title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
+    title_w = title_bbox[2] - title_bbox[0]  # Calculate width from bounding box
+    title_h = title_bbox[3] - title_bbox[1]  # Calculate height from bounding box
     draw.text(((width - title_w) / 2, margin), title_text, fill="black", font=title_font)
 
     # Add grocery images and their names
