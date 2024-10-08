@@ -65,7 +65,7 @@ async def extract_audio(video_path, video_title, sts, bot, msg):
         os.remove(extracted_audio_path)
     else:
         await sts.edit(f"❌ Failed to extract audio from {video_title}")
-
+ 
 # Function to generate thumbnail from the video if no thumbnail is available
 def generate_thumbnail(video_path):
     thumbnail_path = f"{video_path}_thumbnail.jpg"
