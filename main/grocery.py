@@ -81,7 +81,7 @@ async def create_grocery_list(bot, item_msg):
     os.remove(output_image_path)
     shutil.rmtree(extract_dir)
 
-# Function to create the grocery list image
+# Create the grocery list image
 def create_grocery_image(images, names, output_image_path):
     width = 800
     height = 1000
@@ -93,12 +93,14 @@ def create_grocery_image(images, names, output_image_path):
     # Create a blank image
     image = Image.new('RGB', (width, height), background_color)
     draw = ImageDraw.Draw(image)
-    font = ImageFont.load_default()
+    font = ImageFont.load_default()  # Default font to avoid missing font error
 
     # Draw the title
     title_text = "Grocery Items"
-    title_font = ImageFont.load_default()  # Use the default font
-    title_w, title_h = draw.textsize(title_text, font=title_font)
+    title_font = ImageFont.load_default()  # Use default font
+    title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
+    title_w = title_bbox[2] - title_bbox[0]
+    title_h = title_bbox[3] - title_bbox[1]
     draw.text(((width - title_w) / 2, margin), title_text, fill="black", font=title_font)
 
     # Add images and names
@@ -116,7 +118,9 @@ def create_grocery_image(images, names, output_image_path):
         # Paste the image and draw the item name below
         image.paste(item_img, (x_offset, y_offset))
         draw.rectangle([(x_offset, y_offset + box_size[1]), (x_offset + box_size[0], y_offset + box_size[1] + 40)], fill=box_color)
-        name_w, name_h = draw.textsize(name, font=font)
+        name_bbox = draw.textbbox((0, 0), name, font=font)
+        name_w = name_bbox[2] - name_bbox[0]
+        name_h = name_bbox[3] - name_bbox[1]
         draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1]), name, fill="black", font=font)
 
     # Save the image
