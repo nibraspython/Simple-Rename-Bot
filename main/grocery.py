@@ -1,87 +1,167 @@
 import os
 import zipfile
+import shutil
 from PIL import Image, ImageDraw, ImageFont
 from pyrogram import Client, filters
 from config import DOWNLOAD_LOCATION, ADMIN
-import shutil
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import asyncio
 
-# Step 1: Initial command to receive zip file
-@Client.on_message(filters.private & filters.command("grocery") & filters.user(ADMIN))
-async def grocery_list(bot, msg):
-    await msg.reply_text("📦 Please send your zip file containing all grocery images (e.g., butter.png, leeks.png).")
+# Dictionary to store categories and selected items
+categories = {
+    "foods": ["butter", "bread", "cheese"],
+    "spices": ["salt", "pepper", "turmeric"],
+    "vegetables": ["carrot", "leek", "potato"],
+    "meat items": ["chicken", "beef", "lamb"],
+    "other items": ["oil", "sugar", "rice"]
+}
+selected_items = {}
 
-# Step 2: Handling the zip file upload
-@Client.on_message(filters.private & filters.document & filters.user(ADMIN))
-async def receive_zip_file(bot, file_msg):
-    doc = file_msg.document
+# File path for storing selected items
+selected_items_file = os.path.join(DOWNLOAD_LOCATION, "selected_items.txt")
 
-    # Check if the file is a zip file
-    if not doc.file_name.endswith(".zip"):
-        return await file_msg.reply_text("❌ Please send a valid .zip file.")
+# Step 1: Handle the /grocery command
+@Client.on_message(filters.private & filters.command("grocery") & filters.reply & filters.user(ADMIN))
+async def handle_grocery_command(bot, msg):
+    reply = msg.reply_to_message
+    if reply.document and reply.document.file_name.endswith(".zip"):
+        await msg.reply_text("📦 Extracting zip file...")
+        try:
+            # Download and extract the zip file
+            zip_path = os.path.join(DOWNLOAD_LOCATION, reply.document.file_name)
+            await reply.download(zip_path)
 
-    # Acknowledge the zip file
-    sts = await file_msg.reply_text("🔄 Extracting your zip file...")
+            extract_dir = os.path.join(DOWNLOAD_LOCATION, "grocery_images")
+            os.makedirs(extract_dir, exist_ok=True)
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_dir)
 
-    try:
-        # Download the zip file
-        zip_path = os.path.join(DOWNLOAD_LOCATION, doc.file_name)
-        await file_msg.download(zip_path)
+            os.remove(zip_path)
+            await msg.reply_text("✅ Zip file extraction completed.")
+            
+            # Show categories selection with inline buttons
+            await show_category_selection(bot, msg)
 
-        # Extract zip file
-        extract_dir = os.path.join(DOWNLOAD_LOCATION, "grocery_images")
-        os.makedirs(extract_dir, exist_ok=True)  # Ensure the directory exists
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_dir)
+        except Exception as e:
+            await msg.reply_text(f"❌ Error during extraction: {e}")
+    else:
+        await msg.reply_text("❌ Please reply to a valid .zip file.")
 
-        os.remove(zip_path)
-        await sts.edit("✅ Zip file extracted. Now send the items you want in your list (comma separated, e.g., butter,leeks,salt).")
+# Step 2: Show category selection
+async def show_category_selection(bot, msg):
+    keyboard = [
+        [InlineKeyboardButton("Foods", callback_data="category_foods")],
+        [InlineKeyboardButton("Spices", callback_data="category_spices")],
+        [InlineKeyboardButton("Vegetables", callback_data="category_vegetables")],
+        [InlineKeyboardButton("Meat Items", callback_data="category_meat items")],
+        [InlineKeyboardButton("Other Items", callback_data="category_other items")],
+        [InlineKeyboardButton("Done", callback_data="category_done")]
+    ]
+    await msg.reply_text(
+        "🍽 Select your category:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
-    except Exception as e:
-        await sts.edit(f"❌ Error during extraction: {e}")
+# Step 3: Handle category selection
+@Client.on_callback_query(filters.regex(r"^category_"))
+async def handle_category_selection(bot, query):
+    category = query.data.split("_")[1]
+    
+    if category == "done":
+        # Proceed to next steps (image creation, etc.)
+        await process_selected_items(bot, query.message)
         return
 
-# Step 3: Handling the item list for the grocery image
-@Client.on_message(filters.private & filters.text & filters.user(ADMIN))
-async def create_grocery_list(bot, item_msg):
-    items = [item.strip().lower() for item in item_msg.text.split(",")]
-    extract_dir = os.path.join(DOWNLOAD_LOCATION, "grocery_images")
+    # Show items in the selected category with navigation
+    await show_items_in_category(bot, query.message, category, 0)
 
-    if not os.path.exists(extract_dir):
-        return await item_msg.reply_text("❌ No extracted grocery images found. Please send a valid zip file first.")
+# Step 4: Show items in the selected category with navigation
+async def show_items_in_category(bot, msg, category, index):
+    items = categories[category]
+    current_items = items[index:index+3]  # Show 3 items at a time
 
-    images_to_add = []
-    item_names = []
+    # Generate item buttons and navigation buttons
+    item_buttons = [
+        [InlineKeyboardButton(item.capitalize(), callback_data=f"item_{category}_{item}")] 
+        for item in current_items
+    ]
+    navigation_buttons = []
+    if index > 0:
+        navigation_buttons.append(InlineKeyboardButton("◀️ Previous", callback_data=f"prev_{category}_{index-3}"))
+    if index + 3 < len(items):
+        navigation_buttons.append(InlineKeyboardButton("▶️ Next", callback_data=f"next_{category}_{index+3}"))
+    navigation_buttons.append(InlineKeyboardButton("🔙 Back", callback_data="back"))
 
-    # Match items with images
-    for item in items:
-        item_image = os.path.join(extract_dir, f"{item}.png")
-        if os.path.exists(item_image):
-            images_to_add.append(item_image)
-            item_names.append(item.capitalize())
-        else:
-            await item_msg.reply_text(f"❌ Image not found for: {item}. Skipping...")
+    keyboard = item_buttons + [navigation_buttons]
+    
+    await msg.edit_text(
+        f"🍽 {category.capitalize()} items:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
-    if not images_to_add:
-        return await item_msg.reply_text("❌ No valid items found. Please try again.")
+# Step 5: Handle item selection
+@Client.on_callback_query(filters.regex(r"^item_"))
+async def handle_item_selection(bot, query):
+    _, category, item = query.data.split("_")
 
-    # Create the grocery list image
+    # Add the selected item to the list
+    selected_items.setdefault(category, []).append(item)
+
+    # Save the selection to the file
+    with open(selected_items_file, "a") as f:
+        f.write(f"{category}: {item}\n")
+
+    # Show temporary "item added" message
+    added_msg = await query.message.reply_text(f"✅ Item added: {item.capitalize()}")
+    await asyncio.sleep(2)
+    await added_msg.delete()
+
+    # Refresh the category selection screen
+    await show_items_in_category(bot, query.message, category, 0)
+
+# Step 6: Handle navigation (previous, next, back)
+@Client.on_callback_query(filters.regex(r"^prev_|^next_|^back"))
+async def handle_navigation(bot, query):
+    if query.data.startswith("back"):
+        await show_category_selection(bot, query.message)
+    else:
+        _, category, index = query.data.split("_")
+        await show_items_in_category(bot, query.message, category, int(index))
+
+# Step 7: Process selected items after "Done"
+async def process_selected_items(bot, msg):
+    await msg.edit_text("🖼 Creating your grocery list image...")
+
+    # Read selected items from the file
+    if not os.path.exists(selected_items_file):
+        await msg.reply_text("❌ No items selected.")
+        return
+
+    with open(selected_items_file, "r") as f:
+        items = f.readlines()
+
+    # Filter and organize items by category
+    categorized_items = {}
+    for line in items:
+        category, item = line.strip().split(": ")
+        categorized_items.setdefault(category, []).append(item)
+
+    # Create grocery list image (same process as before)
     output_image_path = os.path.join(DOWNLOAD_LOCATION, "grocery_list.png")
-    create_grocery_image(images_to_add, item_names, output_image_path)
+    create_grocery_image(categorized_items, output_image_path)
 
-    await item_msg.reply_text("🖼 Creating your grocery list image...")
-
-    # Send the created grocery list image
     await bot.send_photo(
-        chat_id=item_msg.chat.id,
+        chat_id=msg.chat.id,
         photo=output_image_path,
         caption="🛒 Your Grocery List 🛍",
     )
 
     # Clean up
     os.remove(output_image_path)
-    shutil.rmtree(extract_dir)
-   
-def create_grocery_image(images, names, output_image_path):
+    if os.path.exists(selected_items_file):
+        os.remove(selected_items_file)
+    
+def create_grocery_image(categorized_items, output_image_path):         
     # Set the image size to A4 size in pixels (for print)
     width = 2480  # Width for A4 at 300 DPI
     height = 3508  # Height for A4 at 300 DPI
