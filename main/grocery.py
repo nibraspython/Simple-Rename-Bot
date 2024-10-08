@@ -97,7 +97,7 @@ def create_grocery_image(images, names, output_image_path):
 
     # Draw the title
     title_text = "Grocery Items"
-    title_font = ImageFont.truetype("arial.ttf", 50)  # Adjust font size
+    title_font = ImageFont.load_default()  # Use the default font
     title_w, title_h = draw.textsize(title_text, font=title_font)
     draw.text(((width - title_w) / 2, margin), title_text, fill="black", font=title_font)
 
