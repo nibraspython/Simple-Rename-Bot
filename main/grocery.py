@@ -81,7 +81,6 @@ async def create_grocery_list(bot, item_msg):
     os.remove(output_image_path)
     shutil.rmtree(extract_dir)
 
-# Create the grocery list image
 def create_grocery_image(images, names, output_image_path):
     width = 1000  # Width of the image
     margin = 20   # Margin between images and text
@@ -110,12 +109,11 @@ def create_grocery_image(images, names, output_image_path):
     # Draw the title
     title_text = "Grocery Items"
     title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
-    title_w = title_bbox[2] - title_bbox[0]  # Calculate width from bounding box
-    title_h = title_bbox[3] - title_bbox[1]  # Calculate height from bounding box
+    title_w = title_bbox[2] - title_bbox[0]
     draw.text(((width - title_w) / 2, margin), title_text, fill="black", font=title_font)
 
     # Add grocery images and their names
-    y_offset = title_h + 3 * margin
+    y_offset = title_bbox[3] + 3 * margin  # Update based on title height
     for i, (img_path, name) in enumerate(zip(images, names)):
         # Open each image and resize
         item_img = Image.open(img_path)
@@ -132,7 +130,9 @@ def create_grocery_image(images, names, output_image_path):
         # Draw text box and item name
         draw.rectangle([(x_offset, y_offset + box_size[1]), 
                         (x_offset + box_size[0], y_offset + box_size[1] + 50)], fill=box_color)
-        name_w, name_h = draw.textsize(name, font=item_font)
+
+        name_bbox = draw.textbbox((0, 0), name, font=item_font)
+        name_w = name_bbox[2] - name_bbox[0]
         draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1]), name, fill="black", font=item_font)
 
     # Save the image
