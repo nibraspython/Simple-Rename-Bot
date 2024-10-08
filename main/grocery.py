@@ -80,10 +80,10 @@ async def create_grocery_list(bot, item_msg):
     # Clean up
     os.remove(output_image_path)
     shutil.rmtree(extract_dir)
-
+   
 def create_grocery_image(images, names, output_image_path):
     width = 1000  # Width of the image
-    margin = 20   # Margin between images and text
+    margin = 30   # Increased margin between images and text
     box_size = (300, 300)  # Size of each grocery item image
     num_items_per_row = 2  # Number of items per row
 
@@ -100,8 +100,8 @@ def create_grocery_image(images, names, output_image_path):
     
     # Load custom font, fallback to default if not available
     try:
-        title_font = ImageFont.truetype("arial.ttf", 60)  # Larger title font
-        item_font = ImageFont.truetype("arial.ttf", 40)  # Larger item font
+        title_font = ImageFont.truetype("arial.ttf", 80)  # Larger title font
+        item_font = ImageFont.truetype("arial.ttf", 50)   # Larger item font
     except OSError:
         title_font = ImageFont.load_default()
         item_font = ImageFont.load_default()
@@ -110,7 +110,8 @@ def create_grocery_image(images, names, output_image_path):
     title_text = "Grocery Items"
     title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
     title_w = title_bbox[2] - title_bbox[0]
-    draw.text(((width - title_w) / 2, margin), title_text, fill="black", font=title_font)
+    title_y = margin  # y position for the title
+    draw.text(((width - title_w) / 2, title_y), title_text, fill="black", font=title_font)
 
     # Add grocery images and their names
     y_offset = title_bbox[3] + 3 * margin  # Update based on title height
@@ -122,18 +123,18 @@ def create_grocery_image(images, names, output_image_path):
         # Calculate x position (num_items_per_row items per row)
         x_offset = (i % num_items_per_row) * (box_size[0] + margin) + margin
         if i % num_items_per_row == 0 and i > 0:
-            y_offset += box_size[1] + 3 * margin
+            y_offset += box_size[1] + 3 * margin  # Increase vertical spacing
 
         # Paste the image
         image.paste(item_img, (x_offset, y_offset))
 
         # Draw text box and item name
         draw.rectangle([(x_offset, y_offset + box_size[1]), 
-                        (x_offset + box_size[0], y_offset + box_size[1] + 50)], fill=box_color)
+                        (x_offset + box_size[0], y_offset + box_size[1] + 60)], fill=box_color)
 
         name_bbox = draw.textbbox((0, 0), name, font=item_font)
         name_w = name_bbox[2] - name_bbox[0]
-        draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1]), name, fill="black", font=item_font)
+        draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] + 10), name, fill="black", font=item_font)
 
     # Save the image
     image.save(output_image_path)
