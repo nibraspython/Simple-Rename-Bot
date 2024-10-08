@@ -173,11 +173,12 @@ def create_grocery_image(categorized_items, output_image_path):
     width = 2480  # Width for A4 at 300 DPI
     height = 3508  # Height for A4 at 300 DPI
     background_color = (255, 255, 255)  # White background
-    box_color = (255, 255, 255)  # White for the box (adjusted to match request)
+    box_color = (255, 255, 255)  # White for the box
     shadow_color = (170, 170, 170)  # Darker gray for shadow
-    box_size = (400, 550)  # Adjusted height for longer boxes
+    box_size = (600, 550)  # Increased width and kept height longer
     margin = 50  # Margin for spacing
     shadow_offset = 20  # Offset for the shadow to simulate 3D
+    corner_radius = 40  # Corner radius for rounded rectangles
 
     # Create a blank image
     image = Image.new('RGB', (width, height), background_color)
@@ -223,13 +224,14 @@ def create_grocery_image(categorized_items, output_image_path):
                 y_offset += box_size[1] + 4 * margin  # Increase vertical spacing
 
             # Draw shadow to simulate 3D effect
-            draw.rectangle([(x_offset + shadow_offset, y_offset + shadow_offset), 
-                            (x_offset + box_size[0] + shadow_offset, y_offset + box_size[1] + shadow_offset)], 
-                           fill=shadow_color)
+            draw.rounded_rectangle([(x_offset + shadow_offset, y_offset + shadow_offset), 
+                                    (x_offset + box_size[0] + shadow_offset, y_offset + box_size[1] + shadow_offset)], 
+                                   fill=shadow_color, radius=corner_radius)
 
-            # Draw the main box for the item
-            draw.rectangle([(x_offset, y_offset), 
-                            (x_offset + box_size[0], y_offset + box_size[1])], fill=box_color)
+            # Draw the main box for the item with rounded corners
+            draw.rounded_rectangle([(x_offset, y_offset), 
+                                    (x_offset + box_size[0], y_offset + box_size[1])], 
+                                   fill=box_color, radius=corner_radius)
 
             # Paste the image in the center of the box
             img_x = x_offset + (box_size[0] - item_img.size[0]) // 2
