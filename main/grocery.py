@@ -161,7 +161,7 @@ async def process_selected_items(bot, msg):
     if os.path.exists(selected_items_file):
         os.remove(selected_items_file)
     
-def create_grocery_image(categorized_items, output_image_path):         
+def create_grocery_image(categorized_items, output_image_path): 
     # Set the image size to A4 size in pixels (for print)
     width = 2480  # Width for A4 at 300 DPI
     height = 3508  # Height for A4 at 300 DPI
@@ -189,6 +189,21 @@ def create_grocery_image(categorized_items, output_image_path):
     title_w = title_bbox[2] - title_bbox[0]
     title_y = margin  # y position for the title
     draw.text(((width - title_w) / 2, title_y), title_text, fill="black", font=title_font)
+
+    # Populate the `images` and `names` lists based on categorized_items
+    images = []
+    names = []
+
+    # Assuming the grocery images are located in a folder after zip extraction
+    grocery_images_folder = "/content/Simple-Rename-Bot/grocery_images"  # Update the path if necessary
+
+    for category, items in categorized_items.items():
+        for item in items:
+            # Construct the image path for each item
+            img_path = os.path.join(grocery_images_folder, f"{item}.jpg")  # Adjust extension if needed
+            if os.path.exists(img_path):
+                images.append(img_path)
+                names.append(item.capitalize())  # Add the item name
 
     # Add grocery images and their names
     y_offset = title_bbox[3] + 3 * margin  # Update based on title height
