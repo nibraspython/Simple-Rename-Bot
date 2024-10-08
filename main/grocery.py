@@ -83,45 +83,55 @@ async def create_grocery_list(bot, item_msg):
 
 # Create the grocery list image
 def create_grocery_image(images, names, output_image_path):
-    width = 800
-    height = 1000
-    background_color = (255, 255, 255)
-    box_color = (200, 200, 200)
-    box_size = (250, 250)
-    margin = 20
+    width = 1000  # Width of the image
+    margin = 20   # Margin between images and text
+    box_size = (300, 300)  # Size of each grocery item image
+    num_items_per_row = 2  # Number of items per row
+
+    # Calculate total height based on number of items
+    num_rows = (len(images) + num_items_per_row - 1) // num_items_per_row
+    height = 200 + (box_size[1] + margin) * num_rows  # Adjust height dynamically
+
+    background_color = (255, 255, 255)  # White background
+    box_color = (200, 200, 200)  # Light gray for text box
 
     # Create a blank image
     image = Image.new('RGB', (width, height), background_color)
     draw = ImageDraw.Draw(image)
-    font = ImageFont.load_default()  # Default font to avoid missing font error
+    
+    # Load custom font, fallback to default if not available
+    try:
+        title_font = ImageFont.truetype("arial.ttf", 60)  # Larger title font
+        item_font = ImageFont.truetype("arial.ttf", 40)  # Larger item font
+    except OSError:
+        title_font = ImageFont.load_default()
+        item_font = ImageFont.load_default()
 
     # Draw the title
     title_text = "Grocery Items"
-    title_font = ImageFont.load_default()  # Use default font
-    title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
-    title_w = title_bbox[2] - title_bbox[0]
-    title_h = title_bbox[3] - title_bbox[1]
+    title_w, title_h = draw.textsize(title_text, font=title_font)
     draw.text(((width - title_w) / 2, margin), title_text, fill="black", font=title_font)
 
-    # Add images and names
-    y_offset = title_h + 2 * margin
+    # Add grocery images and their names
+    y_offset = title_h + 3 * margin
     for i, (img_path, name) in enumerate(zip(images, names)):
         # Open each image and resize
         item_img = Image.open(img_path)
         item_img = item_img.resize(box_size)
 
-        # Calculate x position (2 items per row)
-        x_offset = (i % 2) * (box_size[0] + margin) + margin
-        if i % 2 == 1:
-            y_offset += box_size[1] + 2 * margin
+        # Calculate x position (num_items_per_row items per row)
+        x_offset = (i % num_items_per_row) * (box_size[0] + margin) + margin
+        if i % num_items_per_row == 0 and i > 0:
+            y_offset += box_size[1] + 3 * margin
 
-        # Paste the image and draw the item name below
+        # Paste the image
         image.paste(item_img, (x_offset, y_offset))
-        draw.rectangle([(x_offset, y_offset + box_size[1]), (x_offset + box_size[0], y_offset + box_size[1] + 40)], fill=box_color)
-        name_bbox = draw.textbbox((0, 0), name, font=font)
-        name_w = name_bbox[2] - name_bbox[0]
-        name_h = name_bbox[3] - name_bbox[1]
-        draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1]), name, fill="black", font=font)
+
+        # Draw text box and item name
+        draw.rectangle([(x_offset, y_offset + box_size[1]), 
+                        (x_offset + box_size[0], y_offset + box_size[1] + 50)], fill=box_color)
+        name_w, name_h = draw.textsize(name, font=item_font)
+        draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1]), name, fill="black", font=item_font)
 
     # Save the image
     image.save(output_image_path)
