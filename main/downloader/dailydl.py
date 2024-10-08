@@ -1,4 +1,4 @@
-import time, os, subprocress
+import time, os, subprocess
 from pyrogram import Client, filters, enums
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
