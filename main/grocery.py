@@ -81,30 +81,24 @@ async def create_grocery_list(bot, item_msg):
     os.remove(output_image_path)
     shutil.rmtree(extract_dir)
    
-# Load a custom font, adjust the path to where the font is stored
-font_path = "/content/Simple-Rename-Bot/Roboto-Black.ttf"
-
 def create_grocery_image(images, names, output_image_path):
-    width = 1000  # Width of the image
-    margin = 30   # Increased margin between images and text
-    box_size = (300, 300)  # Size of each grocery item image
-    num_items_per_row = 2  # Number of items per row
-
-    # Calculate total height based on number of items
-    num_rows = (len(images) + num_items_per_row - 1) // num_items_per_row
-    height = 200 + (box_size[1] + margin) * num_rows  # Adjust height dynamically
-
+    # Set the image size to A4 size in pixels (for print)
+    width = 2480  # Width for A4 at 300 DPI
+    height = 3508  # Height for A4 at 300 DPI
     background_color = (255, 255, 255)  # White background
     box_color = (200, 200, 200)  # Light gray for text box
+    box_size = (400, 400)  # Size of each grocery item image
+    margin = 30  # Margin for spacing
 
     # Create a blank image
     image = Image.new('RGB', (width, height), background_color)
     draw = ImageDraw.Draw(image)
-    
-    # Load custom font
+
+    # Load a custom font or use default if not available
+    font_path = "/content/Simple-Rename-Bot/Roboto-Black.ttf"  # Update with the correct path
     try:
         title_font = ImageFont.truetype(font_path, 80)  # Larger title font
-        item_font = ImageFont.truetype(font_path, 50)   # Larger item font
+        item_font = ImageFont.truetype(font_path, 60)   # Larger item font
     except OSError:
         title_font = ImageFont.load_default()
         item_font = ImageFont.load_default()
@@ -118,14 +112,16 @@ def create_grocery_image(images, names, output_image_path):
 
     # Add grocery images and their names
     y_offset = title_bbox[3] + 3 * margin  # Update based on title height
+    items_per_row = 3  # Number of items per row for better layout
+
     for i, (img_path, name) in enumerate(zip(images, names)):
         # Open each image and resize
         item_img = Image.open(img_path)
         item_img = item_img.resize(box_size)
 
-        # Calculate x position (num_items_per_row items per row)
-        x_offset = (i % num_items_per_row) * (box_size[0] + margin) + margin
-        if i % num_items_per_row == 0 and i > 0:
+        # Calculate x position (items_per_row items per row)
+        x_offset = (i % items_per_row) * (box_size[0] + margin) + margin
+        if i % items_per_row == 0 and i > 0:
             y_offset += box_size[1] + 3 * margin  # Increase vertical spacing
 
         # Paste the image
@@ -135,6 +131,7 @@ def create_grocery_image(images, names, output_image_path):
         draw.rectangle([(x_offset, y_offset + box_size[1]), 
                         (x_offset + box_size[0], y_offset + box_size[1] + 60)], fill=box_color)
 
+        # Center the item name
         name_bbox = draw.textbbox((0, 0), name, font=item_font)
         name_w = name_bbox[2] - name_bbox[0]
         draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] + 10), name, fill="black", font=item_font)
