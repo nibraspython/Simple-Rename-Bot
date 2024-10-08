@@ -81,6 +81,9 @@ async def create_grocery_list(bot, item_msg):
     os.remove(output_image_path)
     shutil.rmtree(extract_dir)
    
+# Load a custom font, adjust the path to where the font is stored
+font_path = "/content/Simple-Rename-Bot/Roboto-Black.ttf"
+
 def create_grocery_image(images, names, output_image_path):
     width = 1000  # Width of the image
     margin = 30   # Increased margin between images and text
@@ -98,10 +101,10 @@ def create_grocery_image(images, names, output_image_path):
     image = Image.new('RGB', (width, height), background_color)
     draw = ImageDraw.Draw(image)
     
-    # Load custom font, fallback to default if not available
+    # Load custom font
     try:
-        title_font = ImageFont.truetype("arial.ttf", 80)  # Larger title font
-        item_font = ImageFont.truetype("arial.ttf", 50)   # Larger item font
+        title_font = ImageFont.truetype(font_path, 80)  # Larger title font
+        item_font = ImageFont.truetype(font_path, 50)   # Larger item font
     except OSError:
         title_font = ImageFont.load_default()
         item_font = ImageFont.load_default()
