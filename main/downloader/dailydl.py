@@ -140,9 +140,7 @@ async def dailymotion_download(bot, msg):
             os.remove(downloaded)
             if thumbnail_path:
                 os.remove(thumbnail_path)
-
-            await sts.edit(f"✅ Successfully processed: {video_title}")
-
+   
         except Exception as e:
             await msg.reply_text(f"❌ Failed to process {url}. Error: {str(e)}")
 
