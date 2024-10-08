@@ -53,15 +53,26 @@ def download_thumbnail(thumbnail_url, title):
 #funtion to extract audio
 def extract_audio(video_path, audio_path):
     try:
+        # Extract to .ogg first to ensure compatibility
+        intermediate_audio_path = audio_path.replace('.mka', '.ogg')
+        
+        # Extract audio using a well-supported codec (Vorbis)
         (
             ffmpeg
             .input(video_path)
-            .output(audio_path, acodec='libvorbis', format='mka')  # Encode audio to Vorbis for .mka
-            .run(quiet=True, overwrite_output=True)  # Suppress logs and allow overwriting
+            .output(intermediate_audio_path, acodec='libvorbis', format='ogg')  # Use OGG as the intermediate format
+            .run(quiet=True, overwrite_output=True)
         )
+        
+        # Rename .ogg file to .mka
+        os.rename(intermediate_audio_path, audio_path)
+        
         return audio_path
-    except Exception as e:
-        print(f"Error extracting audio: {e}")
+    
+    except ffmpeg.Error as e:
+        # Log the full error message
+        error_message = e.stderr.decode()
+        print(f"Error extracting audio: {error_message}")
         return None
 
 @Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
