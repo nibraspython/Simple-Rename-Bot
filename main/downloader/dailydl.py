@@ -40,6 +40,7 @@ async def extract_audio(video_path, video_title, sts, bot, msg):
     for stream in video_streams_data.get("streams"):
         if stream["codec_type"] == "audio":
             audios.append(stream)
+            audio_duration = int(float(stream['duration']))  # Get audio duration in seconds
 
     for audio in audios:
         extract_cmd = [
