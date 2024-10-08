@@ -11,7 +11,7 @@ import asyncio
 categories = {
     "foods": ["butter", "bread", "cheese"],
     "spices": ["salt", "pepper", "turmeric"],
-    "vegetables": ["carrot", "leek", "potato"],
+    "vegetables": ["carrot", "ලීක්ස්", "potato"],
     "meat items": ["chicken", "beef", "lamb"],
     "other items": ["oil", "sugar", "rice"]
 }
