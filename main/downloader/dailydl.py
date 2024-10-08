@@ -63,7 +63,6 @@ async def extract_audio(video_path, video_title, sts, bot, msg):
             progress_args=(f"🎧 Uploading {video_title}.mka... 📤", sts, c_time),
         )
         os.remove(extracted_audio_path)
-        await sts.edit(f"✅ Audio extracted and uploaded: {video_title}.mka")
     else:
         await sts.edit(f"❌ Failed to extract audio from {video_title}")
 
