@@ -173,10 +173,12 @@ def create_grocery_image(categorized_items, output_image_path):
     width = 2480  # Width for A4 at 300 DPI
     height = 3508  # Height for A4 at 300 DPI
     background_color = (255, 255, 255)  # White background
-    box_color = (200, 200, 200)  # Light gray for text box
+    box_color = (240, 240, 240)  # Light gray for the box
+    shadow_color = (170, 170, 170)  # Darker gray for shadow
     box_size = (400, 400)  # Size of each grocery item image
-    margin = 50  # Margin for spacing, increased to ensure clear separation
-    
+    margin = 50  # Margin for spacing
+    shadow_offset = 20  # Offset for the shadow to simulate 3D
+
     # Create a blank image
     image = Image.new('RGB', (width, height), background_color)
     draw = ImageDraw.Draw(image)
@@ -200,7 +202,7 @@ def create_grocery_image(categorized_items, output_image_path):
     # Add grocery images and their names
     y_offset = title_bbox[3] + 4 * margin  # Update based on title height
     items_per_row = 3  # Number of items per row for better layout
-    
+
     # Iterate through categorized_items to create images
     for category, items in categorized_items.items():
         for i, item in enumerate(items):
@@ -210,29 +212,35 @@ def create_grocery_image(categorized_items, output_image_path):
             # Open each image and resize
             try:
                 item_img = Image.open(img_path)
-                item_img = item_img.resize(box_size)
+                item_img = item_img.resize((box_size[0] - 50, box_size[1] - 50))  # Slightly smaller to fit in the box
             except Exception as e:
                 print(f"Error loading image {img_path}: {e}")
                 continue
 
-            # Calculate x position (items_per_row items per row)
+            # Calculate x and y positions (items_per_row items per row)
             x_offset = (i % items_per_row) * (box_size[0] + margin) + margin
             if i % items_per_row == 0 and i > 0:
                 y_offset += box_size[1] + 4 * margin  # Increase vertical spacing
 
-            # Paste the image
-            image.paste(item_img, (x_offset, y_offset))
+            # Draw shadow to simulate 3D effect
+            draw.rectangle([(x_offset + shadow_offset, y_offset + shadow_offset), 
+                            (x_offset + box_size[0] + shadow_offset, y_offset + box_size[1] + shadow_offset)], 
+                           fill=shadow_color)
 
-            # Draw text box and item name
-            draw.rectangle([(x_offset, y_offset + box_size[1]), 
-                            (x_offset + box_size[0], y_offset + box_size[1] + 80)], fill=box_color)
+            # Draw the main box for the item
+            draw.rectangle([(x_offset, y_offset), 
+                            (x_offset + box_size[0], y_offset + box_size[1])], fill=box_color)
 
-            # Center the item name
+            # Paste the image in the center of the box
+            img_x = x_offset + (box_size[0] - item_img.size[0]) // 2
+            img_y = y_offset + (box_size[1] - item_img.size[1]) // 2 - 40  # Adjust for item name space
+            image.paste(item_img, (img_x, img_y))
+
+            # Draw the item name below the image
             name_bbox = draw.textbbox((0, 0), name, font=item_font)
             name_w = name_bbox[2] - name_bbox[0]
-            draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] + 10), name, fill="black", font=item_font)
+            draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] - 40), 
+                      name.capitalize(), fill="black", font=item_font)
 
     # Save the image
     image.save(output_image_path)
- 
-                     
