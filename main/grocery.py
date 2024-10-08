@@ -173,9 +173,9 @@ def create_grocery_image(categorized_items, output_image_path):
     width = 2480  # Width for A4 at 300 DPI
     height = 3508  # Height for A4 at 300 DPI
     background_color = (255, 255, 255)  # White background
-    box_color = (240, 240, 240)  # Light gray for the box
+    box_color = (255, 255, 255)  # White for the box (adjusted to match request)
     shadow_color = (170, 170, 170)  # Darker gray for shadow
-    box_size = (400, 400)  # Size of each grocery item image
+    box_size = (400, 550)  # Adjusted height for longer boxes
     margin = 50  # Margin for spacing
     shadow_offset = 20  # Offset for the shadow to simulate 3D
 
@@ -212,7 +212,7 @@ def create_grocery_image(categorized_items, output_image_path):
             # Open each image and resize
             try:
                 item_img = Image.open(img_path)
-                item_img = item_img.resize((box_size[0] - 50, box_size[1] - 50))  # Slightly smaller to fit in the box
+                item_img = item_img.resize((box_size[0] - 50, box_size[1] - 200))  # Resize to fit the taller box
             except Exception as e:
                 print(f"Error loading image {img_path}: {e}")
                 continue
@@ -233,13 +233,13 @@ def create_grocery_image(categorized_items, output_image_path):
 
             # Paste the image in the center of the box
             img_x = x_offset + (box_size[0] - item_img.size[0]) // 2
-            img_y = y_offset + (box_size[1] - item_img.size[1]) // 2 - 40  # Adjust for item name space
+            img_y = y_offset + (box_size[1] - item_img.size[1]) // 2 - 100  # Adjust for item name space
             image.paste(item_img, (img_x, img_y))
 
-            # Draw the item name below the image
+            # Draw the item name inside the box, below the image
             name_bbox = draw.textbbox((0, 0), name, font=item_font)
             name_w = name_bbox[2] - name_bbox[0]
-            draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] - 40), 
+            draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] - 100), 
                       name.capitalize(), fill="black", font=item_font)
 
     # Save the image
