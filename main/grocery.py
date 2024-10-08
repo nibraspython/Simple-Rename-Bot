@@ -95,7 +95,7 @@ def create_grocery_image(images, names, output_image_path):
     draw = ImageDraw.Draw(image)
 
     # Load a custom font or use default if not available
-    font_path = "/content/Simple-Rename-Bot/Roboto-Black.ttf"  # Update with the correct path
+    font_path = "/content/Simple-Rename-Bot/AbhayaLibre-Bold.ttf"  # Update with the correct path
     try:
         title_font = ImageFont.truetype(font_path, 80)  # Larger title font
         item_font = ImageFont.truetype(font_path, 60)   # Larger item font
