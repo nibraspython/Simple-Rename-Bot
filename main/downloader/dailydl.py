@@ -1,4 +1,4 @@
-import time, os
+import time, os, subprocress
 from pyrogram import Client, filters, enums
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
@@ -26,6 +26,44 @@ def download_dailymotion(url):
         thumbnail_url = info.get('thumbnail')
         return file_path, video_title, duration, file_size, resolution, thumbnail_url
 
+# Function to extract audio streams from video
+async def extract_audio(video_path, video_title, sts, bot, msg):
+    extract_dir = os.path.dirname(video_path) + "/extract"
+    if not os.path.exists(extract_dir):
+        os.makedirs(extract_dir)
+    
+    # Probe the video file for audio streams
+    video_streams_data = ffmpeg.probe(video_path)
+    audios = []
+
+    for stream in video_streams_data.get("streams"):
+        if stream["codec_type"] == "audio":
+            audios.append(stream)
+
+    for audio in audios:
+        extract_cmd = [
+            "ffmpeg", "-hide_banner", "-i", video_path,
+            "-map", f"0:{audio['index']}", "-c", "copy",
+            f"{extract_dir}/{video_title}.mka"
+        ]
+        subprocess.call(extract_cmd)
+
+    extracted_audio_path = f"{extract_dir}/{video_title}.mka"
+    if os.path.exists(extracted_audio_path):
+        await sts.edit(f"🎧 Extracting audio from {video_title}... 🔄")
+        c_time = time.time()
+        await bot.send_audio(
+            msg.chat.id,
+            audio=extracted_audio_path,
+            caption=f"🎧 **Extracted Audio**: {video_title}.mka",
+            progress=progress_message,
+            progress_args=(f"🎧 Uploading {video_title}.mka... 📤", sts, c_time),
+        )
+        os.remove(extracted_audio_path)
+        await sts.edit(f"✅ Audio extracted and uploaded: {video_title}.mka")
+    else:
+        await sts.edit(f"❌ Failed to extract audio from {video_title}")
+
 # Function to generate thumbnail from the video if no thumbnail is available
 def generate_thumbnail(video_path):
     thumbnail_path = f"{video_path}_thumbnail.jpg"
@@ -49,31 +87,6 @@ def download_thumbnail(thumbnail_url, title):
             f.write(response.content)
         return thumbnail_path
     return None
-
-#funtion to extract audio
-def extract_audio(video_path, audio_path):
-    try:
-        # Extract to .ogg first to ensure compatibility
-        intermediate_audio_path = audio_path.replace('.mka', '.ogg')
-        
-        # Extract audio using a well-supported codec (Vorbis)
-        (
-            ffmpeg
-            .input(video_path)
-            .output(intermediate_audio_path, acodec='libvorbis', format='ogg')  # Use OGG as the intermediate format
-            .run(quiet=True, overwrite_output=True)
-        )
-        
-        # Rename .ogg file to .mka
-        os.rename(intermediate_audio_path, audio_path)
-        
-        return audio_path
-    
-    except ffmpeg.Error as e:
-        # Log the full error message
-        error_message = e.stderr.decode()
-        print(f"Error extracting audio: {error_message}")
-        return None
 
 @Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
 async def dailymotion_download(bot, msg):
@@ -120,25 +133,9 @@ async def dailymotion_download(bot, msg):
                 progress_args=(f"🚀 Uploading {video_title}... 📤", sts, c_time),
             )
 
-            await sts.edit(f"🔄 Extracting audio from {video_title}... 🎧")
-
-            # Extract audio
-            audio_path = f"{DOWNLOAD_LOCATION}/{video_title}.mka"
-            extracted_audio = extract_audio(downloaded, audio_path)
-
-            if extracted_audio:
-                # Upload audio with progress
-                await sts.edit(f"🚀 Uploading audio for {video_title} 📤")
-                c_time = time.time()
-                await bot.send_audio(
-                    msg.chat.id,
-                    audio=extracted_audio,
-                    title=video_title,
-                    progress=progress_message,
-                    progress_args=(f"🚀 Uploading audio for {video_title}... 📤", sts, c_time),
-                )
-                os.remove(extracted_audio)  # Remove audio file after upload
-
+            # Extract audio and upload after video
+            await extract_audio(downloaded, video_title, sts, bot, msg)
+            
             # Clean up video and thumbnail
             os.remove(downloaded)
             if thumbnail_path:
