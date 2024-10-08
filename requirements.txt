@@ -8,5 +8,5 @@ youtube-dl
 ffmpeg
 telegraph
 pymediainfo
-aiohttp
 aiotelegraph
+ffmpeg-python
