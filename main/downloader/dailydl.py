@@ -35,6 +35,7 @@ async def extract_audio(video_path, video_title, sts, bot, msg):
     # Probe the video file for audio streams
     video_streams_data = ffmpeg.probe(video_path)
     audios = []
+    audio_duration = 0
 
     for stream in video_streams_data.get("streams"):
         if stream["codec_type"] == "audio":
@@ -56,7 +57,7 @@ async def extract_audio(video_path, video_title, sts, bot, msg):
             msg.chat.id,
             audio=extracted_audio_path,
             caption=f"🎧 **Extracted Audio**: {video_title}.mka",
-            duration=duration,
+            duration=audio_duration,
             progress=progress_message,
             progress_args=(f"🎧 Uploading {video_title}.mka... 📤", sts, c_time),
         )
