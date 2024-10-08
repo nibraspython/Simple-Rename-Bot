@@ -56,6 +56,7 @@ async def extract_audio(video_path, video_title, sts, bot, msg):
             msg.chat.id,
             audio=extracted_audio_path,
             caption=f"🎧 **Extracted Audio**: {video_title}.mka",
+            duration=duration,
             progress=progress_message,
             progress_args=(f"🎧 Uploading {video_title}.mka... 📤", sts, c_time),
         )
