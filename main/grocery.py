@@ -159,26 +159,26 @@ async def process_selected_items(bot, msg):
     # Clean up
     os.remove(output_image_path)
     if os.path.exists(selected_items_file):
-        os.remove(selected_items_file)
-    
-def create_grocery_image(categorized_items, output_image_path): 
+        os.remove(selected_items_file)    
+
+def create_grocery_image(categorized_items, output_image_path):
     # Set the image size to A4 size in pixels (for print)
     width = 2480  # Width for A4 at 300 DPI
     height = 3508  # Height for A4 at 300 DPI
     background_color = (255, 255, 255)  # White background
     box_color = (200, 200, 200)  # Light gray for text box
     box_size = (400, 400)  # Size of each grocery item image
-    margin = 30  # Margin for spacing
-
+    margin = 50  # Margin for spacing, increased to ensure clear separation
+    
     # Create a blank image
     image = Image.new('RGB', (width, height), background_color)
     draw = ImageDraw.Draw(image)
-
+    
     # Load a custom font or use default if not available
     font_path = "/content/Simple-Rename-Bot/AbhayaLibre-Bold.ttf"  # Update with the correct path
     try:
-        title_font = ImageFont.truetype(font_path, 80)  # Larger title font
-        item_font = ImageFont.truetype(font_path, 60)   # Larger item font
+        title_font = ImageFont.truetype(font_path, 120)  # Larger title font
+        item_font = ImageFont.truetype(font_path, 80)   # Increased item font size
     except OSError:
         title_font = ImageFont.load_default()
         item_font = ImageFont.load_default()
@@ -190,41 +190,34 @@ def create_grocery_image(categorized_items, output_image_path):
     title_y = margin  # y position for the title
     draw.text(((width - title_w) / 2, title_y), title_text, fill="black", font=title_font)
 
-    # Populate the `images` and `names` lists based on categorized_items
-    images = []
-    names = []
-
-    # Assuming the grocery images are located in a folder after zip extraction
-    grocery_images_folder = "/content/Simple-Rename-Bot/grocery_images"  # Update the path if necessary
-
-    for category, items in categorized_items.items():
-        for item in items:
-            # Construct the image path for each item
-            img_path = os.path.join(grocery_images_folder, f"{item}.jpg")  # Adjust extension if needed
-            if os.path.exists(img_path):
-                images.append(img_path)
-                names.append(item.capitalize())  # Add the item name
-
     # Add grocery images and their names
-    y_offset = title_bbox[3] + 3 * margin  # Update based on title height
+    y_offset = title_bbox[3] + 4 * margin  # Update based on title height
     items_per_row = 3  # Number of items per row for better layout
+    
+    # Get images and names from categorized_items
+    images = [item['image_path'] for item in categorized_items]
+    names = [item['name'] for item in categorized_items]
 
     for i, (img_path, name) in enumerate(zip(images, names)):
         # Open each image and resize
-        item_img = Image.open(img_path)
-        item_img = item_img.resize(box_size)
+        try:
+            item_img = Image.open(img_path)
+            item_img = item_img.resize(box_size)
+        except Exception as e:
+            print(f"Error loading image {img_path}: {e}")
+            continue
 
         # Calculate x position (items_per_row items per row)
         x_offset = (i % items_per_row) * (box_size[0] + margin) + margin
         if i % items_per_row == 0 and i > 0:
-            y_offset += box_size[1] + 3 * margin  # Increase vertical spacing
+            y_offset += box_size[1] + 4 * margin  # Increase vertical spacing
 
         # Paste the image
         image.paste(item_img, (x_offset, y_offset))
 
         # Draw text box and item name
         draw.rectangle([(x_offset, y_offset + box_size[1]), 
-                        (x_offset + box_size[0], y_offset + box_size[1] + 60)], fill=box_color)
+                        (x_offset + box_size[0], y_offset + box_size[1] + 80)], fill=box_color)
 
         # Center the item name
         name_bbox = draw.textbbox((0, 0), name, font=item_font)
@@ -233,3 +226,4 @@ def create_grocery_image(categorized_items, output_image_path):
 
     # Save the image
     image.save(output_image_path)
+      
