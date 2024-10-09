@@ -11,7 +11,7 @@ import asyncio
 categories = {
     "foods": ["butter", "bread", "cheese"],
     "spices": ["salt", "pepper", "turmeric"],
-    "vegetables": ["carrot", "ලීක්ස්", "potato"],
+    "vegetables": ["carrot", "leeks", "potato"],
     "meat items": ["chicken", "beef", "lamb"],
     "other items": ["oil", "sugar", "rice"]
 }
@@ -134,10 +134,6 @@ async def handle_navigation(bot, query):
         _, category, index = query.data.split("_")
         await show_items_in_category(bot, query.message, category, int(index))
 
-    # Create grocery list image
-    output_image_path = os.path.join(DOWNLOAD_LOCATION, "grocery_list.png")
-    create_grocery_image(categorized_items, output_image_path)
-
 # Step 7: Process selected items after "Done"
 async def process_selected_items(bot, msg):
     await msg.edit_text("🖼 Creating your grocery list image...")
@@ -154,15 +150,15 @@ async def process_selected_items(bot, msg):
     categorized_items = {}
     for line in items:
         category, item = line.strip().split(": ")
-        # Assume a function `get_image_path` that returns the image path for an item
-        image_path = get_image_path(item)  # Function to fetch image paths
+        # Fetch image paths
+        image_path = get_image_path(item)
         categorized_items.setdefault(category, []).append({"image_path": image_path, "name": item})
 
     # Define the path for the grocery list image to be saved
     output_image_path = os.path.join(DOWNLOAD_LOCATION, "grocery_list.png")
 
     # Create grocery list image
-    create_grocery_image(categorized_items, output_image_path)
+    create_grocery_image_with_background(categorized_items, output_image_path)
 
     await bot.send_photo(
         chat_id=msg.chat.id,
@@ -172,7 +168,7 @@ async def process_selected_items(bot, msg):
 
     # Clean up
     if os.path.exists(selected_items_file):
-        os.remove(selected_items_file)    
+        os.remove(selected_items_file)
 
 # Assuming you've already set the correct path for your background image
 background_image_path = "/content/Simple-Rename-Bot/background_image.jpg"
