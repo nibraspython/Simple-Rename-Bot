@@ -158,6 +158,12 @@ async def process_selected_items(bot, msg):
         image_path = get_image_path(item)  # Function to fetch image paths
         categorized_items.setdefault(category, []).append({"image_path": image_path, "name": item})
 
+    # Define the path for the grocery list image to be saved
+    output_image_path = os.path.join(DOWNLOAD_LOCATION, "grocery_list.png")
+
+    # Create grocery list image
+    create_grocery_image(categorized_items, output_image_path)
+
     await bot.send_photo(
         chat_id=msg.chat.id,
         photo=output_image_path,
