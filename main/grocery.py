@@ -180,21 +180,21 @@ def create_grocery_image_with_background(categorized_items, output_image_path):
     # Set up the drawing context for the background
     draw = ImageDraw.Draw(background)
     
-    # Calculate space for grocery items (on the left side)
-    left_margin = 150  # Left margin for positioning the boxes
-    top_margin = 200   # Start from 200px down from the top
-    box_size = (600, 550)  # Box size for each item (adjust as needed)
+    # Coordinates and size of the region marked by the green arrow (adjust these values as needed)
+    left_margin = 150  # Adjust this to match the left side of the marked area
+    top_margin = 100   # Adjust this to start where the green arrow begins
+    box_size = (500, 400)  # Size for each item box (adjust to fit within the marked region)
     margin = 50  # Margin between boxes
-    items_per_column = 3  # Number of items to show per column for better layout
-    shadow_offset = 20  # Shadow offset for 3D effect
-    corner_radius = 40  # Rounded corners for item boxes
+    items_per_column = 3  # Number of items to show per column
+    shadow_offset = 10  # Offset for the shadow effect
+    corner_radius = 20  # Radius for rounded corners
     box_color = (255, 255, 255)  # White box color
     shadow_color = (170, 170, 170)  # Gray shadow color
 
-    # Load font (adjust path accordingly)
-    font_path = "/content/Simple-Rename-Bot/Roboto-Black.ttf"  # Ensure the path is correct
+    # Load font for item names
+    font_path = "/content/Simple-Rename-Bot/Roboto-Black.ttf"  # Ensure the font path is correct
     try:
-        item_font = ImageFont.truetype(font_path, 80)  # Font size for item names
+        item_font = ImageFont.truetype(font_path, 50)  # Font size for item names
     except OSError:
         item_font = ImageFont.load_default()
 
@@ -208,42 +208,38 @@ def create_grocery_image_with_background(categorized_items, output_image_path):
             img_path = item['image_path']
             name = item['name']
 
-            # Open each item image and resize
+            # Open and resize each item image
             try:
                 item_img = Image.open(img_path)
-                item_img = item_img.resize((box_size[0] - 50, box_size[1] - 200))  # Resize to fit the box
+                item_img = item_img.resize((box_size[0] - 50, box_size[1] - 150))  # Resize to fit the box
             except Exception as e:
                 print(f"Error loading image {img_path}: {e}")
                 continue
 
             # Calculate x and y positions for the item box
             if i % items_per_column == 0 and i > 0:
-                y_offset += box_size[1] + 4 * margin  # Increase vertical spacing
+                y_offset += box_size[1] + margin  # Move down after filling a column
 
-            # Draw shadow to simulate 3D effect
+            # Draw shadow for 3D effect
             draw.rounded_rectangle([(x_offset + shadow_offset, y_offset + shadow_offset), 
                                     (x_offset + box_size[0] + shadow_offset, y_offset + box_size[1] + shadow_offset)], 
                                    fill=shadow_color, radius=corner_radius)
 
-            # Draw the main box for the item with rounded corners
+            # Draw the main box with rounded corners
             draw.rounded_rectangle([(x_offset, y_offset), 
                                     (x_offset + box_size[0], y_offset + box_size[1])], 
                                    fill=box_color, radius=corner_radius)
 
             # Paste the item image in the center of the box
             img_x = x_offset + (box_size[0] - item_img.size[0]) // 2
-            img_y = y_offset + (box_size[1] - item_img.size[1]) // 2 - 100  # Adjust for item name space
+            img_y = y_offset + (box_size[1] - item_img.size[1]) // 2 - 50  # Adjust for item name space
             background.paste(item_img, (img_x, img_y))
 
             # Draw the item name below the image
             name_bbox = draw.textbbox((0, 0), name, font=item_font)
             name_w = name_bbox[2] - name_bbox[0]
-            draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] - 100), 
+            draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] - 50), 
                       name.capitalize(), fill="black", font=item_font)
 
     # Save the final image with the background and items
     background.save(output_image_path)
-
-# Example usage:
-# Assuming categorized_items is a dictionary with items and their image paths
-# create_grocery_image_with_background(categorized_items, "grocery_list_with_bg.png")
