@@ -134,6 +134,10 @@ async def handle_navigation(bot, query):
         _, category, index = query.data.split("_")
         await show_items_in_category(bot, query.message, category, int(index))
 
+    # Create grocery list image
+    output_image_path = os.path.join(DOWNLOAD_LOCATION, "grocery_list.png")
+    create_grocery_image(categorized_items, output_image_path)
+
 # Step 7: Process selected items after "Done"
 async def process_selected_items(bot, msg):
     await msg.edit_text("🖼 Creating your grocery list image...")
@@ -154,10 +158,6 @@ async def process_selected_items(bot, msg):
         image_path = get_image_path(item)  # Function to fetch image paths
         categorized_items.setdefault(category, []).append({"image_path": image_path, "name": item})
 
-    # Create grocery list image
-    output_image_path = os.path.join(DOWNLOAD_LOCATION, "grocery_list.png")
-    create_grocery_image(categorized_items, output_image_path)
-
     await bot.send_photo(
         chat_id=msg.chat.id,
         photo=output_image_path,
@@ -167,10 +167,6 @@ async def process_selected_items(bot, msg):
     # Clean up
     if os.path.exists(selected_items_file):
         os.remove(selected_items_file)    
-
-import os
-from PIL import Image, ImageDraw, ImageFont
-import shutil
 
 # Assuming you've already set the correct path for your background image
 background_image_path = "/content/Simple-Rename-Bot/background_image.jpg"
