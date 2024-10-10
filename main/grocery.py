@@ -23,15 +23,14 @@ selected_items_file = os.path.join(DOWNLOAD_LOCATION, "selected_items.txt")
 def get_image_path(item):
     # Assuming images are stored in a specific directory named 'grocery_images'
     image_directory = os.path.join(DOWNLOAD_LOCATION, "grocery_images")
-    # Create the image path by combining the directory and item name
-    return os.path.join(image_directory, f"{item}.png")  # Assuming images are named as 'item_name.png'
+    return os.path.join(image_directory, f"{item}.png")
 
 # Step 1: Handle the /grocery command
 @Client.on_message(filters.private & filters.command("grocery") & filters.reply & filters.user(ADMIN))
 async def handle_grocery_command(bot, msg):
     reply = msg.reply_to_message
     if reply.document and reply.document.file_name.endswith(".zip"):
-        await msg.reply_text("📦 Extracting zip file...")
+        extract_msg = await msg.reply_text("📦 Extracting zip file...")
         try:
             # Download and extract the zip file
             zip_path = os.path.join(DOWNLOAD_LOCATION, reply.document.file_name)
@@ -43,7 +42,12 @@ async def handle_grocery_command(bot, msg):
                 zip_ref.extractall(extract_dir)
 
             os.remove(zip_path)
-            await msg.reply_text("✅ Zip file extraction completed.")
+            extract_done_msg = await msg.reply_text("✅ Zip file extraction completed.")
+            
+            # Auto-delete messages after a few seconds
+            await asyncio.sleep(5)
+            await extract_msg.delete()
+            await extract_done_msg.delete()
             
             # Show categories selection with inline buttons
             await show_category_selection(bot, msg)
@@ -53,15 +57,15 @@ async def handle_grocery_command(bot, msg):
     else:
         await msg.reply_text("❌ Please reply to a valid .zip file.")
 
-# Step 2: Show category selection
+# Step 2: Show category selection in grid style
 async def show_category_selection(bot, msg):
     keyboard = [
-        [InlineKeyboardButton("Foods", callback_data="category_foods")],
-        [InlineKeyboardButton("Spices", callback_data="category_spices")],
-        [InlineKeyboardButton("Vegetables", callback_data="category_vegetables")],
-        [InlineKeyboardButton("Meat Items", callback_data="category_meat items")],
+        [InlineKeyboardButton("Foods", callback_data="category_foods"),
+         InlineKeyboardButton("Spices", callback_data="category_spices")],
+        [InlineKeyboardButton("Vegetables", callback_data="category_vegetables"),
+         InlineKeyboardButton("Meat Items", callback_data="category_meat items")],
         [InlineKeyboardButton("Other Items", callback_data="category_other items")],
-        [InlineKeyboardButton("Done", callback_data="category_done")]
+        [InlineKeyboardButton("✅ Done", callback_data="category_done")]
     ]
     await msg.reply_text(
         "🍽 Select your category:",
@@ -81,24 +85,26 @@ async def handle_category_selection(bot, query):
     # Show items in the selected category with navigation
     await show_items_in_category(bot, query.message, category, 0)
 
-# Step 4: Show items in the selected category with navigation
+# Step 4: Show items in the selected category with grid style and navigation
 async def show_items_in_category(bot, msg, category, index):
     items = categories[category]
     current_items = items[index:index+3]  # Show 3 items at a time
 
-    # Generate item buttons and navigation buttons
-    item_buttons = [
-        [InlineKeyboardButton(item.capitalize(), callback_data=f"item_{category}_{item}")] 
-        for item in current_items
-    ]
+    # Generate item buttons in a grid
+    item_buttons = []
+    for item in current_items:
+        item_buttons.append(InlineKeyboardButton(item.capitalize(), callback_data=f"item_{category}_{item}"))
+
     navigation_buttons = []
     if index > 0:
         navigation_buttons.append(InlineKeyboardButton("◀️ Previous", callback_data=f"prev_{category}_{index-3}"))
     if index + 3 < len(items):
         navigation_buttons.append(InlineKeyboardButton("▶️ Next", callback_data=f"next_{category}_{index+3}"))
+    
     navigation_buttons.append(InlineKeyboardButton("🔙 Back", callback_data="back"))
 
-    keyboard = item_buttons + [navigation_buttons]
+    # Update inline keyboard with items and navigation buttons
+    keyboard = [item_buttons[:2], item_buttons[2:], navigation_buttons]
     
     await msg.edit_text(
         f"🍽 {category.capitalize()} items:",
