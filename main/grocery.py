@@ -9,11 +9,11 @@ import asyncio
 
 # Dictionary to store categories and selected items
 categories = {
-    "foods": ["butter", "bread", "cheese"],
-    "spices": ["salt", "pepper", "turmeric"],
-    "vegetables": ["carrot", "leeks", "potato"],
-    "meat items": ["chicken", "beef", "lamb"],
-    "other items": ["oil", "sugar", "rice"]
+    "foods": ["butter", "පාන්", "cheese"],
+    "spices": ["ලුණු", "ගම්මිරිස් කුඩු", "කහ කුඩු", "කෑලි මිරිස්"],
+    "vegetables": ["තක්කාලි", "ලීක්ස්", "ලූණු", "රතු ලූණු", "අමු මිරිස්"],
+    "meat items": ["බිත්තර", "beef", "lamb"],
+    "other items": ["පොල්තෙල්", "sugar", "හාල්"]
 }
 selected_items = {}
 
