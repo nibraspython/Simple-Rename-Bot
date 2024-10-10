@@ -192,7 +192,7 @@ def create_grocery_image_with_background(categorized_items, output_image_path):
     shadow_color = (170, 170, 170)  # Gray shadow color
 
     # Load font for item names
-    font_path = "/content/Simple-Rename-Bot/Roboto-Black.ttf"  # Ensure the font path is correct
+    font_path = "/content/Simple-Rename-Bot/AbhayaLibre-Bold.ttf"  # Ensure the font path is correct
     try:
         item_font = ImageFont.truetype(font_path, 25)  # Font size for item names
     except OSError:
