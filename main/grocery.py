@@ -105,11 +105,17 @@ async def show_items_in_category(bot, msg, category, index):
 
     # Update inline keyboard with items and navigation buttons
     keyboard = [item_buttons[:2], item_buttons[2:], navigation_buttons]
-    
-    await msg.edit_text(
-        f"🍽 {category.capitalize()} items:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+
+    new_text = f"🍽 {category.capitalize()} items:"
+
+    # Check if the new text is different from the current message text
+    if msg.text != new_text:
+        await msg.edit_text(
+            new_text,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    else:
+        print("The message is already up to date. No edit needed.")
 
 # Step 5: Handle item selection
 @Client.on_callback_query(filters.regex(r"^item_"))
