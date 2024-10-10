@@ -182,7 +182,7 @@ def create_grocery_image_with_background(categorized_items, output_image_path):
     
     # Coordinates and size of the region below the "Today's List" box
     left_margin = 50  # Adjust this to match the left side
-    top_margin = 200  # Starting point just below the "Today's List" text box
+    top_margin = 300  # Starting point just below the "Today's List" text box
     box_size = (100, 120)  # Size for each item box (width, height)
     margin = 20  # Margin between boxes
     items_per_line = 4  # Number of items to show per line
