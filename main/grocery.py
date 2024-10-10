@@ -180,21 +180,21 @@ def create_grocery_image_with_background(categorized_items, output_image_path):
     # Set up the drawing context for the background
     draw = ImageDraw.Draw(background)
     
-    # Coordinates and size of the region marked by the green arrow (adjust these values as needed)
-    left_margin = 150  # Adjust this to match the left side of the marked area
-    top_margin = 100   # Adjust this to start where the green arrow begins
-    box_size = (500, 400)  # Size for each item box (adjust to fit within the marked region)
-    margin = 50  # Margin between boxes
-    items_per_column = 3  # Number of items to show per column
-    shadow_offset = 10  # Offset for the shadow effect
-    corner_radius = 20  # Radius for rounded corners
+    # Coordinates and size of the region below the "Today's List" box
+    left_margin = 50  # Adjust this to match the left side
+    top_margin = 160  # Starting point just below the "Today's List" text box
+    box_size = (100, 120)  # Size for each item box (width, height)
+    margin = 20  # Margin between boxes
+    items_per_line = 4  # Number of items to show per line
+    shadow_offset = 5  # Offset for the shadow effect
+    corner_radius = 15  # Radius for rounded corners
     box_color = (255, 255, 255)  # White box color
     shadow_color = (170, 170, 170)  # Gray shadow color
 
     # Load font for item names
     font_path = "/content/Simple-Rename-Bot/Roboto-Black.ttf"  # Ensure the font path is correct
     try:
-        item_font = ImageFont.truetype(font_path, 50)  # Font size for item names
+        item_font = ImageFont.truetype(font_path, 25)  # Font size for item names
     except OSError:
         item_font = ImageFont.load_default()
 
@@ -203,6 +203,8 @@ def create_grocery_image_with_background(categorized_items, output_image_path):
     x_offset = left_margin
     
     # Iterate through categorized_items to create the grocery list
+    box_count = 0  # Counter to limit the boxes to 8 (two lines with 4 boxes each)
+    
     for category, items in categorized_items.items():
         for i, item in enumerate(items):
             img_path = item['image_path']
@@ -211,14 +213,10 @@ def create_grocery_image_with_background(categorized_items, output_image_path):
             # Open and resize each item image
             try:
                 item_img = Image.open(img_path)
-                item_img = item_img.resize((box_size[0] - 50, box_size[1] - 150))  # Resize to fit the box
+                item_img = item_img.resize((box_size[0] - 20, box_size[1] - 50))  # Resize to fit the box
             except Exception as e:
                 print(f"Error loading image {img_path}: {e}")
                 continue
-
-            # Calculate x and y positions for the item box
-            if i % items_per_column == 0 and i > 0:
-                y_offset += box_size[1] + margin  # Move down after filling a column
 
             # Draw shadow for 3D effect
             draw.rounded_rectangle([(x_offset + shadow_offset, y_offset + shadow_offset), 
@@ -232,14 +230,30 @@ def create_grocery_image_with_background(categorized_items, output_image_path):
 
             # Paste the item image in the center of the box
             img_x = x_offset + (box_size[0] - item_img.size[0]) // 2
-            img_y = y_offset + (box_size[1] - item_img.size[1]) // 2 - 50  # Adjust for item name space
+            img_y = y_offset + (box_size[1] - item_img.size[1]) // 2 - 20  # Adjust for item name space
             background.paste(item_img, (img_x, img_y))
 
             # Draw the item name below the image
             name_bbox = draw.textbbox((0, 0), name, font=item_font)
             name_w = name_bbox[2] - name_bbox[0]
-            draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] - 50), 
+            draw.text((x_offset + (box_size[0] - name_w) / 2, y_offset + box_size[1] - 30), 
                       name.capitalize(), fill="black", font=item_font)
+
+            # Move to the next position for the next box
+            x_offset += box_size[0] + margin
+            box_count += 1
+
+            # If we've added 4 boxes in one row, move to the next row
+            if (box_count % items_per_line) == 0:
+                x_offset = left_margin  # Reset to the left margin
+                y_offset += box_size[1] + margin  # Move down to the next row
+
+            # Stop after creating 8 boxes (two lines)
+            if box_count == 8:
+                break
+        
+        if box_count == 8:
+            break
 
     # Save the final image with the background and items
     background.save(output_image_path)
