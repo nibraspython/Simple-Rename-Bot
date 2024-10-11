@@ -100,7 +100,7 @@ async def youtube_link_handler(bot, msg):
     markup = InlineKeyboardMarkup(buttons)
 
     caption = (
-        f"**🎬 Title:** {title}\n"
+        f"**🎬 Title:** {title}\n\n"
         f"**👀 Views:** {views}\n"
         f"**👍 Likes:** {likes}\n\n"
         f"📥 **Select your resolution or audio format:**"
