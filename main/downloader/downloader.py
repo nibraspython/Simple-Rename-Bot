@@ -139,25 +139,12 @@ async def yt_callback_handler(bot, query):
         }]
     }
 
-    async def safe_edit_message_text(message, new_text):
-        # Compare trimmed versions of the texts to avoid whitespace/newline differences
-        if message.text and message.text.strip() != new_text.strip():
-            await message.edit_text(new_text)
 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
         
-        # Immediately switch the text to "Uploading started"
-        uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
-
-    except Exception as e:
-        # Handle download error
-        unique_time = f"🕒 {time.strftime('%H:%M:%S')}"
-        error_message = f"❌ **Error during download:** {e}\n\n{unique_time}"
-        await safe_edit_message_text(download_message, error_message)
-        return
 
     final_filesize = os.path.getsize(downloaded_path)
     video = VideoFileClip(downloaded_path)
@@ -193,6 +180,8 @@ async def yt_callback_handler(bot, query):
         f"**[🔗 URL]({url})**\n"
     )
 
+    uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
+   
     c_time = time.time()
     try:
         await bot.send_video(
