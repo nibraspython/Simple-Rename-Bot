@@ -127,7 +127,7 @@ async def yt_callback_handler(bot, query):
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
     # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}")
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
@@ -140,8 +140,8 @@ async def yt_callback_handler(bot, query):
     }
 
     async def safe_edit_message_text(message, new_text):
-        # Check to ensure we don't have NoneType issues and avoid unnecessary edits
-        if message and message.text and message.text.strip() != new_text.strip():
+        # Compare trimmed versions of the texts to avoid whitespace/newline differences
+        if message.text and message.text.strip() != new_text.strip():
             await message.edit_text(new_text)
 
     try:
@@ -149,12 +149,13 @@ async def yt_callback_handler(bot, query):
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
         
-        # Directly move to the uploading message without displaying "Download completed"
-        uploading_message = f"🚀 **Uploading started...** 📤"
-        await safe_edit_message_text(download_message, uploading_message)
+        # Immediately switch the text to "Uploading started"
+        uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
 
     except Exception as e:
-        error_message = f"❌ **Error during download:** {e}"
+        # Handle download error
+        unique_time = f"🕒 {time.strftime('%H:%M:%S')}"
+        error_message = f"❌ **Error during download:** {e}\n\n{unique_time}"
         await safe_edit_message_text(download_message, error_message)
         return
 
@@ -207,7 +208,7 @@ async def yt_callback_handler(bot, query):
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
-    await uploading_message.delete()
+    await progress_message.delete()
 
     # Clean up the downloaded video file and thumbnail after sending
     if os.path.exists(downloaded_path):
