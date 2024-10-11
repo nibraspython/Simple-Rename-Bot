@@ -127,7 +127,7 @@ async def yt_callback_handler(bot, query):
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
     # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}")
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
@@ -149,11 +149,12 @@ async def yt_callback_handler(bot, query):
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
         
-        # Safely edit the message after download is completed
-        await safe_edit_message_text(download_message, "✅ **Download completed!**")
+        # Append a small timestamp to avoid Telegram considering it a duplicate message
+        await safe_edit_message_text(download_message, f"✅ **Download completed!**\n\n🕒 {time.strftime('%H:%M:%S')}")
+
     except Exception as e:
-        # Safely edit the message in case of an error
-        await safe_edit_message_text(download_message, f"❌ **Error during download:** {e}")
+        # Append a small timestamp to avoid duplicate error messages
+        await safe_edit_message_text(download_message, f"❌ **Error during download:** {e}\n\n🕒 {time.strftime('%H:%M:%S')}")
         return
 
     final_filesize = os.path.getsize(downloaded_path)
