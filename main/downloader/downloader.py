@@ -139,24 +139,26 @@ async def yt_callback_handler(bot, query):
         }]
     }
 
-    async def safe_edit_message_text(message, text):
-        # Only edit if the new text is different from the current text
-        if message.text != text:
-            await message.edit_text(text)
+    async def safe_edit_message_text(message, new_text):
+        # Compare trimmed versions of the texts to avoid whitespace/newline differences
+        if message.text.strip() != new_text.strip():
+            await message.edit_text(new_text)
 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
         
-        # Append a small timestamp or hash to make the message unique
+        # Append a unique timestamp to make the message text unique
         unique_time = f"🕒 {time.strftime('%H:%M:%S')}"
-        await safe_edit_message_text(download_message, f"✅ **Download completed!**\n\n{unique_time}")
+        completed_message = f"✅ **Download completed!**\n\n{unique_time}"
+        await safe_edit_message_text(download_message, completed_message)
 
     except Exception as e:
-        # Append the timestamp to the error message to ensure it's unique
+        # Append a unique timestamp to the error message
         unique_time = f"🕒 {time.strftime('%H:%M:%S')}"
-        await safe_edit_message_text(download_message, f"❌ **Error during download:** {e}\n\n{unique_time}")
+        error_message = f"❌ **Error during download:** {e}\n\n{unique_time}"
+        await safe_edit_message_text(download_message, error_message)
         return
 
     final_filesize = os.path.getsize(downloaded_path)
