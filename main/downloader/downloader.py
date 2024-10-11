@@ -127,7 +127,7 @@ async def yt_callback_handler(bot, query):
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
     # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}")
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
@@ -140,7 +140,7 @@ async def yt_callback_handler(bot, query):
     }
 
     async def safe_edit_message_text(message, text):
-        # Only edit if the text is different from the current one
+        # Only edit if the new text is different from the current text
         if message.text != text:
             await message.edit_text(text)
 
@@ -149,12 +149,14 @@ async def yt_callback_handler(bot, query):
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
         
-        # Append a small timestamp to avoid Telegram considering it a duplicate message
-        await safe_edit_message_text(download_message, f"✅ **Download completed!**\n\n🕒 {time.strftime('%H:%M:%S')}")
+        # Append a small timestamp or hash to make the message unique
+        unique_time = f"🕒 {time.strftime('%H:%M:%S')}"
+        await safe_edit_message_text(download_message, f"✅ **Download completed!**\n\n{unique_time}")
 
     except Exception as e:
-        # Append a small timestamp to avoid duplicate error messages
-        await safe_edit_message_text(download_message, f"❌ **Error during download:** {e}\n\n🕒 {time.strftime('%H:%M:%S')}")
+        # Append the timestamp to the error message to ensure it's unique
+        unique_time = f"🕒 {time.strftime('%H:%M:%S')}"
+        await safe_edit_message_text(download_message, f"❌ **Error during download:** {e}\n\n{unique_time}")
         return
 
     final_filesize = os.path.getsize(downloaded_path)
