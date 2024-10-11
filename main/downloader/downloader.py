@@ -139,39 +139,39 @@ async def yt_callback_handler(bot, query):
         }]
     }
 
-
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
-        
 
-    final_filesize = os.path.getsize(downloaded_path)
-    video = VideoFileClip(downloaded_path)
-    duration = int(video.duration)
-    video_width, video_height = video.size
-    filesize = humanbytes(final_filesize)
+            final_filesize = os.path.getsize(downloaded_path)  # Moved this inside the try block
 
-    thumb_url = info_dict.get('thumbnail', None)
-    thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
-    response = requests.get(thumb_url)
-    if response.status_code == 200:
-        with open(thumb_path, 'wb') as thumb_file:
-            thumb_file.write(response.content)
+            video = VideoFileClip(downloaded_path)
+            duration = int(video.duration)
+            video_width, video_height = video.size
+            filesize = humanbytes(final_filesize)
 
-        with Image.open(thumb_path) as img:
-            img_width, img_height = img.size
-            scale_factor = max(video_width / img_width, video_height / img_height)
-            new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
-            img = img.resize(new_size, Image.LANCZOS)
-            left = (img.width - video_width) / 2
-            top = (img.height - video_height) / 2
-            right = (img.width + video_width) / 2
-            bottom = (img.height + video_height) / 2
-            img = img.crop((left, top, right, bottom))
-            img.save(thumb_path)
-    else:
-        thumb_path = None
+            thumb_url = info_dict.get('thumbnail', None)
+            thumb_path = os.path.join(DOWNLOAD_LOCATION, 'thumb.jpg')
+            response = requests.get(thumb_url)
+
+            if response.status_code == 200:
+                with open(thumb_path, 'wb') as thumb_file:
+                    thumb_file.write(response.content)
+
+                with Image.open(thumb_path) as img:
+                    img_width, img_height = img.size
+                    scale_factor = max(video_width / img_width, video_height / img_height)
+                    new_size = (int(img_width * scale_factor), int(img_height * scale_factor))
+                    img = img.resize(new_size, Image.LANCZOS)
+                    left = (img.width - video_width) / 2
+                    top = (img.height - video_height) / 2
+                    right = (img.width + video_width) / 2
+                    bottom = (img.height + video_height) / 2
+                    img = img.crop((left, top, right, bottom))
+                    img.save(thumb_path)
+            else:
+                thumb_path = None
 
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
