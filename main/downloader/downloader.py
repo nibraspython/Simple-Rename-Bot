@@ -182,7 +182,7 @@ async def yt_callback_handler(bot, query):
         f"**[🔗 URL]({url})**\n\n"        
     )
 
-    uploading_message = await query.message.edit_text("✅ **Download Completed**\n\n**🎬 {title}**\n\n**📹 {resolution}**\n\n🚀 **Uploading Started...**")
+    uploading_message = await query.message.edit_text("🚀 **Uploading Started...**")
 
     c_time = time.time()
     try:
