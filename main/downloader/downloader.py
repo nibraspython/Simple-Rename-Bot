@@ -200,7 +200,7 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=(f"📤 Uploading... **🎬{info_dict['title']}**", uploading_message, c_time)
+            progress_args=(f"**📤 Uploading Started...Thanks To All Who Supported ❤\n\n🎬 {info_dict['title']}**", uploading_message, c_time)
         )
     except Exception as e:
         await uploading_message.edit_text(f"❌ **Error during upload:** {e}")
