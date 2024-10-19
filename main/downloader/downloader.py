@@ -177,7 +177,7 @@ async def yt_callback_handler(bot, query):
         thumb_path = None
 
     # Show the "Download completed, now uploading started" message
-    upload_started_message = await query.message.edit_text(f"📥 **Download completed, now uploading started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    upload_started_message = await query.message.edit_text(f"✅ **Download completed | 📤 Uploading started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
     # Wait for a short moment before proceeding to upload
     time.sleep(2)  # Adding a slight delay for smooth UI transition
