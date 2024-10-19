@@ -186,7 +186,7 @@ async def yt_callback_handler(bot, query):
 
     # Safeguard for uploading message edit
     try:
-        uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
+        uploading_message = await query.message.reply_text("🚀 **Uploading started...** 📤")
     except Exception as e:
         print(f"Failed to edit message for uploading start: {e}")
         return
