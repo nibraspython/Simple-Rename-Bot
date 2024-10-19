@@ -175,27 +175,23 @@ async def yt_callback_handler(bot, query):
             img.save(thumb_path)
     else:
         thumb_path = None
-
+        
     # Show the "Download completed, now uploading started" message
     upload_started_message = await query.message.edit_text(f"✅ **Download completed | 📤 Uploading started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
     # Wait for a short moment before proceeding to upload
     time.sleep(2)  # Adding a slight delay for smooth UI transition
 
-    # Delete the previous message (Download Completed)
-    await upload_started_message.delete()
-
     # Upload progress caption
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
         f"📹 **Resolution:** {resolution} | 💽 **Size:** {filesize}\n"
-        f"🕒 **Duration:** {duration} seconds\n"       
+        f"🕒 **Duration:** {duration} seconds\n"
         f"**[🔗 URL]({url})**\n\n"
     )
 
     c_time = time.time()
     try:
-
         # Send the video with progress tracking
         await bot.send_video(
             chat_id=query.message.chat.id,
@@ -203,14 +199,17 @@ async def yt_callback_handler(bot, query):
             thumb=thumb_path,
             caption=caption,
             duration=duration,
-            progress=progress_message,
-            progress_args=(f"📤 **Uploading started...Thanks To All Who Supported ❤ **\n\n**🎬 {info_dict['title']}**", query.message, c_time)
+            progress=progress_message,  # Ensure progress_message is used
+            progress_args=(
+                f"📤 **Uploading Started...Thanks To All Who Supported**\n\n**🎬 {info_dict['title']}**",
+                query.message,  # Message to be updated
+                c_time  # Start time for progress calculation
+            )
         )
 
     except Exception as e:
         await bot.send_message(query.message.chat.id, f"❌ **Error during upload:** {e}")
         return
-
 
     # Clean up the downloaded video file and thumbnail after sending
     if os.path.exists(downloaded_path):
