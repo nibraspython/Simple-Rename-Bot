@@ -182,10 +182,14 @@ async def yt_callback_handler(bot, query):
         f"**[🔗 URL]({url})**\n\n"        
     )
 
-    uploading_message = await query.message.edit_text("🚀 **Uploading Started...**")
+    # Send a new message for uploading progress
+    progress_message = await query.message.edit_text(f"🚀 **Uploading Started...**\n\n**🎬 {info_dict['title']}**")
 
     c_time = time.time()
     try:
+        # Delete the progress message once upload starts
+        await progress_message.delete()
+        
         await bot.send_video(
             chat_id=query.message.chat.id,
             video=downloaded_path,
