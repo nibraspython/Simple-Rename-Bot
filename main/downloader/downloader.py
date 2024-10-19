@@ -184,13 +184,10 @@ async def yt_callback_handler(bot, query):
         f"**[🔗 URL]({url})**\n\n"   
     )
 
-    # Safeguard for uploading message edit
-    try:
-        uploading_message = await query.message.reply_text("🚀 **Uploading started...** 📤")
-    except Exception as e:
-        print(f"Failed to edit message for uploading start: {e}")
-        return
-        
+
+    uploading_message = await query.message.reply_text("🚀 **Uploading started...** 📤")   
+
+
     c_time = time.time()
     try:
         await bot.send_video(
