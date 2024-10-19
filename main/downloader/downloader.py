@@ -207,18 +207,9 @@ async def yt_callback_handler(bot, query):
             progress_args=(f"📤 **Uploading started...Thanks To All Who Supported ❤ **\n\n**🎬 {info_dict['title']}**", query.message, c_time)
         )
 
-        # After the upload is complete, delete the progress message
-        await progress_msg.delete()
-
     except Exception as e:
         await bot.send_message(query.message.chat.id, f"❌ **Error during upload:** {e}")
         return
-
-    # Clean up the downloaded video file and thumbnail after sending
-    if os.path.exists(downloaded_path):
-        os.remove(downloaded_path)
-    if thumb_path and os.path.exists(thumb_path):
-        os.remove(thumb_path)
 
 
     # Clean up the downloaded video file and thumbnail after sending
