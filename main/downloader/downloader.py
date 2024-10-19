@@ -187,9 +187,15 @@ async def yt_callback_handler(bot, query):
 
     uploading_message = await query.message.reply_text("🚀 **Uploading started...** 📤")   
 
-
     c_time = time.time()
     try:
+        progress_message_text = f"📤 **Uploading started...**\n\n**🎬 {info_dict['title']}**"
+        progress_msg = await bot.send_message(
+            chat_id=query.message.chat.id,
+            text=progress_message_text
+        )
+
+        # Send the video with progress tracking
         await bot.send_video(
             chat_id=query.message.chat.id,
             video=downloaded_path,
@@ -197,8 +203,12 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=(f"📤 Upload Started..... Thanks To All Who Supported ❤️\n\n**🎬{info_dict['title']}**", query.message, c_time)
+            progress_args=(progress_message_text, progress_msg, c_time)
         )
+
+        # After the upload is complete, delete the progress message
+        await progress_msg.delete()
+
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
         return
