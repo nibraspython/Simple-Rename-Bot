@@ -116,6 +116,7 @@ async def youtube_link_handler(bot, msg):
     await msg.delete()
     await processing_message.delete()
 
+
 @Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
@@ -182,14 +183,18 @@ async def yt_callback_handler(bot, query):
         f"**[🔗 URL]({url})**\n\n"        
     )
 
-    # Send a new message for uploading progress
-    progress_message = await query.message.edit_text(f"🚀 **Uploading Started...**\n\n**🎬 {info_dict['title']}**")
+    # Delete the previous message (Download Started) and replace it with the upload progress message
+    await query.message.delete()
 
     c_time = time.time()
     try:
-        # Delete the progress message once upload starts
-        await progress_message.delete()
-        
+        progress_message_text = f"📤 **Uploading Started...Thanks To All Who Supported ❤**\n\n**🎬 {info_dict['title']}**"
+        progress_msg = await bot.send_message(
+            chat_id=query.message.chat.id,
+            text=progress_message_text
+        )
+
+        # Send the video with progress tracking
         await bot.send_video(
             chat_id=query.message.chat.id,
             video=downloaded_path,
@@ -197,13 +202,15 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=(f"📤 Upload Started..... Thanks To All Who Supported ❤️\n\n**🎬{info_dict['title']}**", query.message, c_time)
+            progress_args=(progress_message_text, progress_msg, c_time)
         )
-    except Exception as e:
-        await query.message.edit_text(f"❌ **Error during upload:** {e}")
-        return
 
-    await uploading_message.delete()
+        # After the upload is complete, delete the progress message
+        await progress_msg.delete()
+
+    except Exception as e:
+        await bot.send_message(query.message.chat.id, f"❌ **Error during upload:** {e}")
+        return
 
     # Clean up the downloaded video file and thumbnail after sending
     if os.path.exists(downloaded_path):
