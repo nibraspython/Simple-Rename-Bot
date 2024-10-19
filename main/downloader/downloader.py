@@ -182,7 +182,14 @@ async def yt_callback_handler(bot, query):
         f"**[🔗 URL]({url})**\n\n"     
     )
 
-    uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
+    # Delete the "Download started" message and update the caption to "Uploading started"
+    await download_message.delete()
+
+    uploading_message = await bot.send_photo(
+        chat_id=query.message.chat.id,
+        photo=thumb_path,
+        caption="🚀 **Uploading started...** 📤"
+    )
 
     c_time = time.time()
     try:
@@ -193,13 +200,14 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=(f"📤Upload Started..... Thanks To All Who Supported ❤️\n\n**🎬{info_dict['title']}**", query.message, c_time)
+            progress_args=(f"📤 Uploading... **🎬{info_dict['title']}**", uploading_message, c_time)
         )
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error during upload:** {e}")
+        await uploading_message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
     await uploading_message.delete()
+
 
     # Clean up the downloaded video file and thumbnail after sending
     if os.path.exists(downloaded_path):
