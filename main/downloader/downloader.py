@@ -127,7 +127,7 @@ async def yt_callback_handler(bot, query):
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
     # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
@@ -143,7 +143,7 @@ async def yt_callback_handler(bot, query):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
-        await download_message.edit_text("✅ **Download completed!**")
+        
     except Exception as e:
         await download_message.edit_text(f"❌ **Error during download:** {e}")
         return
@@ -177,11 +177,9 @@ async def yt_callback_handler(bot, query):
 
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
-        f"💽 **Size:** {filesize}\n"
-        f"🕒 **Duration:** {duration} seconds\n"
-        f"📹 **Resolution:** {resolution}\n"
-        f"**[🔗 URL]({url})**\n\n"
-        f"✅ **Download completed!**"
+        f"📹 **Resolution:** {resolution} | 💽 **Size:** {filesize}\n"
+        f"🕒 **Duration:** {duration} seconds\n"        
+        f"**[🔗 URL]({url})**\n\n"     
     )
 
     uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
@@ -195,7 +193,7 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=(f"Upload Started..... Thanks To All Who Supported ❤️\n\n**🎬{info_dict['title']}**", query.message, c_time)
+            progress_args=(f"📤Upload Started..... Thanks To All Who Supported ❤️\n\n**🎬{info_dict['title']}**", query.message, c_time)
         )
     except Exception as e:
         await query.message.edit_text(f"❌ **Error during upload:** {e}")
