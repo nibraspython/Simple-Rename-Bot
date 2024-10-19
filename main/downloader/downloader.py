@@ -176,23 +176,25 @@ async def yt_callback_handler(bot, query):
     else:
         thumb_path = None
 
+    # Show the "Download completed, now uploading started" message
+    upload_started_message = await query.message.edit_text(f"📥 **Download completed, now uploading started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+
+    # Wait for a short moment before proceeding to upload
+    time.sleep(2)  # Adding a slight delay for smooth UI transition
+
+    # Delete the previous message (Download Completed)
+    await upload_started_message.delete()
+
+    # Upload progress caption
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
         f"📹 **Resolution:** {resolution} | 💽 **Size:** {filesize}\n"
         f"🕒 **Duration:** {duration} seconds\n"       
-        f"**[🔗 URL]({url})**\n\n"        
+        f"**[🔗 URL]({url})**\n\n"
     )
-
-    # Delete the previous message (Download Started) and replace it with the upload progress message
-    await query.message.delete()
 
     c_time = time.time()
     try:
-        progress_message_text = f"📤 **Uploading Started...Thanks To All Who Supported ❤**\n\n**🎬 {info_dict['title']}**"
-        progress_msg = await bot.send_message(
-            chat_id=query.message.chat.id,
-            text=progress_message_text
-        )
 
         # Send the video with progress tracking
         await bot.send_video(
@@ -202,7 +204,7 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=(progress_message_text, progress_msg, c_time)
+            progress_args=(f"📤 **Uploading started...Thanks To All Who Supported ❤ **\n\n**🎬 {info_dict['title']}**", query.message, c_time)
         )
 
         # After the upload is complete, delete the progress message
@@ -211,6 +213,13 @@ async def yt_callback_handler(bot, query):
     except Exception as e:
         await bot.send_message(query.message.chat.id, f"❌ **Error during upload:** {e}")
         return
+
+    # Clean up the downloaded video file and thumbnail after sending
+    if os.path.exists(downloaded_path):
+        os.remove(downloaded_path)
+    if thumb_path and os.path.exists(thumb_path):
+        os.remove(thumb_path)
+
 
     # Clean up the downloaded video file and thumbnail after sending
     if os.path.exists(downloaded_path):
