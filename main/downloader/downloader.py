@@ -1,6 +1,8 @@
 import os
 import time
 import requests
+import logging
+from pyrogram.errors import FloodWait
 import yt_dlp as youtube_dl
 from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -117,6 +119,10 @@ async def youtube_link_handler(bot, msg):
     await processing_message.delete()
 
 
+# Suppress unwanted log messages
+logging.getLogger("pyrogram").setLevel(logging.WARNING)  # Reduce verbosity of Pyrogram logs
+logging.getLogger("yt_dlp").setLevel(logging.ERROR)  # Suppress yt-dlp logs
+
 @Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?youtube\.com/watch\?v='))
 async def yt_callback_handler(bot, query):
     data = query.data.split('_')
@@ -175,18 +181,17 @@ async def yt_callback_handler(bot, query):
             img.save(thumb_path)
     else:
         thumb_path = None
-        
-    # Show the "Download completed, now uploading started" message
-    upload_started_message = await query.message.edit_text(f"✅ **Download completed | 📤 Uploading started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
-    # Wait for a short moment before proceeding to upload
-    time.sleep(2)  # Adding a slight delay for smooth UI transition
+    # Show the "Download completed, now uploading started" message
+    await download_message.delete()  # Delete the download message first
+    
+    upload_started_message = await query.message.reply_text(f"✅ **Download completed | 📤 Uploading started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
     # Upload progress caption
     caption = (
         f"**🎬 {info_dict['title']}**\n\n"
         f"📹 **Resolution:** {resolution} | 💽 **Size:** {filesize}\n"
-        f"🕒 **Duration:** {duration} seconds\n"
+        f"🕒 **Duration:** {duration} seconds\n"       
         f"**[🔗 URL]({url})**\n\n"
     )
 
@@ -199,17 +204,17 @@ async def yt_callback_handler(bot, query):
             thumb=thumb_path,
             caption=caption,
             duration=duration,
-            progress=progress_message,  # Ensure progress_message is used
-            progress_args=(
-                f"📤 **Uploading Started...Thanks To All Who Supported**\n\n**🎬 {info_dict['title']}**",
-                query.message,  # Message to be updated
-                c_time  # Start time for progress calculation
-            )
+            progress=progress_message,
+            progress_args=(f"📤 **Uploading started...**\n\n**🎬 {info_dict['title']}**", query.message, c_time)
         )
 
+    except FloodWait as e:
+        await query.message.reply_text(f"⚠️ **FloodWait Error:** Wait for {e.value} seconds before retrying.")
+        time.sleep(e.value)
+        return
     except Exception as e:
         await bot.send_message(query.message.chat.id, f"❌ **Error during upload:** {e}")
-        return
+        return    
 
     # Clean up the downloaded video file and thumbnail after sending
     if os.path.exists(downloaded_path):
