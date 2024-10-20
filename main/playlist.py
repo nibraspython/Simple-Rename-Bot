@@ -17,10 +17,20 @@ def extract_playlist(playlist_url):
 @Client.on_message(filters.private & filters.command("playlist"))
 async def extract_playlist_url(bot, msg):
     reply = msg.reply_to_message
-    if not reply or len(msg.command) < 2:
-        return await msg.reply_text("Please reply to a playlist URL with the /playlist command.")
+    playlist_url = None
 
-    playlist_url = msg.text.split(" ", 1)[1]
+    # Check if the user replied to a message containing a URL
+    if reply and reply.text:
+        playlist_url = reply.text.strip()
+
+    # Check if a URL is provided with the command
+    elif len(msg.command) > 1:
+        playlist_url = msg.text.split(" ", 1)[1].strip()
+
+    # If no URL is provided, send a message prompting the user
+    if not playlist_url:
+        return await msg.reply_text("Please reply to a message containing a YouTube playlist URL or provide the URL with the /playlist command.")
+
     sts = await msg.reply_text("🔄 Processing your playlist URL...📥")
 
     try:
