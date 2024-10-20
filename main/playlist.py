@@ -45,22 +45,16 @@ async def extract_playlist_url(bot, msg):
         for i, entry in enumerate(video_entries, start=1):
             video_title = entry.get("title", "Untitled Video")
             video_url = entry.get("url", "")
-            video_list.append(f"{i}. {video_title}\n`Url = {video_url}`")
+            video_list.append(f"{i}. {video_title}\n<code>Url = {video_url}</code>")
 
         # Split the video list into chunks of 20 and send them as separate messages
         chunk_size = 20
         for idx in range(0, len(video_list), chunk_size):
             chunk = video_list[idx:idx+chunk_size]
-            # Escape special characters for MarkdownV2
-            message = f"📃 *{escape_markdown(playlist_name)}*\n\n" + "\n\n".join([escape_markdown(chunk_item) for chunk_item in chunk])
-            await bot.send_message(msg.chat.id, message, parse_mode="MarkdownV2")
+            message = f"📃 <b>{playlist_name}</b>\n\n" + "\n\n".join(chunk)
+            await bot.send_message(msg.chat.id, message, parse_mode="HTML")
 
         # Final message showing all URLs processed
         await msg.reply_text(f"✅ All URLs processed! {len(video_entries)} videos found.")
     except Exception as e:
         await sts.edit(f"❌ Error: {e}")
-
-# Escape special characters for MarkdownV2
-def escape_markdown(text):
-    escape_chars = r"_*[]()~`>#+-=|{}.!"
-    return "".join(f"\\{char}" if char in escape_chars else char for char in text)
