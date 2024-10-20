@@ -43,7 +43,7 @@ async def extract_playlist_url(bot, msg):
         for i, entry in enumerate(video_entries, start=1):
             video_title = entry.get("title", "Untitled Video")
             video_url = entry.get("url", "")
-            video_list.append(f"{i}. 🎬 **{video_title}**\n\n📎Url = `{video_url}`")  # Monospace for the URL
+            video_list.append(f"{i}. 🎬 **{video_title}**\n\n📎URL = `{video_url}`")  # Monospace for the URL
 
         # Split the video list into chunks of 20 and send them as separate messages
         chunk_size = 20
