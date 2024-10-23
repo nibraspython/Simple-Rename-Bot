@@ -4,6 +4,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineQueryResultArticle, InputTextMessageContent, InlineQueryResultVideo
 from googleapiclient.discovery import build
 import isodate  # To convert ISO 8601 duration format
+import re  # To help extract channel ID from the URL
 
 # Your bot's API credentials and other configurations
 YOUTUBE_API_KEY = "AIzaSyDp0oGuQ35JDAW6HBJCg3OBviIlWzLXTn4"
@@ -27,78 +28,94 @@ def format_duration(duration):
     else:
         return f"{seconds}s"
 
+def extract_channel_id(url):
+    """Extract the channel ID from the given YouTube channel URL."""
+    match = re.search(r'(?:https?://)?(?:www\.)?youtube\.com/(?:channel|@|c/)?([^/?]+)', url)
+    return match.group(1) if match else None
+
 @Client.on_inline_query()
 async def youtube_search(bot, query):
     search_query = query.query.strip()
 
-    # Check if query starts with '@Dilrenamer_bot <channel_id>'
-    if search_query.startswith('@Dilrenamer_bot'):
-        channel_id = search_query.split()[1]  # Extract the channel ID
-        channel_response = youtube.channels().list(
-            id=channel_id,
-            part='snippet,contentDetails',
-            maxResults=1
-        ).execute()
+    # Check if the query is a YouTube channel URL
+    if search_query.startswith('https://youtube.com/'):
+        channel_id_or_handle = extract_channel_id(search_query)
 
-        if channel_response['items']:
-            channel = channel_response['items'][0]
-            channel_title = channel['snippet']['title']
-            channel_icon = channel['snippet']['thumbnails']['default']['url']
-            uploads_playlist_id = channel['contentDetails']['relatedPlaylists']['uploads']
-
-            # Fetch videos uploaded by the channel
-            video_response = youtube.playlistItems().list(
-                playlistId=uploads_playlist_id,
-                part='snippet',
-                maxResults=5,  # Adjust as needed
+        if channel_id_or_handle:
+            # Try fetching channel by ID or handle (for newer YouTube URLs using @)
+            channel_response = youtube.channels().list(
+                forUsername=channel_id_or_handle,  # Try using handle first
+                part='snippet,contentDetails',
+                maxResults=1
             ).execute()
 
-            results = []
-
-            # Add channel name and icon at the top
-            results.append(
-                InlineQueryResultArticle(
-                    title=channel_title,
-                    description=f"Channel ID: {channel_id}",
-                    thumb_url=channel_icon,
-                    input_message_content=InputTextMessageContent(f"Channel: {channel_title}\nChannel ID: {channel_id}"),
-                )
-            )
-
-            # Add videos from the channel
-            for item in video_response['items']:
-                video_id = item['snippet']['resourceId']['videoId']
-                title = item['snippet']['title']
-                thumbnail = item['snippet']['thumbnails']['default']['url']
-                video_url = f"https://www.youtube.com/watch?v={video_id}"
-
-                # Get video details (duration, views)
-                video_details = youtube.videos().list(
-                    id=video_id,
-                    part='contentDetails,statistics'
+            if not channel_response['items']:
+                # If no result from username/handle, try using it as channel ID
+                channel_response = youtube.channels().list(
+                    id=channel_id_or_handle,  # Try as channel ID
+                    part='snippet,contentDetails',
+                    maxResults=1
                 ).execute()
 
-                # Format duration
-                duration_iso = video_details['items'][0]['contentDetails']['duration']
-                duration = format_duration(duration_iso)
+            if channel_response['items']:
+                channel = channel_response['items'][0]
+                channel_title = channel['snippet']['title']
+                channel_icon = channel['snippet']['thumbnails']['default']['url']
+                uploads_playlist_id = channel['contentDetails']['relatedPlaylists']['uploads']
 
-                views = video_details['items'][0]['statistics']['viewCount']
+                # Fetch videos uploaded by the channel, ordered by latest
+                video_response = youtube.playlistItems().list(
+                    playlistId=uploads_playlist_id,
+                    part='snippet',
+                    maxResults=10,  # Fetch more if needed
+                ).execute()
 
-                # Create an inline result
+                results = []
+
+                # Add channel name and icon at the top
                 results.append(
                     InlineQueryResultArticle(
-                        title=title,
-                        description=f"Duration: {duration} | Views: {views}",
-                        thumb_url=thumbnail,
-                        input_message_content=InputTextMessageContent(video_url),
-                        url=video_url,
+                        title=channel_title,
+                        description="Channel Videos",
+                        thumb_url=channel_icon,
+                        input_message_content=InputTextMessageContent(f"Channel: {channel_title}"),
                     )
                 )
 
-            await query.answer(results, cache_time=0)
+                # Add videos from the channel (latest to oldest)
+                for item in video_response['items']:
+                    video_id = item['snippet']['resourceId']['videoId']
+                    title = item['snippet']['title']
+                    thumbnail = item['snippet']['thumbnails']['default']['url']
+                    video_url = f"https://www.youtube.com/watch?v={video_id}"
+
+                    # Get video details (duration, views)
+                    video_details = youtube.videos().list(
+                        id=video_id,
+                        part='contentDetails,statistics'
+                    ).execute()
+
+                    # Format duration
+                    duration_iso = video_details['items'][0]['contentDetails']['duration']
+                    duration = format_duration(duration_iso)
+
+                    views = video_details['items'][0]['statistics']['viewCount']
+
+                    # Create an inline result
+                    results.append(
+                        InlineQueryResultArticle(
+                            title=title,
+                            description=f"Duration: {duration} | Views: {views}",
+                            thumb_url=thumbnail,
+                            input_message_content=InputTextMessageContent(video_url),
+                            url=video_url,
+                        )
+                    )
+
+                await query.answer(results, cache_time=0)
         return
 
-    # Default search by keywords if no channel ID is provided
+    # Default search by keywords if no channel URL is provided
     if not search_query:
         return
 
@@ -115,8 +132,6 @@ async def youtube_search(bot, query):
         title = item['snippet']['title']
         thumbnail = item['snippet']['thumbnails']['default']['url']
         video_url = f"https://www.youtube.com/watch?v={video_id}"
-        channel_id = item['snippet']['channelId']
-        channel_title = item['snippet']['channelTitle']
 
         # Get video details like duration and views
         video_details = youtube.videos().list(
@@ -134,9 +149,9 @@ async def youtube_search(bot, query):
         results.append(
             InlineQueryResultArticle(
                 title=title,
-                description=f"Duration: {duration} | Views: {views} | Channel ID: {channel_id}",
+                description=f"Duration: {duration} | Views: {views}",
                 thumb_url=thumbnail,
-                input_message_content=InputTextMessageContent(f"{video_url}\nChannel: {channel_title}\nChannel ID: {channel_id}"),
+                input_message_content=InputTextMessageContent(video_url),
                 url=video_url,
             )
         )
