@@ -4,7 +4,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineQueryResultArticle, InputTextMessageContent
 from googleapiclient.discovery import build
 import isodate  # To convert ISO 8601 duration format
-import re  # To help extract channel ID from the URL
+import re  # To help extract channel ID or handle from the URL
 
 # Your bot's API credentials and other configurations
 YOUTUBE_API_KEY = "AIzaSyDp0oGuQ35JDAW6HBJCg3OBviIlWzLXTn4"
@@ -25,10 +25,17 @@ def format_duration(duration):
     else:
         return f"{seconds}s"
 
-def extract_channel_id(url):
-    """Extract the channel ID from the given YouTube channel URL."""
-    match = re.search(r'(?:https?://)?(?:www\.)?youtube\.com/(?:channel|@|c/)?([^/?]+)', url)
-    return match.group(1) if match else None
+def extract_channel_info(url):
+    """Extract the channel handle, username, or ID from a YouTube channel URL."""
+    channel_id = None
+    # Handle different types of YouTube channel URLs
+    if '/channel/' in url:
+        channel_id = re.search(r'channel/([^/?]+)', url).group(1)
+    elif '/user/' in url:
+        channel_id = re.search(r'user/([^/?]+)', url).group(1)
+    elif '@' in url:
+        channel_id = re.search(r'@([^/?]+)', url).group(1)
+    return channel_id
 
 @Client.on_inline_query()
 async def youtube_search(bot, query):
@@ -36,29 +43,30 @@ async def youtube_search(bot, query):
 
     # Check if the query is a YouTube channel URL
     if search_query.startswith('https://youtube.com/'):
-        channel_id_or_handle = extract_channel_id(search_query)
+        channel_id_or_handle = extract_channel_info(search_query)
 
         if channel_id_or_handle:
-            # Try fetching channel by username/handle
+            # Try fetching channel by username/handle first
             try:
+                # Fetch by handle or username
                 channel_response = youtube.channels().list(
-                    forUsername=channel_id_or_handle,  # Try using handle first
+                    forUsername=channel_id_or_handle,
                     part='snippet,contentDetails',
                     maxResults=1
                 ).execute()
             except Exception:
                 channel_response = None
 
-            # If handle-based search fails, try using it as channel ID
+            # If no results, try as channel ID
             if not channel_response or 'items' not in channel_response:
                 channel_response = youtube.channels().list(
-                    id=channel_id_or_handle,  # Try as channel ID
+                    id=channel_id_or_handle,
                     part='snippet,contentDetails',
                     maxResults=1
                 ).execute()
 
-            # Ensure 'items' exist in the response
             if 'items' in channel_response and channel_response['items']:
+                # Extract channel information
                 channel = channel_response['items'][0]
                 channel_title = channel['snippet']['title']
                 channel_icon = channel['snippet']['thumbnails']['default']['url']
