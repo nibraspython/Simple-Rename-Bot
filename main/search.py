@@ -1,7 +1,7 @@
 import os
 import time
 from pyrogram import Client, filters
-from pyrogram.types import InlineQueryResultArticle, InputTextMessageContent, InlineQueryResultVideo
+from pyrogram.types import InlineQueryResultArticle, InputTextMessageContent
 from googleapiclient.discovery import build
 import isodate  # To convert ISO 8601 duration format
 import re  # To help extract channel ID from the URL
@@ -13,11 +13,8 @@ YOUTUBE_API_KEY = "AIzaSyDp0oGuQ35JDAW6HBJCg3OBviIlWzLXTn4"
 youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
 
 def format_duration(duration):
-    # Convert ISO 8601 duration (e.g., PT3M10S) to a human-readable format
     duration_obj = isodate.parse_duration(duration)
     total_seconds = int(duration_obj.total_seconds())
-    
-    # Convert to hours, minutes, and seconds
     hours, remainder = divmod(total_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
 
@@ -42,22 +39,26 @@ async def youtube_search(bot, query):
         channel_id_or_handle = extract_channel_id(search_query)
 
         if channel_id_or_handle:
-            # Try fetching channel by ID or handle (for newer YouTube URLs using @)
-            channel_response = youtube.channels().list(
-                forUsername=channel_id_or_handle,  # Try using handle first
-                part='snippet,contentDetails',
-                maxResults=1
-            ).execute()
+            # Try fetching channel by username/handle
+            try:
+                channel_response = youtube.channels().list(
+                    forUsername=channel_id_or_handle,  # Try using handle first
+                    part='snippet,contentDetails',
+                    maxResults=1
+                ).execute()
+            except Exception:
+                channel_response = None
 
-            if not channel_response['items']:
-                # If no result from username/handle, try using it as channel ID
+            # If handle-based search fails, try using it as channel ID
+            if not channel_response or 'items' not in channel_response:
                 channel_response = youtube.channels().list(
                     id=channel_id_or_handle,  # Try as channel ID
                     part='snippet,contentDetails',
                     maxResults=1
                 ).execute()
 
-            if channel_response['items']:
+            # Ensure 'items' exist in the response
+            if 'items' in channel_response and channel_response['items']:
                 channel = channel_response['items'][0]
                 channel_title = channel['snippet']['title']
                 channel_icon = channel['snippet']['thumbnails']['default']['url']
@@ -83,7 +84,7 @@ async def youtube_search(bot, query):
                 )
 
                 # Add videos from the channel (latest to oldest)
-                for item in video_response['items']:
+                for item in video_response.get('items', []):
                     video_id = item['snippet']['resourceId']['videoId']
                     title = item['snippet']['title']
                     thumbnail = item['snippet']['thumbnails']['default']['url']
@@ -113,6 +114,13 @@ async def youtube_search(bot, query):
                     )
 
                 await query.answer(results, cache_time=0)
+            else:
+                # Handle the case where the channel was not found
+                await query.answer([InlineQueryResultArticle(
+                    title="Channel not found",
+                    description="Please check the URL and try again.",
+                    input_message_content=InputTextMessageContent("No channel found for the given URL.")
+                )], cache_time=0)
         return
 
     # Default search by keywords if no channel URL is provided
