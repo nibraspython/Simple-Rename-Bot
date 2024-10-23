@@ -59,9 +59,9 @@ async def youtube_search(bot, query):
             results.append(
                 InlineQueryResultArticle(
                     title=channel_title,
-                    description="Channel Videos",
+                    description=f"Channel ID: {channel_id}",
                     thumb_url=channel_icon,
-                    input_message_content=InputTextMessageContent(f"Channel: {channel_title}"),
+                    input_message_content=InputTextMessageContent(f"Channel: {channel_title}\nChannel ID: {channel_id}"),
                 )
             )
 
@@ -115,6 +115,8 @@ async def youtube_search(bot, query):
         title = item['snippet']['title']
         thumbnail = item['snippet']['thumbnails']['default']['url']
         video_url = f"https://www.youtube.com/watch?v={video_id}"
+        channel_id = item['snippet']['channelId']
+        channel_title = item['snippet']['channelTitle']
 
         # Get video details like duration and views
         video_details = youtube.videos().list(
@@ -132,9 +134,9 @@ async def youtube_search(bot, query):
         results.append(
             InlineQueryResultArticle(
                 title=title,
-                description=f"Duration: {duration} | Views: {views}",
+                description=f"Duration: {duration} | Views: {views} | Channel ID: {channel_id}",
                 thumb_url=thumbnail,
-                input_message_content=InputTextMessageContent(video_url),
+                input_message_content=InputTextMessageContent(f"{video_url}\nChannel: {channel_title}\nChannel ID: {channel_id}"),
                 url=video_url,
             )
         )
