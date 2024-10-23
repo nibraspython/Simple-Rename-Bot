@@ -45,7 +45,12 @@ async def youtube_link_handler(bot, msg):
         likes = info_dict.get('like_count', 'N/A')
         thumb_url = info_dict.get('thumbnail', None)
         description = info_dict.get('description', 'No description available.')
-        formats = info_dict.get('formats', [])
+        formats = info_dict.get('formats', [])      
+        duration_seconds = info_dict.get('duration', 0)
+        uploader = info_dict.get('uploader', 'Unknown Channel')
+
+    # Format the duration as HH:MM:SS
+    duration = time.strftime('%H:%M:%S', time.gmtime(duration_seconds))
 
     # Extract all available resolutions with their sizes
     available_resolutions = []
@@ -102,7 +107,9 @@ async def youtube_link_handler(bot, msg):
     caption = (
         f"**🎬 {title}**\n\n"
         f"**👀 Views:** {views}\n"
-        f"**👍 Likes:** {likes}\n\n"
+        f"**👍 Likes:** {likes}\n"
+        f"**⏰ {duration}**\n"
+        f"**🎥 {uploader}**\n\n"
         f"📥 **Select your resolution or audio format:**"
     )
 
