@@ -26,16 +26,13 @@ def format_duration(duration):
         return f"{seconds}s"
 
 def extract_channel_info(url):
-    """Extract the channel handle, username, or ID from a YouTube channel URL."""
+    """Extract the channel handle or ID from a YouTube channel URL."""
     print(f"Extracting channel info from URL: {url}")  # Debug log
     channel_id = None
     if '/channel/' in url:
         match = re.search(r'channel/([^/?]+)', url)
         channel_id = match.group(1) if match else None
-    elif '/user/' in url:
-        match = re.search(r'user/([^/?]+)', url)
-        channel_id = match.group(1) if match else None
-    elif '@' in url:
+    elif '@' in url:  # New YouTube handle format
         match = re.search(r'@([^/?]+)', url)
         channel_id = match.group(1) if match else None
     
@@ -52,92 +49,88 @@ async def youtube_search(bot, query):
 
         if channel_id_or_handle:
             try:
-                # Try fetching by username/handle first
+                # Fetch the channel using search().list with the handle or ID
                 print(f"Fetching channel details for: {channel_id_or_handle}")  # Debug log
-                channel_response = youtube.channels().list(
-                    forUsername=channel_id_or_handle,
-                    part='snippet,contentDetails',
+                channel_response = youtube.search().list(
+                    q=channel_id_or_handle,  # Search using the handle or ID
+                    type='channel',
+                    part='snippet',
                     maxResults=1
                 ).execute()
-            except Exception as e:
-                print(f"Error fetching channel by username: {e}")  # Debug log
-                channel_response = None
 
-            # If no results, try as channel ID
-            if not channel_response or 'items' not in channel_response:
-                try:
-                    channel_response = youtube.channels().list(
-                        id=channel_id_or_handle,
-                        part='snippet,contentDetails',
-                        maxResults=1
-                    ).execute()
-                except Exception as e:
-                    print(f"Error fetching channel by ID: {e}")  # Debug log
-                    channel_response = None
+                # Check if channel data is found
+                if 'items' in channel_response and channel_response['items']:
+                    channel = channel_response['items'][0]
+                    channel_title = channel['snippet']['title']
+                    channel_icon = channel['snippet']['thumbnails']['default']['url']
+                    channel_id = channel['id']['channelId']
 
-            if channel_response and 'items' in channel_response and channel_response['items']:
-                # Extract channel information
-                channel = channel_response['items'][0]
-                channel_title = channel['snippet']['title']
-                channel_icon = channel['snippet']['thumbnails']['default']['url']
-                uploads_playlist_id = channel['contentDetails']['relatedPlaylists']['uploads']
-
-                # Fetch videos uploaded by the channel, ordered by latest
-                video_response = youtube.playlistItems().list(
-                    playlistId=uploads_playlist_id,
-                    part='snippet',
-                    maxResults=10  # Fetch more if needed
-                ).execute()
-
-                results = []
-
-                # Add channel name and icon at the top
-                results.append(
-                    InlineQueryResultArticle(
-                        title=channel_title,
-                        description="Channel Videos",
-                        thumb_url=channel_icon,
-                        input_message_content=InputTextMessageContent(f"Channel: {channel_title}"),
-                    )
-                )
-
-                # Add videos from the channel (latest to oldest)
-                for item in video_response.get('items', []):
-                    video_id = item['snippet']['resourceId']['videoId']
-                    title = item['snippet']['title']
-                    thumbnail = item['snippet']['thumbnails']['default']['url']
-                    video_url = f"https://www.youtube.com/watch?v={video_id}"
-
-                    # Get video details (duration, views)
-                    video_details = youtube.videos().list(
-                        id=video_id,
-                        part='contentDetails,statistics'
+                    # Now fetch all videos from the channel
+                    video_response = youtube.search().list(
+                        channelId=channel_id,
+                        part='snippet',
+                        type='video',
+                        order='date',
+                        maxResults=10
                     ).execute()
 
-                    # Format duration
-                    duration_iso = video_details['items'][0]['contentDetails']['duration']
-                    duration = format_duration(duration_iso)
+                    results = []
 
-                    views = video_details['items'][0]['statistics']['viewCount']
-
-                    # Create an inline result
+                    # Add channel name and icon at the top
                     results.append(
                         InlineQueryResultArticle(
-                            title=title,
-                            description=f"Duration: {duration} | Views: {views}",
-                            thumb_url=thumbnail,
-                            input_message_content=InputTextMessageContent(video_url),
-                            url=video_url,
+                            title=channel_title,
+                            description="Channel Videos",
+                            thumb_url=channel_icon,
+                            input_message_content=InputTextMessageContent(f"Channel: {channel_title}"),
                         )
                     )
 
-                await query.answer(results, cache_time=0)
-            else:
-                # Handle the case where the channel was not found
+                    # Add videos from the channel (latest to oldest)
+                    for item in video_response.get('items', []):
+                        video_id = item['id']['videoId']
+                        title = item['snippet']['title']
+                        thumbnail = item['snippet']['thumbnails']['default']['url']
+                        video_url = f"https://www.youtube.com/watch?v={video_id}"
+
+                        # Get video details (duration, views)
+                        video_details = youtube.videos().list(
+                            id=video_id,
+                            part='contentDetails,statistics'
+                        ).execute()
+
+                        # Format duration
+                        duration_iso = video_details['items'][0]['contentDetails']['duration']
+                        duration = format_duration(duration_iso)
+
+                        views = video_details['items'][0]['statistics']['viewCount']
+
+                        # Create an inline result
+                        results.append(
+                            InlineQueryResultArticle(
+                                title=title,
+                                description=f"Duration: {duration} | Views: {views}",
+                                thumb_url=thumbnail,
+                                input_message_content=InputTextMessageContent(video_url),
+                                url=video_url,
+                            )
+                        )
+
+                    await query.answer(results, cache_time=0)
+                else:
+                    # Channel not found
+                    await query.answer([InlineQueryResultArticle(
+                        title="Channel not found",
+                        description="Please check the URL and try again.",
+                        input_message_content=InputTextMessageContent("No channel found for the given URL.")
+                    )], cache_time=0)
+
+            except Exception as e:
+                print(f"Error fetching channel: {e}")  # Debug log
                 await query.answer([InlineQueryResultArticle(
-                    title="Channel not found",
-                    description="Please check the URL and try again.",
-                    input_message_content=InputTextMessageContent("No channel found for the given URL.")
+                    title="Error fetching channel",
+                    description="There was an error fetching the channel details.",
+                    input_message_content=InputTextMessageContent("Error fetching channel details. Please try again.")
                 )], cache_time=0)
         return
 
