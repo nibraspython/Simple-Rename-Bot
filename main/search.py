@@ -30,10 +30,78 @@ def format_duration(duration):
 @Client.on_inline_query()
 async def youtube_search(bot, query):
     search_query = query.query.strip()
+
+    # Check if query starts with '@Dilrenamer_bot <channel_id>'
+    if search_query.startswith('@Dilrenamer_bot'):
+        channel_id = search_query.split()[1]  # Extract the channel ID
+        channel_response = youtube.channels().list(
+            id=channel_id,
+            part='snippet,contentDetails',
+            maxResults=1
+        ).execute()
+
+        if channel_response['items']:
+            channel = channel_response['items'][0]
+            channel_title = channel['snippet']['title']
+            channel_icon = channel['snippet']['thumbnails']['default']['url']
+            uploads_playlist_id = channel['contentDetails']['relatedPlaylists']['uploads']
+
+            # Fetch videos uploaded by the channel
+            video_response = youtube.playlistItems().list(
+                playlistId=uploads_playlist_id,
+                part='snippet',
+                maxResults=5,  # Adjust as needed
+            ).execute()
+
+            results = []
+
+            # Add channel name and icon at the top
+            results.append(
+                InlineQueryResultArticle(
+                    title=channel_title,
+                    description="Channel Videos",
+                    thumb_url=channel_icon,
+                    input_message_content=InputTextMessageContent(f"Channel: {channel_title}"),
+                )
+            )
+
+            # Add videos from the channel
+            for item in video_response['items']:
+                video_id = item['snippet']['resourceId']['videoId']
+                title = item['snippet']['title']
+                thumbnail = item['snippet']['thumbnails']['default']['url']
+                video_url = f"https://www.youtube.com/watch?v={video_id}"
+
+                # Get video details (duration, views)
+                video_details = youtube.videos().list(
+                    id=video_id,
+                    part='contentDetails,statistics'
+                ).execute()
+
+                # Format duration
+                duration_iso = video_details['items'][0]['contentDetails']['duration']
+                duration = format_duration(duration_iso)
+
+                views = video_details['items'][0]['statistics']['viewCount']
+
+                # Create an inline result
+                results.append(
+                    InlineQueryResultArticle(
+                        title=title,
+                        description=f"Duration: {duration} | Views: {views}",
+                        thumb_url=thumbnail,
+                        input_message_content=InputTextMessageContent(video_url),
+                        url=video_url,
+                    )
+                )
+
+            await query.answer(results, cache_time=0)
+        return
+
+    # Default search by keywords if no channel ID is provided
     if not search_query:
         return
 
-    # Search for videos using the YouTube Data API
     search_response = youtube.search().list(
         q=search_query,
         part='snippet',
@@ -66,7 +134,7 @@ async def youtube_search(bot, query):
                 title=title,
                 description=f"Duration: {duration} | Views: {views}",
                 thumb_url=thumbnail,
-                input_message_content=InputTextMessageContent(video_url),  # Send only the URL
+                input_message_content=InputTextMessageContent(video_url),
                 url=video_url,
             )
         )
