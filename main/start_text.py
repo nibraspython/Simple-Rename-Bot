@@ -22,35 +22,35 @@ async def Bot_Features(bot, msg):
     txt = """<b>✨ ━━━━━━━━(Bot Features)━━━━━━━</b>
 
 <b>📹 Youtube Video And Audio Downloader</b> (/ytdl)
-<blockquote>
-➭ Download YouTube videos in different formats available.<br>
-➭ Download YouTube video's audio in highest format.<br>
-➭ Download YouTube video thumbnail.<br>
-➭ Get video description.<br>
+
+➭ Download YouTube videos in different formats available.
+➭ Download YouTube video's audio in highest format.
+➭ Download YouTube video thumbnail.
+➭ Get video description.
 ➭ Uploading progress tracking and Simple UI design.
-</blockquote>
+
 
 <b>✂ Advanced Video Trimmer</b> (/trim)
-<blockquote>
-➭ Trim a video with specific duration.<br>
-➭ Downloading and uploading progress tracking.<br>
-➭ Video and document support.<br>
+
+➭ Trim a video with specific duration.
+➭ Downloading and uploading progress tracking.
+➭ Video and document support.
 ➭ Simple UI design.
-</blockquote>
+
 
 <b>ℹ Generate Mediainfo</b> (/info)
-<blockquote>
-➭ Generate Mediainfo for any file.<br>
-➭ All information support.<br>
-➭ Telegraph view (not sure anytime).
-</blockquote>
 
-<b>📂 File Zipper</b> (/zip)
-<blockquote>
-➭ Any kind of file support.<br>
-➭ Progress tracking.<br>
+➭ Generate Mediainfo for any file.
+➭ All information support.
+➭ Telegraph view (not sure anytime).
+
+
+>>📂 File Zipper</b> (/zip)
+
+➭ Any kind of file support.
+➭ Progress tracking.
 ➭ Move first before using.
-</blockquote>
+
 
 <b>Many more features will be added soon 🌟</b>
 """
