@@ -1,7 +1,7 @@
 YTDL_WELCOME_TEXT = """
             **Youtube Video Downloader 🎬**
 
-    📹 ━━━━━━❰ **Feautures** ❱━━━━━━➣
+    📹 ━━━━━━━━━❰ **Feautures** ❱━━━━━━━━━➣
     
  ➭📹 **Download Youtube Video In All Available Resolutions\n**
  ➭🎧 **Download Audio In Highest Bitrate\n**
