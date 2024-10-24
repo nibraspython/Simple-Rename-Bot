@@ -12,43 +12,48 @@ async def start_cmd(bot, msg):
             InlineKeyboardButton("🤖 SOURCE CODE", url="https://github.com/MrMKN/Simple-Rename-Bot")
         ], [
             InlineKeyboardButton("🖥️ How To Deploy", url="https://youtu.be/oc847WvOUaI"),
-            InlineKeyboardButton("✨ Bot Feautures", callback_data="Bot_Features")  # Updated callback_data
+            InlineKeyboardButton("✨ Bot Features", callback_data="Bot_Features")
         ]])
         await msg.reply_text(text=txt, reply_markup=btn, disable_web_page_preview=True)
 
-@Client.on_callback_query(filters.regex("Bot_Features"))  # Updated regex to match the callback data
-async def Bot_Feautures(bot, msg):
-    txt = ("""<b>✨ ━━━━━━━━━━(Bot Feautures)━━━━━━━━━━━</b>
+@Client.on_callback_query(filters.regex("Bot_Features"))
+async def Bot_Features(bot, msg):
+    # Adding quotes using blockquote HTML tag
+    txt = """<b>✨ ━━━━━━━━(Bot Features)━━━━━━━</b>
 
->📹  <b>Youtube Video And Audio Downloader</b> (/ytdl)
-
-➭ Download YouTube videos in different formats available.
-➭ Download YouTube video's audio in highest format.
-➭ Download YouTube video thumbnail.
-➭ Get video description.
+<b>📹 Youtube Video And Audio Downloader</b> (/ytdl)
+<blockquote>
+➭ Download YouTube videos in different formats available.<br>
+➭ Download YouTube video's audio in highest format.<br>
+➭ Download YouTube video thumbnail.<br>
+➭ Get video description.<br>
 ➭ Uploading progress tracking and Simple UI design.
+</blockquote>
 
-✂ <b>Advanced Video Trimmer</b> (/trim)
-
-➭ Trim a video with specific duration.
-➭ Downloading and uploading progress tracking.
-➭ Video and document support.
+<b>✂ Advanced Video Trimmer</b> (/trim)
+<blockquote>
+➭ Trim a video with specific duration.<br>
+➭ Downloading and uploading progress tracking.<br>
+➭ Video and document support.<br>
 ➭ Simple UI design.
+</blockquote>
 
-ℹ <b>Generate Mediainfo</b> (/info)
-
-➭ Generate Mediainfo for any file.
-➭ All information support.
+<b>ℹ Generate Mediainfo</b> (/info)
+<blockquote>
+➭ Generate Mediainfo for any file.<br>
+➭ All information support.<br>
 ➭ Telegraph view (not sure anytime).
+</blockquote>
 
-📂<b>File Zipper</b> (/zip)
-
-➭ Any kind of file support.
-➭ Progress tracking.
+<b>📂 File Zipper</b> (/zip)
+<blockquote>
+➭ Any kind of file support.<br>
+➭ Progress tracking.<br>
 ➭ Move first before using.
+</blockquote>
 
 <b>Many more features will be added soon 🌟</b>
-""")
+"""
     button = [[
         InlineKeyboardButton("🚫 Close", callback_data="del"),
         InlineKeyboardButton("⬅️ Back", callback_data="start")
