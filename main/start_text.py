@@ -13,12 +13,12 @@ async def start_cmd(bot, msg):
     ]])
     sent_msg = await msg.reply_text(text=txt, reply_markup=btn, disable_web_page_preview=True)
     # Store the message_id of the sent message to use in quoting features
-    return sent_msg.message_id  # Use this for quoting
+    return sent_msg.id  # Corrected to return the message ID
 
 @Client.on_callback_query(filters.regex("Bot_Features"))
 async def Bot_Features(bot, msg):
     # Quoting the message by using the message_id
-    original_message_id = msg.message.message_id
+    original_message_id = msg.message.id  # Corrected to msg.message.id
 
     # Now send the bot features and reference the original message to make it "quoted"
     await bot.send_message(
