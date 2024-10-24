@@ -18,12 +18,37 @@ async def start_cmd(bot, msg):
 
 @Client.on_callback_query(filters.regex("✨ Bot Feautures"))
 async def informations(bot, msg):
-    txt = ("<b>🤖 ᴍy ɴᴀᴍᴇ : Dilrenamer\n"
-           "🖥️ Dᴇᴠᴇʟᴏᴩᴇʀ : Dilshan\n"
-           "👨‍💻 Owner : Private Bots\n"
-           "✏️ Lᴀɴɢᴜᴀɢᴇ: Pyᴛʜᴏɴ\n"
-           "📊 Bᴜɪʟᴅ Vᴇʀꜱɪᴏɴ: Pʀɪᴠᴀᴛᴇ Bᴏᴛs\n\n"
-           "<b>Thanks To All Who Supported ❤</b>")
+    txt = ("""<b>✨ ━━━━━━━━━━(Bot Feautures)━━━━━━━━━━━</b>
+
+📹  <b>Youtube Video And Audio Downloader</b> (/ytdl)
+
+➭ Download YouTube videos in different formats available.
+➭ Download YouTube video's audio in highest format.
+➭ Download YouTube video thumbnail.
+➭ Get video description.
+➭ Uploading progress tracking and Simple UI design.
+
+✂ <b>Advanced Video Trimmer</b> (/trim)
+
+➭ Trim a video with specific duration.
+➭ Downloading and uploading progress tracking.
+➭ Video and document support.
+➭ Simple UI design.
+
+ℹ <b>Generate Mediainfo</b> (/info)
+
+➭ Generate Mediainfo for any file.
+➭ All information support.
+➭ Telegraph view (not sure anytime).
+
+📂<b>File Zipper</b> (/zip)
+
+➭ Any kind of file support.
+➭ Progress tracking.
+➭ Move first before using.
+
+<b>Many more features will be added soon 🌟</b>
+""")
     button = [[
         InlineKeyboardButton("🚫 Close", callback_data="del"),
         InlineKeyboardButton("⬅️ Back", callback_data="start")
