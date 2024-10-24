@@ -16,7 +16,7 @@ async def start_cmd(bot, msg):
         ]])
         await msg.reply_text(text=txt, reply_markup=btn, disable_web_page_preview=True)
 
-@Client.on_callback_query(filters.regex("informations"))
+@Client.on_callback_query(filters.regex("✨ Bot Feautures"))
 async def informations(bot, msg):
     txt = ("<b>🤖 ᴍy ɴᴀᴍᴇ : Dilrenamer\n"
            "🖥️ Dᴇᴠᴇʟᴏᴩᴇʀ : Dilshan\n"
