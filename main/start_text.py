@@ -12,11 +12,11 @@ async def start_cmd(bot, msg):
             InlineKeyboardButton("🤖 SOURCE CODE", url="https://github.com/MrMKN/Simple-Rename-Bot")
         ], [
             InlineKeyboardButton("🖥️ How To Deploy", url="https://youtu.be/oc847WvOUaI"),
-            InlineKeyboardButton("✨Bot Feautures", callback_data="Bot Feautures")
+            InlineKeyboardButton("✨Bot Feautures", callback_data="Bot_Feautures")
         ]])
         await msg.reply_text(text=txt, reply_markup=btn, disable_web_page_preview=True)
 
-@Client.on_callback_query(filters.regex("✨ Bot Feautures"))
+@Client.on_callback_query(filters.regex("Bot_Feautures"))
 async def Bot_Feautures(bot, msg):
     txt = ("""<b>✨ ━━━━━━━━━━(Bot Feautures)━━━━━━━━━━━</b>
 
@@ -64,7 +64,7 @@ async def start(bot, msg, cb=True):
         InlineKeyboardButton("ℹ️ Help", callback_data="help"),
         InlineKeyboardButton("📡 About", callback_data="about")
     ], [
-        InlineKeyboardButton("✨ Bot Feautures", callback_data="Bot Feautures")
+        InlineKeyboardButton("✨ Bot Feautures", callback_data="Bot_Feautures")
     ]]
 
     if msg.from_user.id == ADMIN:
