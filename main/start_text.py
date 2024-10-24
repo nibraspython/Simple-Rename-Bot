@@ -20,7 +20,7 @@ async def start_cmd(bot, msg):
 async def Bot_Feautures(bot, msg):
     txt = ("""<b>✨ ━━━━━━━━━━(Bot Feautures)━━━━━━━━━━━</b>
 
-📹  <b>Youtube Video And Audio Downloader</b> (/ytdl)
+>📹  <b>Youtube Video And Audio Downloader</b> (/ytdl)
 
 ➭ Download YouTube videos in different formats available.
 ➭ Download YouTube video's audio in highest format.
