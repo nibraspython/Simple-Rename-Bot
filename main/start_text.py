@@ -12,7 +12,7 @@ async def start_cmd(bot, msg):
             InlineKeyboardButton("🤖 SOURCE CODE", url="https://github.com/MrMKN/Simple-Rename-Bot")
         ], [
             InlineKeyboardButton("🖥️ How To Deploy", url="https://youtu.be/oc847WvOUaI"),
-            InlineKeyboardButton("ℹ️ Informations", callback_data="informations")
+            InlineKeyboardButton("✨Bot Feautures", callback_data="informations")
         ]])
         await msg.reply_text(text=txt, reply_markup=btn, disable_web_page_preview=True)
 
