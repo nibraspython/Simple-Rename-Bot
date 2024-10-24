@@ -64,7 +64,7 @@ async def start(bot, msg, cb=True):
         InlineKeyboardButton("ℹ️ Help", callback_data="help"),
         InlineKeyboardButton("📡 About", callback_data="about")
     ], [
-        InlineKeyboardButton("✨ Bot Feautures", callback_data="")
+        InlineKeyboardButton("✨ Bot Feautures", callback_data="Bot Feautures")
     ]]
 
     if msg.from_user.id == ADMIN:
