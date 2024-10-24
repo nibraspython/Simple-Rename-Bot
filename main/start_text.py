@@ -4,61 +4,55 @@ from config import ADMIN, START_IMAGE_URL
 
 @Client.on_message(filters.command("start") & filters.private)
 async def start_cmd(bot, msg):
-    if msg.from_user.id == ADMIN:
-        await start(bot, msg, cb=False)
-    else:
-        txt = "This is a personal use bot 🙏. Do you want your own bot? 👇 Click the source code to deploy"
-        btn = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🤖 SOURCE CODE", url="https://github.com/MrMKN/Simple-Rename-Bot")
-        ], [
-            InlineKeyboardButton("🖥️ How To Deploy", url="https://youtu.be/oc847WvOUaI"),
-            InlineKeyboardButton("✨ Bot Features", callback_data="Bot_Features")
-        ]])
-        await msg.reply_text(text=txt, reply_markup=btn, disable_web_page_preview=True)
+    txt = "This is a personal use bot 🙏. Do you want your own bot? 👇 Click the source code to deploy"
+    btn = InlineKeyboardMarkup([[
+        InlineKeyboardButton("🤖 SOURCE CODE", url="https://github.com/MrMKN/Simple-Rename-Bot")
+    ], [
+        InlineKeyboardButton("🖥️ How To Deploy", url="https://youtu.be/oc847WvOUaI"),
+        InlineKeyboardButton("✨ Bot Features", callback_data="Bot_Features")
+    ]])
+    sent_msg = await msg.reply_text(text=txt, reply_markup=btn, disable_web_page_preview=True)
+    # Store the message_id of the sent message to use in quoting features
+    return sent_msg.message_id  # Use this for quoting
 
 @Client.on_callback_query(filters.regex("Bot_Features"))
 async def Bot_Features(bot, msg):
-    # Adding quotes using blockquote HTML tag
-    txt = """<b>✨ ━━━━━━━━(Bot Features)━━━━━━━</b>
+    # Quoting the message by using the message_id
+    original_message_id = msg.message.message_id
 
-<b>📹 Youtube Video And Audio Downloader</b> (/ytdl)
+    # Now send the bot features and reference the original message to make it "quoted"
+    await bot.send_message(
+        chat_id=msg.message.chat.id,
+        text="""✨ ━━━━━━━━Bot Features━━━━━━━
 
+📹 Youtube Video And Audio Downloader (/ytdl)
 ➭ Download YouTube videos in different formats available.
-➭ Download YouTube video's audio in highest format.
+➭ Download YouTube video's audio in the highest format.
 ➭ Download YouTube video thumbnail.
 ➭ Get video description.
 ➭ Uploading progress tracking and Simple UI design.
 
-
-<b>✂ Advanced Video Trimmer</b> (/trim)
-
+✂ Advanced Video Trimmer (/trim)
 ➭ Trim a video with specific duration.
 ➭ Downloading and uploading progress tracking.
 ➭ Video and document support.
 ➭ Simple UI design.
 
-
-<b>ℹ Generate Mediainfo</b> (/info)
-
+ℹ Generate Mediainfo (/info)
 ➭ Generate Mediainfo for any file.
 ➭ All information support.
 ➭ Telegraph view (not sure anytime).
 
-
->>📂 File Zipper</b> (/zip)
-
+📂 File Zipper (/zip)
 ➭ Any kind of file support.
 ➭ Progress tracking.
 ➭ Move first before using.
 
-
-<b>Many more features will be added soon 🌟</b>
-"""
-    button = [[
-        InlineKeyboardButton("🚫 Close", callback_data="del"),
-        InlineKeyboardButton("⬅️ Back", callback_data="start")
-    ]]
-    await msg.message.edit(text=txt, reply_markup=InlineKeyboardMarkup(button), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
+Many more features will be added soon 🌟
+""",
+        reply_to_message_id=original_message_id,  # Referencing the original message
+        parse_mode=enums.ParseMode.MARKDOWN
+    )
 
 @Client.on_callback_query(filters.regex("start"))
 async def start(bot, msg, cb=True):
