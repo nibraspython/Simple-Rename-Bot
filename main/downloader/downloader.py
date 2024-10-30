@@ -183,10 +183,9 @@ async def yt_callback_handler(bot, query):
         thumb_path = None
 
     caption = (
-        f"**🎬 {info_dict['title']}**\n\n"
-        f"📹 **Resolution:** {resolution} | 💽 **Size:** {filesize}\n"
-        f"🕒 **Duration:** {duration} seconds\n"        
-        f"**[🔗 URL]({url})**\n\n"     
+        f"**🎬 {info_dict['title']} | [🔗 URL]({url})**\n\n"
+        f"📹 **{resolution}** | 💽 **{filesize}**\n"                     
+
     )
 
     # Delete the "Download started" message and update the caption to "Uploading started"
