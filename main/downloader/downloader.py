@@ -183,8 +183,8 @@ async def yt_callback_handler(bot, query):
         thumb_path = None
 
     caption = (
-        f"**🎬 {info_dict['title']} | [🔗 URL]({url})**\n\n"
-        f"📹 **{resolution}** | 💽 **{filesize}**\n"                     
+        f"**🎬 {info_dict['title']}   |   [🔗 URL]({url})**\n\n"
+        f"📹 **{resolution}**   |   💽 **{filesize}**\n"                     
 
     )
 
