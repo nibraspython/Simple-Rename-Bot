@@ -1,4 +1,4 @@
-PyroMulti==2.2.11
+pyrofork
 Tgcrypto
 moviepy
 yt-dlp
