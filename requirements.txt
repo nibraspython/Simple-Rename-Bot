@@ -1,4 +1,4 @@
-pyrogram
+pyrofork
 Tgcrypto
 moviepy
 yt-dlp
