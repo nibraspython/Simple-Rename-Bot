@@ -25,7 +25,7 @@ async def ytdl(bot, msg):
     )
 
 # Command to handle YouTube video link and provide resolution/audio options
-@Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(?:www\.|m\.)?(youtube\.com/(watch\?v=|live/)|youtu\.be/)[\w\-]+'))
+@Client.on_callback_query(filters.regex(r'^yt_\d+_\d+p(?:\d+fps)?_https?://(www\.)?(youtube\.com|youtu\.be)/[\S]+'))
 
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
