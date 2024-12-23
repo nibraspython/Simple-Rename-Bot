@@ -106,8 +106,8 @@ async def dailymotion_download(bot, msg):
         return await msg.reply_text("Please provide valid Dailymotion URLs.")
     
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("With Extract Audio", callback_data="with_audio")],
-        [InlineKeyboardButton("Only Video", callback_data="only_video")]
+        [InlineKeyboardButton("With Extract Audio 🎬🎧", callback_data="with_audio")],
+        [InlineKeyboardButton("Only Video 🎬", callback_data="only_video")]
     ])
     sent_message = await msg.reply("Select your method:", reply_markup=keyboard)
     callback_data_store[sent_message.id] = urls
@@ -166,7 +166,7 @@ async def process_dailymotion_download(bot, msg, urls, method):
                 ),
                 duration=duration,
                 progress=progress_message,
-                progress_args=(f"🚀 Uploading {video_title}... 📤", uploading_message, c_time),
+                progress_args=(f"🚀 Uploading Started\n\n🎬 {video_title} 📤", uploading_message, c_time),
             )
 
             # Extract audio if the method is "with_audio"
