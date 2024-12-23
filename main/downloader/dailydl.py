@@ -6,6 +6,7 @@ from yt_dlp import YoutubeDL
 import requests
 from moviepy.editor import VideoFileClip
 import ffmpeg  # For fast audio extraction
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # Dailymotion Download Function with Resolution and Thumbnail URL
 def download_dailymotion(url):
@@ -99,7 +100,20 @@ async def dailymotion_download(bot, msg):
     urls = reply.text.split()
     if not urls:
         return await msg.reply_text("Please provide valid Dailymotion URLs.")
-
+    
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("With Extract Audio", callback_data="with_audio")],
+        [InlineKeyboardButton("Only Video", callback_data="only_video")]
+    ])
+    await msg.reply("Select your method:", reply_markup=keyboard)
+    
+    @Client.on_callback_query(filters.regex("with_audio|only_video"))
+    async def method_selection(bot, callback_query):
+        method = callback_query.data
+        await callback_query.message.delete()
+        await process_dailymotion_download(bot, callback_query.message, urls, method)
+    
+async def process_dailymotion_download(bot, msg, urls, method):
     for url in urls:
         try:
             sts = await msg.reply_text(f"🔄 Processing your request for {url}...")
@@ -110,20 +124,21 @@ async def dailymotion_download(bot, msg):
             human_size = humanbytes(file_size)
 
             # Display Downloading Text
-            await sts.edit(f"📥 Downloading: {video_title}\nResolution: {resolution}p\n💽 Size: {human_size}")
-
+            progress_sts = await sts.edit(f"📥 Downloading: {video_title}\nResolution: {resolution}p\n💽 Size: {human_size}")
+            
             # Generate or download thumbnail
             thumbnail_path = download_thumbnail(thumbnail_url, video_title)
             if not thumbnail_path:
                 thumbnail_path = generate_thumbnail(downloaded)
 
-            await sts.edit("✅ Download Completed! 📥")
+            # Delete downloading progress message
+            await progress_sts.delete()
 
             # Prepare the caption
             cap = f"🎬 **{video_title}**\n\n💽 Size: {human_size}\n🕒 Duration: {duration // 60} mins {duration % 60} secs\n📹 Resolution: {resolution}p"
 
             # Upload video to Telegram
-            await sts.edit(f"🚀 Uploading: {video_title} 📤")
+            progress_sts = await msg.reply(f"🚀 Uploading: {video_title} 📤")
             c_time = time.time()
             await bot.send_video(
                 msg.chat.id,
@@ -132,11 +147,12 @@ async def dailymotion_download(bot, msg):
                 caption=cap,
                 duration=duration,
                 progress=progress_message,
-                progress_args=(f"🚀 Uploading {video_title}... 📤", sts, c_time),
+                progress_args=(f"🚀 Uploading {video_title}... 📤", progress_sts, c_time),
             )
 
-            # Extract audio and upload after video
-            await extract_audio(downloaded, video_title, sts, bot, msg)
+            if method == "with_audio":
+                # Extract audio and upload after video
+                await extract_audio(downloaded, video_title, progress_sts, bot, msg)
             
             # Clean up video and thumbnail
             os.remove(downloaded)
@@ -144,6 +160,6 @@ async def dailymotion_download(bot, msg):
                 os.remove(thumbnail_path)
    
         except Exception as e:
-            await sts.edit(f"❌ Failed to process {url}. Error: {str(e)}")
+            await msg.reply(f"❌ Failed to process {url}. Error: {str(e)}")
 
     await msg.reply_text("🎉 All URLs processed successfully!")
