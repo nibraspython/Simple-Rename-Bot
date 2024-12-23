@@ -1,14 +1,19 @@
-import time, os, subprocess
-from pyrogram import Client, filters, enums
+import time
+import os
+import subprocess
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from yt_dlp import YoutubeDL
 from config import DOWNLOAD_LOCATION, ADMIN
 from main.utils import progress_message, humanbytes
-from yt_dlp import YoutubeDL
-import requests
 from moviepy.editor import VideoFileClip
-import ffmpeg  # For fast audio extraction
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import ffmpeg
+import requests
 
-# Dailymotion Download Function with Resolution and Thumbnail URL
+# Temporary storage for callback query data
+callback_data_store = {}
+
+# Function to download Dailymotion videos
 def download_dailymotion(url):
     ydl_opts = {
         'format': 'best',
@@ -33,7 +38,6 @@ async def extract_audio(video_path, video_title, sts, bot, msg):
     if not os.path.exists(extract_dir):
         os.makedirs(extract_dir)
     
-    # Probe the video file for audio streams
     video_streams_data = ffmpeg.probe(video_path)
     audios = []
     audio_duration = 0
@@ -41,7 +45,7 @@ async def extract_audio(video_path, video_title, sts, bot, msg):
     for stream in video_streams_data.get("streams"):
         if stream["codec_type"] == "audio":
             audios.append(stream)
-            audio_duration = int(float(stream['duration']))  # Get audio duration in seconds
+            audio_duration = int(float(stream['duration']))
 
     for audio in audios:
         extract_cmd = [
@@ -66,8 +70,8 @@ async def extract_audio(video_path, video_title, sts, bot, msg):
         os.remove(extracted_audio_path)
     else:
         await sts.edit(f"❌ Failed to extract audio from {video_title}")
- 
-# Function to generate thumbnail from the video if no thumbnail is available
+
+# Function to generate thumbnail from video
 def generate_thumbnail(video_path):
     thumbnail_path = f"{video_path}_thumbnail.jpg"
     try:
@@ -79,7 +83,7 @@ def generate_thumbnail(video_path):
         print(f"Error generating thumbnail: {e}")
         return None
 
-# Function to download the thumbnail if available
+# Function to download thumbnail from a URL
 def download_thumbnail(thumbnail_url, title):
     if not thumbnail_url:
         return None
@@ -105,39 +109,36 @@ async def dailymotion_download(bot, msg):
         [InlineKeyboardButton("With Extract Audio", callback_data="with_audio")],
         [InlineKeyboardButton("Only Video", callback_data="only_video")]
     ])
-    await msg.reply("Select your method:", reply_markup=keyboard)
-    
-    @Client.on_callback_query(filters.regex("with_audio|only_video"))
-    async def method_selection(bot, callback_query):
-        method = callback_query.data
-        await callback_query.message.delete()
-        await process_dailymotion_download(bot, callback_query.message, urls, method)
-    
+    sent_message = await msg.reply("Select your method:", reply_markup=keyboard)
+    callback_data_store[sent_message.message_id] = urls
+
+@Client.on_callback_query(filters.regex("with_audio|only_video"))
+async def method_selection(bot, callback_query):
+    method = callback_query.data
+    message_id = callback_query.message.message_id
+    urls = callback_data_store.get(message_id)
+    if not urls:
+        return await callback_query.answer("Session expired or invalid request!", show_alert=True)
+
+    await callback_query.answer(f"Selected: {'Extract Audio' if method == 'with_audio' else 'Only Video'}")
+    await callback_query.message.delete()
+    await process_dailymotion_download(bot, callback_query.message, urls, method)
+    del callback_data_store[message_id]
+
 async def process_dailymotion_download(bot, msg, urls, method):
     for url in urls:
         try:
-            sts = await msg.reply_text(f"🔄 Processing your request for {url}...")
-
-            # Start downloading the video
+            sts = await msg.reply_text(f"🔄 Processing: {url}...")
             c_time = time.time()
             downloaded, video_title, duration, file_size, resolution, thumbnail_url = download_dailymotion(url)
             human_size = humanbytes(file_size)
 
-            # Display Downloading Text
-            progress_sts = await sts.edit(f"📥 Downloading: {video_title}\nResolution: {resolution}p\n💽 Size: {human_size}")
-            
-            # Generate or download thumbnail
+            await sts.edit(f"📥 Downloading: {video_title}\nResolution: {resolution}p\n💽 Size: {human_size}")
             thumbnail_path = download_thumbnail(thumbnail_url, video_title)
             if not thumbnail_path:
                 thumbnail_path = generate_thumbnail(downloaded)
 
-            # Delete downloading progress message
-            await progress_sts.delete()
-
-            # Prepare the caption
             cap = f"🎬 **{video_title}**\n\n💽 Size: {human_size}\n🕒 Duration: {duration // 60} mins {duration % 60} secs\n📹 Resolution: {resolution}p"
-
-            # Upload video to Telegram
             progress_sts = await msg.reply(f"🚀 Uploading: {video_title} 📤")
             c_time = time.time()
             await bot.send_video(
@@ -151,10 +152,8 @@ async def process_dailymotion_download(bot, msg, urls, method):
             )
 
             if method == "with_audio":
-                # Extract audio and upload after video
                 await extract_audio(downloaded, video_title, progress_sts, bot, msg)
             
-            # Clean up video and thumbnail
             os.remove(downloaded)
             if thumbnail_path:
                 os.remove(thumbnail_path)
