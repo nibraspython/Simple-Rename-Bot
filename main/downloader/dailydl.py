@@ -1,3 +1,5 @@
+import asyncio
+import math
 import time
 import os
 import subprocess
@@ -13,15 +15,45 @@ import requests
 # Temporary storage for callback query data
 callback_data_store = {}
 
-# Function to download Dailymotion videos
-def download_dailymotion(url):
+# Function to download Dailymotion videos with progress tracking
+def download_dailymotion_with_progress(url, message, loop):
+    def progress_hook(d):
+        if d['status'] == 'downloading':
+            downloaded = d.get('downloaded_bytes', 0)
+            total = d.get('total_bytes', 0)
+            speed = d.get('speed', 0)
+            eta = d.get('eta', 0)
+
+            progress = 0 if total == 0 else math.floor(downloaded * 100 / total)
+            human_downloaded = humanbytes(downloaded)
+            human_total = humanbytes(total)
+            human_speed = humanbytes(speed)
+
+            text = (
+                f"📥 **Downloading:** {progress}%\n"
+                f"Downloaded: {human_downloaded} of {human_total}\n"
+                f"Speed: {human_speed}/s\n"
+                f"ETA: {eta} seconds"
+            )
+
+            if progress_hook.last_text != text:
+                asyncio.run_coroutine_threadsafe(
+                    message.edit(text),
+                    loop
+                )
+                progress_hook.last_text = text
+
+    progress_hook.last_text = None
+
     ydl_opts = {
         'format': 'best',
         'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
         'noplaylist': True,
         'quiet': True,
         'no_warnings': True,
+        'progress_hooks': [progress_hook]
     }
+
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         file_path = ydl.prepare_filename(info)
@@ -32,12 +64,13 @@ def download_dailymotion(url):
         thumbnail_url = info.get('thumbnail')
         return file_path, video_title, duration, file_size, resolution, thumbnail_url
 
-# Function to extract audio streams from video
+# Function to extract audio from video
 async def extract_audio(video_path, video_title, sts, bot, msg):
     extract_dir = os.path.dirname(video_path) + "/extract"
     if not os.path.exists(extract_dir):
         os.makedirs(extract_dir)
-    
+
+    # Probe the video for audio streams
     video_streams_data = ffmpeg.probe(video_path)
     audios = []
     audio_duration = 0
@@ -128,25 +161,22 @@ async def method_selection(bot, callback_query):
 async def process_dailymotion_download(bot, msg, urls, method):
     for url in urls:
         try:
-            # Show downloading progress text directly
+            # Show downloading progress directly
             downloading_message = await msg.reply_text("📥 Starting download... 🔄")
             c_time = time.time()
 
-            # Start downloading the video
-            downloaded, video_title, duration, file_size, resolution, thumbnail_url = download_dailymotion(url)
-            human_size = humanbytes(file_size)
-
-            # Update the downloading progress
-            await downloading_message.edit(
-                f"📥 Downloading: {video_title}\n💽 Size: {human_size}\n📹 Resolution: {resolution}p"
+            # Start downloading with progress tracking
+            downloaded, video_title, duration, file_size, resolution, thumbnail_url = download_dailymotion_with_progress(
+                url, downloading_message, asyncio.get_event_loop()
             )
+            human_size = humanbytes(file_size)
 
             # Generate or download thumbnail
             thumbnail_path = download_thumbnail(thumbnail_url, video_title)
             if not thumbnail_path:
                 thumbnail_path = generate_thumbnail(downloaded)
 
-            # After download is completed, delete the downloading message
+            # Delete the downloading message after completion
             await downloading_message.delete()
 
             # Show new uploading progress text
