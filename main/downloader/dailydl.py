@@ -1,5 +1,3 @@
-import asyncio
-import math
 import time
 import os
 import subprocess
@@ -15,17 +13,15 @@ import requests
 # Temporary storage for callback query data
 callback_data_store = {}
 
-
-
+# Function to download Dailymotion videos
+def download_dailymotion(url):
     ydl_opts = {
         'format': 'best',
         'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
         'noplaylist': True,
         'quiet': True,
         'no_warnings': True,
-   
     }
-
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         file_path = ydl.prepare_filename(info)
@@ -36,13 +32,12 @@ callback_data_store = {}
         thumbnail_url = info.get('thumbnail')
         return file_path, video_title, duration, file_size, resolution, thumbnail_url
 
-# Function to extract audio from video
+# Function to extract audio streams from video
 async def extract_audio(video_path, video_title, sts, bot, msg):
     extract_dir = os.path.dirname(video_path) + "/extract"
     if not os.path.exists(extract_dir):
         os.makedirs(extract_dir)
-
-    # Probe the video for audio streams
+    
     video_streams_data = ffmpeg.probe(video_path)
     audios = []
     audio_duration = 0
