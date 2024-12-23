@@ -128,37 +128,58 @@ async def method_selection(bot, callback_query):
 async def process_dailymotion_download(bot, msg, urls, method):
     for url in urls:
         try:
-            sts = await msg.reply_text(f"🔄 Processing: {url}...")
+            # Show downloading progress text directly
+            downloading_message = await msg.reply_text("📥 Starting download... 🔄")
             c_time = time.time()
+
+            # Start downloading the video
             downloaded, video_title, duration, file_size, resolution, thumbnail_url = download_dailymotion(url)
             human_size = humanbytes(file_size)
 
-            await sts.edit(f"📥 Downloading: {video_title}\nResolution: {resolution}p\n💽 Size: {human_size}")
+            # Update the downloading progress
+            await downloading_message.edit(
+                f"📥 Downloading: {video_title}\n💽 Size: {human_size}\n📹 Resolution: {resolution}p"
+            )
+
+            # Generate or download thumbnail
             thumbnail_path = download_thumbnail(thumbnail_url, video_title)
             if not thumbnail_path:
                 thumbnail_path = generate_thumbnail(downloaded)
 
-            cap = f"🎬 **{video_title}**\n\n💽 Size: {human_size}\n🕒 Duration: {duration // 60} mins {duration % 60} secs\n📹 Resolution: {resolution}p"
-            progress_sts = await msg.reply(f"🚀 Uploading: {video_title} 📤")
+            # After download is completed, delete the downloading message
+            await downloading_message.delete()
+
+            # Show new uploading progress text
+            uploading_message = await msg.reply_text(f"🚀 Uploading: {video_title}... 📤")
             c_time = time.time()
+
+            # Upload the video to Telegram
             await bot.send_video(
                 msg.chat.id,
                 video=downloaded,
                 thumb=thumbnail_path if thumbnail_path else None,
-                caption=cap,
+                caption=(
+                    f"🎬 **{video_title}**\n\n"
+                    f"💽 Size: {human_size}\n"
+                    f"🕒 Duration: {duration // 60} mins {duration % 60} secs\n"
+                    f"📹 Resolution: {resolution}p"
+                ),
                 duration=duration,
                 progress=progress_message,
-                progress_args=(f"🚀 Uploading {video_title}... 📤", progress_sts, c_time),
+                progress_args=(f"🚀 Uploading {video_title}... 📤", uploading_message, c_time),
             )
 
+            # Extract audio if the method is "with_audio"
             if method == "with_audio":
-                await extract_audio(downloaded, video_title, progress_sts, bot, msg)
-            
+                await extract_audio(downloaded, video_title, uploading_message, bot, msg)
+
+            # Clean up files
             os.remove(downloaded)
             if thumbnail_path:
                 os.remove(thumbnail_path)
-   
+
         except Exception as e:
             await msg.reply(f"❌ Failed to process {url}. Error: {str(e)}")
 
+    # Send final completion message
     await msg.reply_text("🎉 All URLs processed successfully!")
