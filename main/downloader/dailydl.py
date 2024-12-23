@@ -110,12 +110,12 @@ async def dailymotion_download(bot, msg):
         [InlineKeyboardButton("Only Video", callback_data="only_video")]
     ])
     sent_message = await msg.reply("Select your method:", reply_markup=keyboard)
-    callback_data_store[sent_message.message_id] = urls
+    callback_data_store[sent_message.id] = urls
 
 @Client.on_callback_query(filters.regex("with_audio|only_video"))
 async def method_selection(bot, callback_query):
     method = callback_query.data
-    message_id = callback_query.message.message_id
+    message_id = callback_query.message.id
     urls = callback_data_store.get(message_id)
     if not urls:
         return await callback_query.answer("Session expired or invalid request!", show_alert=True)
