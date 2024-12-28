@@ -32,25 +32,6 @@ def download_dailymotion(url):
         thumbnail_url = info.get('thumbnail')
         return file_path, video_title, duration, file_size, resolution, thumbnail_url
 
-# Function to download Facebook videos
-def download_facebook(url):
-    ydl_opts = {
-        'format': 'best',
-        'outtmpl': f'{DOWNLOAD_LOCATION}/%(title)s.%(ext)s',
-        'noplaylist': True,
-        'quiet': True,
-        'no_warnings': True,
-    }
-    with YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        file_path = ydl.prepare_filename(info)
-        video_title = info.get('title')
-        duration = info.get('duration', 0)
-        file_size = info.get('filesize', 0)
-        resolution = info.get('height')
-        thumbnail_url = info.get('thumbnail')
-        return file_path, video_title, duration, file_size, resolution, thumbnail_url
-
 # Function to extract audio streams from video
 async def extract_audio(video_path, video_title, sts, bot, msg):
     extract_dir = os.path.dirname(video_path) + "/extract"
@@ -114,6 +95,19 @@ def download_thumbnail(thumbnail_url, title):
         return thumbnail_path
     return None
 
+# Function to extract and download images from a Facebook post
+def download_facebook_images(url):
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': True,  # Extract metadata without downloading
+        'skip_download': True,
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        image_urls = [entry['url'] for entry in info.get('entries', []) if entry.get('url')]
+        return image_urls
+
 @Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
 async def dailymotion_facebook_download(bot, msg):
     reply = msg.reply_to_message
@@ -122,14 +116,35 @@ async def dailymotion_facebook_download(bot, msg):
     
     urls = reply.text.split()
     if not urls:
-        return await msg.reply_text("Please provide valid Dailymotion or Facebook video URLs.")
+        return await msg.reply_text("Please provide valid Dailymotion or Facebook URLs.")
     
+    # Check if the URL is a Facebook post and contains images
+    if "facebook.com" in urls[0]:
+        try:
+            await msg.reply_text("🔄 Checking for images in the post...")
+            image_urls = download_facebook_images(urls[0])
+            if image_urls:
+                await msg.reply_text("📸 Images found! Sending them...")
+                for image_url in image_urls:
+                    image_data = requests.get(image_url)
+                    if image_data.status_code == 200:
+                        # Send the image to the chat
+                        await bot.send_photo(msg.chat.id, photo=image_data.content)
+            else:
+                await msg.reply_text("❌ No images found in the post.")
+        except Exception as e:
+            await msg.reply_text(f"❌ Failed to extract images. Error: {str(e)}")
+    
+    # Proceed with video processing
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("With Extract Audio 🎬🎧", callback_data="with_audio")],
         [InlineKeyboardButton("Only Video 🎬", callback_data="only_video")]
     ])
     sent_message = await msg.reply("Select your method:", reply_markup=keyboard)
     callback_data_store[sent_message.id] = urls
+
+
+@Client.on_message(filters.private & filters.command("dailydl") & filters.user(ADMIN))
 
 @Client.on_callback_query(filters.regex("with_audio|only_video"))
 async def method_selection(bot, callback_query):
@@ -141,29 +156,18 @@ async def method_selection(bot, callback_query):
 
     await callback_query.answer(f"Selected: {'Extract Audio' if method == 'with_audio' else 'Only Video'}")
     await callback_query.message.delete()
-    await process_video_download(bot, callback_query.message, urls, method)
+    await process_dailymotion_download(bot, callback_query.message, urls, method)
     del callback_data_store[message_id]
 
-async def process_video_download(bot, msg, urls, method):
+async def process_dailymotion_download(bot, msg, urls, method):
     for url in urls:
         try:
-            # Check if URL is from Dailymotion or Facebook
-            if "dailymotion.com" in url:
-                downloader = download_dailymotion
-                platform = "Dailymotion"
-            elif "facebook.com" in url:
-                downloader = download_facebook
-                platform = "Facebook"
-            else:
-                await msg.reply(f"❌ Unsupported URL: {url}")
-                continue
-
             # Show downloading progress text directly
-            downloading_message = await msg.reply_text(f"📥 Starting {platform} video download... 🔄")
+            downloading_message = await msg.reply_text("📥 Starting download... 🔄")
             c_time = time.time()
 
             # Start downloading the video
-            downloaded, video_title, duration, file_size, resolution, thumbnail_url = downloader(url)
+            downloaded, video_title, duration, file_size, resolution, thumbnail_url = download_dailymotion(url)
             human_size = humanbytes(file_size)
 
             # Update the downloading progress
