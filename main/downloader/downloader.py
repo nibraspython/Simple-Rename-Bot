@@ -137,6 +137,31 @@ async def yt_callback_handler(bot, query):
     # Send initial download started message with title and resolution
     download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
+    # Define a progress hook function
+    def progress_hook(d):
+        nonlocal download_message
+        if d['status'] == 'downloading':
+            downloaded_bytes = d.get('downloaded_bytes', 0)
+            total_bytes = d.get('total_bytes', 0)
+            speed = d.get('speed', 0)
+            eta = d.get('eta', 0)
+
+            # Convert bytes to human-readable format
+            downloaded_str = humanbytes(downloaded_bytes)
+            total_str = humanbytes(total_bytes) if total_bytes else "Unknown"
+            speed_str = humanbytes(speed) + "/s" if speed else "Unknown"
+
+            # Update the download message with progress
+            progress_text = (
+                f"📥 **Downloading...**\n\n"
+                f"**🎬 {title}**\n\n"
+                f"**📹 {resolution}**\n\n"
+                f"**⬇️ Downloaded:** {downloaded_str} / {total_str}\n"
+                f"**🚀 Speed:** {speed_str}\n"
+                f"**⏳ ETA:** {eta} seconds"
+            )
+            bot.loop.create_task(download_message.edit_text(progress_text))
+
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
@@ -144,7 +169,8 @@ async def yt_callback_handler(bot, query):
         'postprocessors': [{
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
-        }]
+        }],
+        'progress_hooks': [progress_hook]  # Add the progress hook
     }
 
     try:
@@ -186,7 +212,6 @@ async def yt_callback_handler(bot, query):
     caption = (
         f"**🎬 {info_dict['title']}   |   [🔗 URL]({url})**\n\n"
         f"📹 **{resolution}**   |   💽 **{filesize}**\n"                     
-
     )
 
     # Delete the "Download started" message and update the caption to "Uploading started"
