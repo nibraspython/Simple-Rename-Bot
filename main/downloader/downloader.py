@@ -26,6 +26,7 @@ async def ytdl(bot, msg):
 
 # Command to handle YouTube video link and provide resolution/audio options
 @Client.on_message(filters.private & filters.user(ADMIN) & filters.regex(r'https?://(www\.)?youtube\.com/watch\?v='))
+
 async def youtube_link_handler(bot, msg):
     url = msg.text.strip()
 
@@ -45,7 +46,12 @@ async def youtube_link_handler(bot, msg):
         likes = info_dict.get('like_count', 'N/A')
         thumb_url = info_dict.get('thumbnail', None)
         description = info_dict.get('description', 'No description available.')
-        formats = info_dict.get('formats', [])
+        formats = info_dict.get('formats', [])      
+        duration_seconds = info_dict.get('duration', 0)
+        uploader = info_dict.get('uploader', 'Unknown Channel')
+
+    # Format the duration as HH:MM:SS
+    duration = time.strftime('%H:%M:%S', time.gmtime(duration_seconds))
 
     # Extract all available resolutions with their sizes
     available_resolutions = []
@@ -100,9 +106,11 @@ async def youtube_link_handler(bot, msg):
     markup = InlineKeyboardMarkup(buttons)
 
     caption = (
-        f"**🎬 Title:** {title}\n"
+        f"**🎬 {title}**\n\n"
         f"**👀 Views:** {views}\n"
-        f"**👍 Likes:** {likes}\n\n"
+        f"**👍 Likes:** {likes}\n"
+        f"**⏰ {duration}**\n"
+        f"**🎥 {uploader}**\n\n"
         f"📥 **Select your resolution or audio format:**"
     )
 
@@ -127,8 +135,9 @@ async def yt_callback_handler(bot, query):
     title = query.message.caption.split('🎬 ')[1].split('\n')[0]
 
     # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"⬇️ **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
 
+    
     ydl_opts = {
         'format': f"{format_id}+bestaudio[ext=m4a]",  # Ensure AVC video and AAC audio
         'outtmpl': os.path.join(DOWNLOAD_LOCATION, '%(title)s.%(ext)s'),
@@ -137,13 +146,14 @@ async def yt_callback_handler(bot, query):
             'key': 'FFmpegVideoConvertor',
             'preferedformat': 'mp4'
         }]
+        
     }
 
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
-        await download_message.edit_text("✅ **Download completed!**")
+        
     except Exception as e:
         await download_message.edit_text(f"❌ **Error during download:** {e}")
         return
@@ -176,15 +186,18 @@ async def yt_callback_handler(bot, query):
         thumb_path = None
 
     caption = (
-        f"**🎬 {info_dict['title']}**\n\n"
-        f"💽 **Size:** {filesize}\n"
-        f"🕒 **Duration:** {duration} seconds\n"
-        f"📹 **Resolution:** {resolution}\n"
-        f"**[🔗 URL]({url})**\n\n"
-        f"✅ **Download completed!**"
+        f"**🎬 {info_dict['title']}   |   [🔗 URL]({url})**\n\n"
+        f"📹 **{resolution}**   |   💽 **{filesize}**\n"                     
     )
 
-    uploading_message = await query.message.edit_text("🚀 **Uploading started...** 📤")
+    # Delete the "Download started" message and update the caption to "Uploading started"
+    await download_message.delete()
+
+    uploading_message = await bot.send_photo(
+        chat_id=query.message.chat.id,
+        photo=thumb_path,
+        caption="🚀 **Uploading started...** 📤"
+    )
 
     c_time = time.time()
     try:
@@ -195,13 +208,14 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=(f"Upload Started..... Thanks To All Who Supported ❤️\n\n**🎬{info_dict['title']}**", query.message, c_time)
+            progress_args=(f"**📤 Uploading Started...Thanks To All Who Supported ❤\n\n🎬 {info_dict['title']}**", uploading_message, c_time)
         )
     except Exception as e:
-        await query.message.edit_text(f"❌ **Error during upload:** {e}")
+        await uploading_message.edit_text(f"❌ **Error during upload:** {e}")
         return
 
     await uploading_message.delete()
+
 
     # Clean up the downloaded video file and thumbnail after sending
     if os.path.exists(downloaded_path):
