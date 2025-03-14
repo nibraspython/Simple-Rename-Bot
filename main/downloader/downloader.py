@@ -106,7 +106,7 @@ async def youtube_link_handler(bot, msg):
     markup = InlineKeyboardMarkup(buttons)
 
     caption = (
-        f"**🎬 {title}**\n\n"
+        f"**🎞 {title}**\n\n"
         f"**👀 Views:** {views}\n"
         f"**👍 Likes:** {likes}\n"
         f"**⏰ {duration}**\n"
@@ -132,10 +132,10 @@ async def yt_callback_handler(bot, query):
     url = query.data.split('_', 3)[3]
 
     # Get the title from the original message caption
-    title = query.message.caption.split('🎬 ')[1].split('\n')[0]
+    title = query.message.caption.split('🎞 ')[1].split('\n')[0]
 
     # Send initial download started message with title and resolution
-    download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎬 {title}**\n\n**📹 {resolution}**")
+    download_message = await query.message.edit_text(f"📥 **Download started...**\n\n**🎞 {title}**\n\n**📹 {resolution}**")
 
     
     ydl_opts = {
@@ -186,8 +186,8 @@ async def yt_callback_handler(bot, query):
         thumb_path = None
 
     caption = (
-        f"**🎬 {info_dict['title']}   |   [🔗 URL]({url})**\n\n"
-        f"📹 **{resolution}**   |   💽 **{filesize}**\n"                     
+        f"**🎞 {info_dict['title']}   |   [🔗 URL]({url})**\n\n"
+        f"🎥 **{resolution}**   |   🗂 **{filesize}**\n"                     
     )
 
     # Delete the "Download started" message and update the caption to "Uploading started"
@@ -208,7 +208,7 @@ async def yt_callback_handler(bot, query):
             caption=caption,
             duration=duration,
             progress=progress_message,
-            progress_args=(f"**📤 Uploading Started...Thanks To All Who Supported ❤\n\n🎬 {info_dict['title']}**", uploading_message, c_time)
+            progress_args=(f"**📤 Uploading Started...Thanks To All Who Supported ❤\n\n🎞 {info_dict['title']}**", uploading_message, c_time)
         )
     except Exception as e:
         await uploading_message.edit_text(f"❌ **Error during upload:** {e}")
