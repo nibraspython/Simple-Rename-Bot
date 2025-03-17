@@ -10,3 +10,7 @@ telegraph
 pymediainfo
 aiotelegraph
 ffmpeg-python
+pyrogram
+tgcrypto
+fastapi
+uvicorn
