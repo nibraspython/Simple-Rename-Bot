@@ -5,11 +5,11 @@ import asyncio
 from fastapi import FastAPI
 import uvicorn
 
-# Create download location if not exists
+# Create a download folder if it doesn't exist
 if not os.path.isdir(DOWNLOAD_LOCATION):
     os.makedirs(DOWNLOAD_LOCATION)
 
-# FastAPI for Render Web Service
+# FastAPI Web Server for Render
 app = FastAPI()
 
 @app.get("/")
@@ -35,11 +35,11 @@ class Bot(Client):
 
     async def stop(self, *args):
         await super().stop()
-        print("Bot Restarting........")
+        print("Bot Stopping...")
 
 bot = Bot()
 
-# Run the bot and web service together
+# Run bot & web service together
 async def main():
     await bot.start()
     config = uvicorn.Config(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
